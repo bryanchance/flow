@@ -1,0 +1,151 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"time"
+
+	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	cli "github.com/urfave/cli/v2"
+)
+
+var queueJobCommand = &cli.Command{
+	Name:  "queue",
+	Usage: "queue render job",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "name",
+			Usage: "job name",
+		},
+		&cli.StringFlag{
+			Name:    "project-file",
+			Aliases: []string{"f"},
+			Usage:   "path to project file",
+		},
+		&cli.IntFlag{
+			Name:    "resolution-x",
+			Aliases: []string{"x"},
+			Usage:   "render resolution (x)",
+			Value:   1920,
+		},
+		&cli.IntFlag{
+			Name:    "resolution-y",
+			Aliases: []string{"y"},
+			Usage:   "render resolution (y)",
+			Value:   1080,
+		},
+		&cli.IntFlag{
+			Name:  "resolution-scale",
+			Usage: "render resolution scale",
+			Value: 100,
+		},
+		&cli.IntFlag{
+			Name:    "render-start-frame",
+			Aliases: []string{"s"},
+			Usage:   "render start frame",
+			Value:   1,
+		},
+		&cli.IntFlag{
+			Name:    "render-end-frame",
+			Aliases: []string{"e"},
+			Usage:   "render end frame",
+		},
+		&cli.IntFlag{
+			Name:  "render-samples",
+			Usage: "render samples",
+			Value: 100,
+		},
+		&cli.BoolFlag{
+			Name:    "render-use-gpu",
+			Aliases: []string{"g"},
+			Usage:   "use gpu for rendering",
+		},
+	},
+	Action: queueAction,
+}
+
+func queueAction(clix *cli.Context) error {
+	name := clix.String("name")
+	if name == "" {
+		return fmt.Errorf("job name must be specified")
+	}
+
+	jobFile := clix.String("project-file")
+	f, err := os.Open(jobFile)
+	if err != nil {
+		return errors.Wrapf(err, "error opening project file %s", jobFile)
+	}
+	defer f.Close()
+
+	logrus.Debugf("using project %s", jobFile)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	client, err := getClient(clix)
+	if err != nil {
+		return err
+	}
+
+	stream, err := client.QueueJob(ctx)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debug("sending job request")
+	if err := stream.Send(&api.QueueJobRequest{
+		Data: &api.QueueJobRequest_Request{
+			Request: &api.JobRequest{
+				Name:             name,
+				ResolutionX:      int64(clix.Int("resolution-x")),
+				ResolutionY:      int64(clix.Int("resolution-y")),
+				ResolutionScale:  int64(clix.Int("resolution-scale")),
+				RenderStartFrame: int64(clix.Int("render-start-frame")),
+				RenderEndFrame:   int64(clix.Int("render-end-frame")),
+				RenderSamples:    int64(clix.Int("render-samples")),
+				RenderUseGPU:     clix.Bool("render-use-gpu"),
+			},
+		},
+	}); err != nil {
+		return err
+	}
+
+	rdr := bufio.NewReader(f)
+	buf := make([]byte, 4096)
+
+	chunk := 0
+	for {
+		n, err := rdr.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "error reading file chunk")
+		}
+
+		req := &api.QueueJobRequest{
+			Data: &api.QueueJobRequest_ChunkData{
+				ChunkData: buf[:n],
+			},
+		}
+
+		if err := stream.Send(req); err != nil {
+			return errors.Wrap(err, "error sending file chunk")
+		}
+
+		chunk += 1
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		return errors.Wrap(err, "error receiving response from server")
+	}
+
+	logrus.Printf("queued job %s", res.GetUUID())
+	return nil
+}

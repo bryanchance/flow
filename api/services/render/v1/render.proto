@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package finca.services.render.v1;
+
+import "gogoproto/gogo.proto";
+import weak "google/protobuf/empty.proto";
+
+option go_package = "git.underland.io/ehazlett/finca/api/services/render/v1;render";
+
+service Render {
+        rpc QueueJob(stream QueueJobRequest) returns (QueueJobResponse);
+        rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+}
+
+message QueueJobRequest {
+        oneof data {
+                JobRequest request = 1;
+                bytes chunk_data = 2;
+        }
+}
+
+message JobRequest {
+        string uuid = 1 [(gogoproto.customname) = "UUID"];
+        string name = 2;
+        int64 resolution_x = 3;
+        int64 resolution_y = 4;
+        int64 resolution_scale = 5;
+        int64 render_samples = 6;
+        int64 render_start_frame = 7;
+        int64 render_end_frame = 8;
+        bool render_use_gpu = 9 [(gogoproto.customname) = "RenderUseGPU"];
+}
+
+message QueueJobResponse {
+        string uuid = 1 [(gogoproto.customname) = "UUID"];
+}
+
+message Job {}
+
+message ListJobsRequest {}
+
+message ListJobsResponse {}
