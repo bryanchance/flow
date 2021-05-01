@@ -189,6 +189,7 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 						"S3_BUCKET":            s.getJobOutputDir(),
 						"OPTIX_CACHE_PATH":     "/data/finca_optix_cache",
 						"RENDER_START_FRAME":   fmt.Sprintf("%d", req.GetRenderStartFrame()),
+						"RENDER_SAMPLES":       fmt.Sprintf("%d", req.GetRenderSamples()),
 					},
 					Artifacts: []*nomadapi.TaskArtifact{
 						{
