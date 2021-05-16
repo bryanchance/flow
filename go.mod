@@ -8,6 +8,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/hashicorp/nomad/api v0.0.0-20210430195122-5157aa65e8d4
 	github.com/minio/minio-go/v7 v7.0.10
+	github.com/mitchellh/copystructure v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1

@@ -29,6 +29,10 @@ message JobRequest {
         int64 render_start_frame = 7;
         int64 render_end_frame = 8;
         bool render_use_gpu = 9 [(gogoproto.customname) = "RenderUseGPU"];
+        int64 render_priority = 10;
+        int64 cpu = 11 [(gogoproto.customname) = "CPU"];
+        int64 memory = 12;
+        int64 render_slices = 13;
 }
 
 message QueueJobResponse {

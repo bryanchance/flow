@@ -36,9 +36,11 @@ func New(cfg *finca.Config) (services.Service, error) {
 	nomadCfg := nomadapi.DefaultConfig()
 	nomadCfg.Address = cfg.NomadAddress
 	if v := cfg.NomadRegion; v != "" {
+		logrus.Debugf("using nomad region %s", v)
 		nomadCfg.Region = v
 	}
 	if v := cfg.NomadNamespace; v != "" {
+		logrus.Debugf("using nomad ns %s", v)
 		nomadCfg.Namespace = v
 	}
 	nc, err := nomadapi.NewClient(nomadCfg)

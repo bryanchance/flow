@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"time"
@@ -12,6 +13,7 @@ import (
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	nomadapi "github.com/hashicorp/nomad/api"
 	minio "github.com/minio/minio-go/v7"
+	cs "github.com/mitchellh/copystructure"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -20,7 +22,21 @@ import (
 
 const (
 	storageProjectBucketName = "projects"
+	s3RenderDirectory        = "render"
+	renderSliceTemplate      = `
+export RENDER_SLICE_MIN_X=%1f
+export RENDER_SLICE_MAX_X=%1f
+export RENDER_SLICE_MIN_Y=%1f
+export RENDER_SLICE_MAX_Y=%1f
+`
 )
+
+type renderSlice struct {
+	MinX float64
+	MaxX float64
+	MinY float64
+	MaxY float64
+}
 
 func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	logrus.Debug("processing queue request")
@@ -108,6 +124,11 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	return nil
 }
 
+// this takes care of creating and submitting jobs for rendering to nomad
+// the details for each task group and task are heavily coupled to the worker
+// and compositor as the worker containers need configuration for rendering
+// if anything is changed here check the /worker/render.sh and /cmd/finca-compositor
+// subdirectories for corresponding updates
 func (s *service) queueNomadJob(req *api.JobRequest) error {
 	jobID := s.getJobID(req)
 	jobType := "batch"
@@ -115,18 +136,41 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 	if req.GetRenderEndFrame() > 0 {
 		frameCount = (req.GetRenderEndFrame() - req.GetRenderStartFrame()) + int64(1)
 	}
-	job := nomadapi.NewBatchJob("", jobID, s.config.NomadRegion, s.config.JobPriority)
+
+	jobPriority := req.RenderPriority
+	if jobPriority == 0 {
+		jobPriority = int64(s.config.JobPriority)
+	}
+	job := nomadapi.NewBatchJob("", jobID, s.config.NomadRegion, int(jobPriority))
+	job.Region = &s.config.NomadRegion
+	job.Namespace = &s.config.NomadNamespace
 	job.ID = &jobID
 	job.Type = &jobType
 	job.Datacenters = s.config.NomadDatacenters
+	job.Constraints = []*nomadapi.Constraint{}
 
 	runtimeConfig := map[string]interface{}{
 		"image": s.config.JobImage,
 	}
 
+	taskEnv := map[string]string{
+		"WORK_DIR":             "/local",
+		"PROJECT_NAME":         req.GetName(),
+		"PROJECT_ID":           jobID,
+		"S3_ACCESS_KEY_ID":     s.config.S3AccessID,
+		"S3_ACCESS_KEY_SECRET": s.config.S3AccessKey,
+		"S3_ENDPOINT":          s.config.S3Endpoint,
+		"S3_OUTPUT_DIR":        s.getJobOutputDir(),
+		"OPTIX_CACHE_PATH":     "/data/finca_optix_cache",
+		"RENDER_START_FRAME":   fmt.Sprintf("%d", req.GetRenderStartFrame()),
+		"RENDER_END_FRAME":     fmt.Sprintf("%d", req.GetRenderEndFrame()),
+		"RENDER_SAMPLES":       fmt.Sprintf("%d", req.GetRenderSamples()),
+		"RENDER_DEVICE":        "CPU",
+	}
+
 	if req.GetRenderUseGPU() {
 		constraint := nomadapi.NewConstraint("${node.class}", "=", "gpu")
-		job.Constraints = []*nomadapi.Constraint{constraint}
+		job.Constraints = append(job.Constraints, constraint)
 
 		runtimeConfig["gpus"] = []int{0}
 		runtimeConfig["mounts"] = map[string]interface{}{
@@ -135,12 +179,13 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 			"target":  "/data",
 			"options": []string{"rbind", "rw"},
 		}
+		taskEnv["RENDER_DEVICE"] = "GPU"
 	}
 
 	taskName := "render"
 	jobCount := int(frameCount)
-	jobInterval := 5 * time.Second
-	jobDelay := 10 * time.Second
+	jobInterval := 20 * time.Second
+	jobDelay := 5 * time.Second
 	jobMigrate := true
 	jobSticky := true
 	jobArtifactScheme := "http"
@@ -150,8 +195,43 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 	jobArtifactSource := fmt.Sprintf("s3::%s://%s/%s", jobArtifactScheme, s.config.S3Endpoint, path.Join(s.config.S3Bucket, getStorageJobPath(req)))
 	jobArtifactDestination := "local/project"
 	jobArtifactMode := "any"
+	jobCPU := int(req.CPU)
+	jobMemory := int(req.Memory)
+	if jobCPU == 0 {
+		jobCPU = s.config.JobCPU
+	}
+	if jobMemory == 0 {
+		jobMemory = s.config.JobMemory
+	}
 
-	job.TaskGroups = []*nomadapi.TaskGroup{
+	// default tasks
+	task := &nomadapi.Task{
+		Name:   fmt.Sprintf("render-%s", req.GetName()),
+		Driver: "containerd-driver",
+		Config: runtimeConfig,
+		Env:    taskEnv,
+		Artifacts: []*nomadapi.TaskArtifact{
+			{
+				GetterSource: &jobArtifactSource,
+				RelativeDest: &jobArtifactDestination,
+				GetterMode:   &jobArtifactMode,
+				GetterOptions: map[string]string{
+					"aws_access_key_id":     s.config.S3AccessID,
+					"aws_access_key_secret": s.config.S3AccessKey,
+				},
+			},
+		},
+		RestartPolicy: &nomadapi.RestartPolicy{
+			Attempts: &s.config.JobMaxAttempts,
+			Interval: &jobInterval,
+			Delay:    &jobDelay,
+		},
+		Resources: &nomadapi.Resources{
+			CPU:      &jobCPU,
+			MemoryMB: &jobMemory,
+		},
+	}
+	taskGroups := []*nomadapi.TaskGroup{
 		{
 			Name:  &taskName,
 			Count: &jobCount,
@@ -175,46 +255,133 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 					AddressMode: "alloc",
 				},
 			},
-			Tasks: []*nomadapi.Task{
+			Tasks: []*nomadapi.Task{task},
+		},
+	}
+	// if render slices are used create tasks for each slice
+	if req.RenderSlices > 0 {
+		logrus.Debugf("calculating %d slices", int(req.RenderSlices))
+		slices, err := calculateRenderSlices(int(req.RenderSlices))
+		if err != nil {
+			return err
+		}
+		taskGroups = []*nomadapi.TaskGroup{}
+		for i := 0; i < len(slices); i++ {
+			slice := slices[i]
+			// copy and override env to set slice region
+			te, err := cs.Copy(taskEnv)
+			if err != nil {
+				return err
+			}
+			tEnv := te.(map[string]string)
+			tEnv["RENDER_SLICE_MIN_X"] = fmt.Sprintf("%1f", slice.MinX)
+			tEnv["RENDER_SLICE_MAX_X"] = fmt.Sprintf("%1f", slice.MaxX)
+			tEnv["RENDER_SLICE_MIN_Y"] = fmt.Sprintf("%1f", slice.MinY)
+			tEnv["RENDER_SLICE_MAX_Y"] = fmt.Sprintf("%1f", slice.MaxY)
+			tName := fmt.Sprintf("%s-slice-%d", taskName, i)
+			st, err := cs.Copy(task)
+			if err != nil {
+				return err
+			}
+			// copy and override task to configure slice region
+			sliceTask := st.(*nomadapi.Task)
+			// update env for slice env vars
+			sliceTask.Env = tEnv
+			taskGroups = append(taskGroups, []*nomadapi.TaskGroup{
 				{
-					Name:   fmt.Sprintf("render-%s", req.GetName()),
-					Driver: "containerd-driver",
-					Config: runtimeConfig,
-					Env: map[string]string{
-						"WORK_DIR":             "/local",
-						"PROJECT_NAME":         jobID,
-						"S3_ACCESS_KEY_ID":     s.config.S3AccessID,
-						"S3_ACCESS_KEY_SECRET": s.config.S3AccessKey,
-						"S3_ENDPOINT":          s.config.S3Endpoint,
-						"S3_BUCKET":            s.getJobOutputDir(),
-						"OPTIX_CACHE_PATH":     "/data/finca_optix_cache",
-						"RENDER_START_FRAME":   fmt.Sprintf("%d", req.GetRenderStartFrame()),
-						"RENDER_SAMPLES":       fmt.Sprintf("%d", req.GetRenderSamples()),
-					},
-					Artifacts: []*nomadapi.TaskArtifact{
-						{
-							GetterSource: &jobArtifactSource,
-							RelativeDest: &jobArtifactDestination,
-							GetterMode:   &jobArtifactMode,
-							GetterOptions: map[string]string{
-								"aws_access_key_id":     s.config.S3AccessID,
-								"aws_access_key_secret": s.config.S3AccessKey,
-							},
-						},
-					},
-					RestartPolicy: &nomadapi.RestartPolicy{
+					Name:  &tName,
+					Count: &jobCount,
+					ReschedulePolicy: &nomadapi.ReschedulePolicy{
 						Attempts: &s.config.JobMaxAttempts,
 						Interval: &jobInterval,
 						Delay:    &jobDelay,
 					},
-					Resources: &nomadapi.Resources{
-						CPU:      &s.config.JobCPU,
-						MemoryMB: &s.config.JobMemory,
+					EphemeralDisk: &nomadapi.EphemeralDisk{
+						Migrate: &jobMigrate,
+						Sticky:  &jobSticky,
+					},
+					Networks: []*nomadapi.NetworkResource{
+						{
+							Mode: "cni/default",
+						},
+					},
+					Services: []*nomadapi.Service{
+						{
+							Name:        "render",
+							AddressMode: "alloc",
+						},
+					},
+					Tasks: []*nomadapi.Task{sliceTask},
+				},
+			}...)
+		}
+		// composite task
+		compositeTaskName := fmt.Sprintf("%s-composite", req.GetName())
+		// copy and override task to configure compositing
+		ct, err := cs.Copy(task)
+		if err != nil {
+			return err
+		}
+		compositeTask := ct.(*nomadapi.Task)
+		ce, err := cs.Copy(taskEnv)
+		if err != nil {
+			return err
+		}
+		cEnv := ce.(map[string]string)
+		cEnv["NOMAD_ADDR"] = s.config.NomadAddress
+		cEnv["NOMAD_JOB_ID"] = jobID
+		cEnv["NOMAD_NAMESPACE"] = s.config.NomadNamespace
+		cEnv["RENDER_SLICES"] = fmt.Sprintf("%d", len(slices))
+		cEnv["S3_BUCKET"] = s.config.S3Bucket
+		cEnv["S3_RENDER_DIRECTORY"] = s3RenderDirectory
+		cEnv["DEBUG"] = "true"
+		compositeTask.Env = cEnv
+		// override command for compositing
+		compositeTask.Config["command"] = "/usr/local/bin/finca-compositor"
+		taskGroups = append(taskGroups, []*nomadapi.TaskGroup{
+			{
+				Name: &compositeTaskName,
+				ReschedulePolicy: &nomadapi.ReschedulePolicy{
+					Attempts: &s.config.JobMaxAttempts,
+					Interval: &jobInterval,
+					Delay:    &jobDelay,
+				},
+				EphemeralDisk: &nomadapi.EphemeralDisk{
+					Migrate: &jobMigrate,
+					Sticky:  &jobSticky,
+				},
+				Networks: []*nomadapi.NetworkResource{
+					{
+						Mode: "cni/default",
 					},
 				},
+				Services: []*nomadapi.Service{
+					{
+						Name:        "render",
+						AddressMode: "alloc",
+					},
+				},
+				Tasks: []*nomadapi.Task{compositeTask},
 			},
+		}...)
+	}
+
+	constraints := []*nomadapi.Constraint{
+		{
+			Operand: "distinct_hosts",
+			RTarget: "true",
 		},
 	}
+	affinities := []*nomadapi.Affinity{
+		{
+			LTarget: "${node.class}",
+			Operand: "set_contains_any",
+			RTarget: "gpu",
+		},
+	}
+	job.Affinities = affinities
+	job.Constraints = constraints
+	job.TaskGroups = taskGroups
 
 	// TODO register job
 	resp, _, err := s.computeClient.Jobs().Register(job, nil)
@@ -232,9 +399,43 @@ func (s *service) getJobID(req *api.JobRequest) string {
 }
 
 func (s *service) getJobOutputDir() string {
-	return path.Join(s.config.S3Bucket, "render")
+	return path.Join(s.config.S3Bucket, s3RenderDirectory)
 }
 
 func getStorageJobPath(req *api.JobRequest) string {
 	return path.Join(storageProjectBucketName, req.GetName()+".zip")
+}
+
+func calculateRenderSlices(workers int) ([]renderSlice, error) {
+	// starting origins
+	startMinX := 0.0
+	startMaxX := 0.0
+	startMinY := 0.0
+	startMaxY := 0.0
+	totalSlices := workers / 2
+	offset := float64(1.0) / float64(workers/2)
+	startMaxX += offset
+	startMaxY += offset
+	results := []renderSlice{}
+	for i := 0; i < totalSlices; i++ {
+		for x := 0; x < totalSlices; x++ {
+			results = append(results, renderSlice{
+				MinX: startMinX,
+				MaxX: startMaxX,
+				MinY: startMinY,
+				MaxY: startMaxY,
+			})
+			startMinX += offset
+			startMaxX += offset
+			startMinX = math.Round(startMinX*10) / 10
+			startMaxX = math.Round(startMaxX*10) / 10
+		}
+		startMinX = 0.0
+		startMaxX = offset
+		startMinY += offset
+		startMinY = math.Round(startMinY*10) / 10
+		startMaxY += offset
+		startMaxY = math.Round(startMaxY*10) / 10
+	}
+	return results, nil
 }

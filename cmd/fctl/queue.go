@@ -65,6 +65,24 @@ var queueJobCommand = &cli.Command{
 			Aliases: []string{"g"},
 			Usage:   "use gpu for rendering",
 		},
+		&cli.IntFlag{
+			Name:    "render-priority",
+			Aliases: []string{"p"},
+			Usage:   "set render priority (0-100)",
+			Value:   50,
+		},
+		&cli.IntFlag{
+			Name:  "cpu",
+			Usage: "specify cpu (in Mhz) for each task in the render job",
+		},
+		&cli.IntFlag{
+			Name:  "memory",
+			Usage: "specify memory (in MB) for each task in the render job",
+		},
+		&cli.IntFlag{
+			Name:  "render-slices",
+			Usage: "number of slices to subdivide a frame for rendering",
+		},
 	},
 	Action: queueAction,
 }
@@ -73,6 +91,11 @@ func queueAction(clix *cli.Context) error {
 	name := clix.String("name")
 	if name == "" {
 		return fmt.Errorf("job name must be specified")
+	}
+
+	priority := clix.Int("render-priority")
+	if priority < 0 || priority > 100 {
+		return fmt.Errorf("priority must be greater than 0 and less than 100")
 	}
 
 	jobFile := clix.String("project-file")
@@ -109,6 +132,10 @@ func queueAction(clix *cli.Context) error {
 				RenderEndFrame:   int64(clix.Int("render-end-frame")),
 				RenderSamples:    int64(clix.Int("render-samples")),
 				RenderUseGPU:     clix.Bool("render-use-gpu"),
+				RenderPriority:   int64(priority),
+				CPU:              int64(clix.Int("cpu")),
+				Memory:           int64(clix.Int("memory")),
+				RenderSlices:     int64(clix.Int("render-slices")),
 			},
 		},
 	}); err != nil {
