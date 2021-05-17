@@ -59,7 +59,8 @@ func runAction(clix *cli.Context) error {
 				continue
 			}
 			logrus.Debugf("allocation: %s (%s)", alloc.Name, alloc.ClientStatus)
-			if alloc.ClientStatus != nomadapi.AllocClientStatusComplete {
+			switch alloc.ClientStatus {
+			case nomadapi.AllocClientStatusRunning, nomadapi.AllocClientStatusPending:
 				complete = false
 				break
 			}

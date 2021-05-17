@@ -58,7 +58,7 @@ cyclo:
 check: vet lint
 
 test:
-	@go test -short -v -cover $(TEST_ARGS) ${PACKAGES}
+	@go test -mod=mod -short -v -cover $(TEST_ARGS) ${PACKAGES}
 
 clean:
 	@rm -rf bin/

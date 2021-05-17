@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path"
 	"time"
@@ -407,35 +406,35 @@ func getStorageJobPath(req *api.JobRequest) string {
 }
 
 func calculateRenderSlices(workers int) ([]renderSlice, error) {
-	// starting origins
-	startMinX := 0.0
-	startMaxX := 0.0
-	startMinY := 0.0
-	startMaxY := 0.0
-	totalSlices := workers / 2
-	offset := float64(1.0) / float64(workers/2)
-	startMaxX += offset
-	startMaxY += offset
-	results := []renderSlice{}
-	for i := 0; i < totalSlices; i++ {
-		for x := 0; x < totalSlices; x++ {
-			results = append(results, renderSlice{
-				MinX: startMinX,
-				MaxX: startMaxX,
-				MinY: startMinY,
-				MaxY: startMaxY,
-			})
-			startMinX += offset
-			startMaxX += offset
-			startMinX = math.Round(startMinX*10) / 10
-			startMaxX = math.Round(startMaxX*10) / 10
-		}
-		startMinX = 0.0
-		startMaxX = offset
-		startMinY += offset
-		startMinY = math.Round(startMinY*10) / 10
-		startMaxY += offset
-		startMaxY = math.Round(startMaxY*10) / 10
+	// ensure even slices
+	if (workers % 2) != 0 {
+		workers++
 	}
+	offset := float64(1.0) / float64(workers)
+	minX := 0.0
+	maxX := offset
+	minY := 0.0
+	maxY := 1.0
+	results := []renderSlice{
+		{
+			MinX: minX,
+			MaxX: maxX,
+			MinY: minY,
+			MaxY: maxY,
+		},
+	}
+	for i := 1; i < workers; i++ {
+		minX += offset
+		maxX += offset
+		results = append(results, renderSlice{
+			MinX: minX,
+			MaxX: maxX,
+			MinY: minY,
+			MaxY: maxY,
+		})
+	}
+
+	// adjust last tile
+	results[len(results)-1].MaxX = 1.0
 	return results, nil
 }
