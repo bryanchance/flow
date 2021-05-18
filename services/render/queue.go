@@ -146,7 +146,6 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 	job.ID = &jobID
 	job.Type = &jobType
 	job.Datacenters = s.config.NomadDatacenters
-	job.Constraints = []*nomadapi.Constraint{}
 
 	runtimeConfig := map[string]interface{}{
 		"image": s.config.JobImage,
@@ -167,10 +166,16 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 		"RENDER_DEVICE":        "CPU",
 	}
 
+	affinities := []*nomadapi.Affinity{}
+	// run jobs on unique hosts for best performance
+	constraints := []*nomadapi.Constraint{
+		{
+			Operand: "distinct_hosts",
+			RTarget: "true",
+		},
+	}
 	if req.GetRenderUseGPU() {
-		constraint := nomadapi.NewConstraint("${node.class}", "=", "gpu")
-		job.Constraints = append(job.Constraints, constraint)
-
+		constraints = append(constraints, nomadapi.NewConstraint("${node.class}", "=", "gpu"))
 		runtimeConfig["gpus"] = []int{0}
 		runtimeConfig["mounts"] = map[string]interface{}{
 			"type":    "bind",
@@ -339,7 +344,9 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 		compositeTask.Config["command"] = "/usr/local/bin/finca-compositor"
 		taskGroups = append(taskGroups, []*nomadapi.TaskGroup{
 			{
-				Name: &compositeTaskName,
+				Name:        &compositeTaskName,
+				Constraints: []*nomadapi.Constraint{},
+				Affinities:  []*nomadapi.Affinity{},
 				ReschedulePolicy: &nomadapi.ReschedulePolicy{
 					Attempts: &s.config.JobMaxAttempts,
 					Interval: &jobInterval,
@@ -365,19 +372,6 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 		}...)
 	}
 
-	constraints := []*nomadapi.Constraint{
-		{
-			Operand: "distinct_hosts",
-			RTarget: "true",
-		},
-	}
-	affinities := []*nomadapi.Affinity{
-		{
-			LTarget: "${node.class}",
-			Operand: "set_contains_any",
-			RTarget: "gpu",
-		},
-	}
 	job.Affinities = affinities
 	job.Constraints = constraints
 	job.TaskGroups = taskGroups

@@ -49,7 +49,7 @@ func runAction(clix *cli.Context) error {
 			return err
 		}
 
-		if len(allocations) < renderSlices {
+		if len(allocations) <= renderSlices {
 			logrus.Debugf("not all render tasks have been queueud; waiting")
 			continue
 		}
@@ -82,7 +82,7 @@ func runAction(clix *cli.Context) error {
 	s3RenderDirectory := clix.String("s3-render-directory")
 	logrus.Infof("syncing render slices from %s/%s", s3Endpoint, s3Bucket)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3600*time.Second)
 	defer cancel()
 
 	// get objects
@@ -113,7 +113,6 @@ func runAction(clix *cli.Context) error {
 	}
 
 	// process images
-	slices := []image.Image{}
 	renderStartFrame := clix.Int("render-start-frame")
 	renderEndFrame := clix.Int("render-end-frame")
 	if renderEndFrame == 0 {
@@ -121,8 +120,9 @@ func runAction(clix *cli.Context) error {
 	}
 	logrus.Debugf("processing %d -> %d frames", renderStartFrame, renderEndFrame)
 	for i := renderStartFrame; i <= renderEndFrame; i++ {
+		slices := []image.Image{}
 		logrus.Debugf("processing frame %d", i)
-		files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("%s_%d*", projectName, i)))
+		files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("render_%d_*", i)))
 		if err != nil {
 			return err
 		}

@@ -88,7 +88,7 @@ for scene in bpy.data.scenes:
     scene.render.resolution_percentage = ${RESOLUTION_SCALE}
     scene.render.tile_x = ${RENDER_TILE_X}
     scene.render.tile_y = ${RENDER_TILE_Y}
-    scene.render.filepath = os.path.join("${OUTPUT_DIR}", filename + "_" + "${OUTPUT_FILENAME_SUFFIX}")
+    scene.render.filepath = os.path.join("${OUTPUT_DIR}", "render" + "_" + "${OUTPUT_FILENAME_SUFFIX}")
     ${SCENE_EXTRA}
 EOF
 
