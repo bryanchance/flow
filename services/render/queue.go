@@ -7,13 +7,13 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	nomadapi "github.com/hashicorp/nomad/api"
 	minio "github.com/minio/minio-go/v7"
 	cs "github.com/mitchellh/copystructure"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -90,16 +90,15 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 
 	defer os.Remove(tmpJobFile.Name())
 
-	// generate id
-	id := uuid.NewV4()
-
-	// TODO: save to minio
-	jobFileName := getStorageJobPath(jobReq)
-	jobContentType := "application/zip"
+	// save to minio
+	jobFileName, err := getStorageJobPath(jobReq)
+	if err != nil {
+		return err
+	}
 
 	logrus.Debugf("saving %s to storage", jobFileName)
 	ctx := context.Background()
-	jobStorageInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, jobFileName, tmpJobFile.Name(), minio.PutObjectOptions{ContentType: jobContentType})
+	jobStorageInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, jobFileName, tmpJobFile.Name(), minio.PutObjectOptions{ContentType: jobReq.ContentType})
 	if err != nil {
 		return status.Errorf(codes.Internal, "error saving job to storage: %s", err)
 	}
@@ -110,7 +109,7 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 
 	logrus.Debug("closing stream")
 	if err := stream.SendAndClose(&api.QueueJobResponse{
-		UUID: id.String(),
+		UUID: jobReq.UUID,
 	}); err != nil {
 		return status.Errorf(codes.Unknown, "error sending response to client: %s", err)
 	}
@@ -119,7 +118,7 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	if err := s.queueNomadJob(jobReq); err != nil {
 		return status.Errorf(codes.Internal, "error queueing compute job: %s", err)
 	}
-	logrus.Infof("queued job %s (%s)", jobName, id)
+	logrus.Infof("queued job %s (%s)", jobName, jobReq.UUID)
 	return nil
 }
 
@@ -196,7 +195,11 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 	if s.config.S3UseSSL {
 		jobArtifactScheme = "https"
 	}
-	jobArtifactSource := fmt.Sprintf("s3::%s://%s/%s", jobArtifactScheme, s.config.S3Endpoint, path.Join(s.config.S3Bucket, getStorageJobPath(req)))
+	jobFileName, err := getStorageJobPath(req)
+	if err != nil {
+		return err
+	}
+	jobArtifactSource := fmt.Sprintf("s3::%s://%s/%s", jobArtifactScheme, s.config.S3Endpoint, path.Join(s.config.S3Bucket, jobFileName))
 	jobArtifactDestination := "local/project"
 	jobArtifactMode := "any"
 	jobCPU := int(req.CPU)
@@ -340,6 +343,10 @@ func (s *service) queueNomadJob(req *api.JobRequest) error {
 		cEnv["S3_RENDER_DIRECTORY"] = s3RenderDirectory
 		cEnv["DEBUG"] = "true"
 		compositeTask.Env = cEnv
+		compositeTask.Lifecycle = &nomadapi.TaskLifecycle{
+			Hook:    "poststop",
+			Sidecar: false,
+		}
 		// override command for compositing
 		compositeTask.Config["command"] = "/usr/local/bin/finca-compositor"
 		taskGroups = append(taskGroups, []*nomadapi.TaskGroup{
@@ -395,8 +402,19 @@ func (s *service) getJobOutputDir() string {
 	return path.Join(s.config.S3Bucket, s3RenderDirectory)
 }
 
-func getStorageJobPath(req *api.JobRequest) string {
-	return path.Join(storageProjectBucketName, req.GetName()+".zip")
+func getStorageJobPath(req *api.JobRequest) (string, error) {
+	ext := ""
+	switch strings.ToLower(req.ContentType) {
+	case "application/zip":
+		ext = "zip"
+	case "application/octet-stream":
+		// assume binary is blend; worker will fail if not
+		ext = "blend"
+	default:
+		return "", fmt.Errorf("unknown content type: %s", req.ContentType)
+	}
+	objName := fmt.Sprintf("%s-%s.%s", req.UUID, req.GetName(), ext)
+	return path.Join(storageProjectBucketName, objName), nil
 }
 
 func calculateRenderSlices(workers int) ([]renderSlice, error) {

@@ -33,6 +33,7 @@ message JobRequest {
         int64 cpu = 11 [(gogoproto.customname) = "CPU"];
         int64 memory = 12;
         int64 render_slices = 13;
+        string content_type = 14;
 }
 
 message QueueJobResponse {

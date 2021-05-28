@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
-	"time"
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
@@ -99,17 +100,25 @@ func queueAction(clix *cli.Context) error {
 	}
 
 	jobFile := clix.String("project-file")
+	logrus.Debugf("using project %s", jobFile)
+
 	f, err := os.Open(jobFile)
 	if err != nil {
 		return errors.Wrapf(err, "error opening project file %s", jobFile)
 	}
 	defer f.Close()
 
-	logrus.Debugf("using project %s", jobFile)
+	cBuf := make([]byte, 512)
+	if _, err := f.Read(cBuf); err != nil {
+		return err
+	}
+	contentType := http.DetectContentType(cBuf)
+	if _, err := f.Seek(0, 0); err != nil {
+		return err
+	}
+	logrus.Debugf("detected content type: %s", contentType)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	ctx := context.Background()
 	client, err := getClient(clix)
 	if err != nil {
 		return err
@@ -120,10 +129,11 @@ func queueAction(clix *cli.Context) error {
 		return err
 	}
 
-	logrus.Debug("sending job request")
+	id := uuid.NewV4()
 	if err := stream.Send(&api.QueueJobRequest{
 		Data: &api.QueueJobRequest_Request{
 			Request: &api.JobRequest{
+				UUID:             id.String(),
 				Name:             name,
 				ResolutionX:      int64(clix.Int("resolution-x")),
 				ResolutionY:      int64(clix.Int("resolution-y")),
@@ -136,11 +146,13 @@ func queueAction(clix *cli.Context) error {
 				CPU:              int64(clix.Int("cpu")),
 				Memory:           int64(clix.Int("memory")),
 				RenderSlices:     int64(clix.Int("render-slices")),
+				ContentType:      contentType,
 			},
 		},
 	}); err != nil {
 		return err
 	}
+	logrus.Debugf("sending job request for %s", id.String())
 
 	rdr := bufio.NewReader(f)
 	buf := make([]byte, 4096)

@@ -17,6 +17,10 @@ VAB_ARGS?=
 CWD=$(PWD)
 WORKER_IMAGE?=r.underland.io/apps/finca:latest
 
+ifeq ($(GOOS), windows)
+	EXT=.exe
+endif
+
 all: binaries
 
 protos:
@@ -30,15 +34,15 @@ bindir:
 
 $(CLI): bindir
 	@>&2 echo " -> building $(CLI) ${COMMIT}${BUILD}"
-	@cd cmd/$(CLI) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(CLI) .
+	@cd cmd/$(CLI) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(CLI)$(EXT) .
 
 $(DAEMON): bindir
 	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD}"
-	@cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON) .
+	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Finca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
 
 $(COMPOSITOR): bindir
 	@>&2 echo " -> building $(COMPOSITOR) ${COMMIT}${BUILD}"
-	@cd cmd/$(COMPOSITOR) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(COMPOSITOR) .
+	@cd cmd/$(COMPOSITOR) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(COMPOSITOR)$(EXT) .
 
 vet:
 	@echo " -> $@"
