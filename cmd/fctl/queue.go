@@ -10,7 +10,6 @@ import (
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
@@ -129,11 +128,9 @@ func queueAction(clix *cli.Context) error {
 		return err
 	}
 
-	id := uuid.NewV4()
 	if err := stream.Send(&api.QueueJobRequest{
 		Data: &api.QueueJobRequest_Request{
 			Request: &api.JobRequest{
-				UUID:             id.String(),
 				Name:             name,
 				ResolutionX:      int64(clix.Int("resolution-x")),
 				ResolutionY:      int64(clix.Int("resolution-y")),
@@ -152,7 +149,7 @@ func queueAction(clix *cli.Context) error {
 	}); err != nil {
 		return err
 	}
-	logrus.Debugf("sending job request for %s", id.String())
+	logrus.Debugf("sending job request for %s", name)
 
 	rdr := bufio.NewReader(f)
 	buf := make([]byte, 4096)

@@ -5,9 +5,9 @@ import (
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"git.underland.io/ehazlett/finca/services"
 	ptypes "github.com/gogo/protobuf/types"
-	nomadapi "github.com/hashicorp/nomad/api"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
+	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -19,7 +19,7 @@ var (
 
 type service struct {
 	config        *finca.Config
-	computeClient *nomadapi.Client
+	natsClient    *nats.Conn
 	storageClient *minio.Client
 }
 
@@ -30,27 +30,30 @@ func New(cfg *finca.Config) (services.Service, error) {
 		Secure: cfg.S3UseSSL,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error setting up storage service")
 	}
 
-	nomadCfg := nomadapi.DefaultConfig()
-	nomadCfg.Address = cfg.NomadAddress
-	if v := cfg.NomadRegion; v != "" {
-		logrus.Debugf("using nomad region %s", v)
-		nomadCfg.Region = v
-	}
-	if v := cfg.NomadNamespace; v != "" {
-		logrus.Debugf("using nomad ns %s", v)
-		nomadCfg.Namespace = v
-	}
-	nc, err := nomadapi.NewClient(nomadCfg)
+	// nats
+	nc, err := nats.Connect(cfg.NATSURL)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error connecting to nats")
 	}
+
+	js, err := nc.JetStream()
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting nats jetstream context")
+	}
+
+	js.AddStream(&nats.StreamConfig{
+		Name:     cfg.NATSSubject,
+		Subjects: []string{cfg.NATSSubject + ".*"},
+	})
+
+	logrus.Debugf("job timeout: %s", cfg.JobTimeout)
 
 	return &service{
 		config:        cfg,
-		computeClient: nc,
+		natsClient:    nc,
 		storageClient: mc,
 	}, nil
 }
@@ -69,13 +72,6 @@ func (s *service) Requires() []services.Type {
 }
 
 func (s *service) Start() error {
-	status := s.computeClient.Status()
-	leader, err := status.Leader()
-	if err != nil {
-		return errors.Wrap(err, "error connecting to nomad")
-	}
-	logrus.Debugf("connected to nomad: leader=%s", leader)
-
 	return nil
 }
 

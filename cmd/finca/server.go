@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,7 +9,6 @@ import (
 	"git.underland.io/ehazlett/finca/server"
 	"git.underland.io/ehazlett/finca/services"
 	renderservice "git.underland.io/ehazlett/finca/services/render"
-	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
@@ -30,11 +28,8 @@ var serverCommand = &cli.Command{
 }
 
 func serverAction(clix *cli.Context) error {
-	var cfg *finca.Config
-	if _, err := toml.DecodeFile(clix.String("config"), &cfg); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("A config file must be specified.  Generate a new one with the \"config\" command.")
-		}
+	cfg, err := finca.LoadConfig(clix.String("config"))
+	if err != nil {
 		return err
 	}
 

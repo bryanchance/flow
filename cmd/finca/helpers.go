@@ -60,14 +60,7 @@ func getInterfaceIP(iface net.Interface) string {
 
 func defaultConfig(clix *cli.Context) (*finca.Config, error) {
 	ip := getIP(clix)
-	return &finca.Config{
-		GRPCAddress:      fmt.Sprintf("%s:%d", ip, 8080),
-		NomadAddress:     "127.0.0.1:4646",
-		NomadDatacenters: []string{"dc1"},
-		JobImage:         "r.underland.io/apps/finca:latest",
-		JobPriority:      50,
-		JobMaxAttempts:   2,
-		JobCPU:           1000,
-		JobMemory:        1024,
-	}, nil
+	defaultConfig := finca.DefaultConfig()
+	defaultConfig.GRPCAddress = fmt.Sprintf("%s:%d", ip, 8080)
+	return defaultConfig, nil
 }

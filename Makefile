@@ -5,6 +5,7 @@ APP=finca
 DAEMON=finca
 CLI=fctl
 COMPOSITOR=finca-compositor
+WORKER=finca-worker
 REPO?=git.underland.io/ehazlett/$(APP)
 TAG?=dev
 BUILD?=-d
@@ -27,7 +28,7 @@ protos:
 	@>&2 echo " -> building protobufs for grpc"
 	@echo ${PACKAGES} | xargs protobuild -quiet
 
-binaries: $(DAEMON) $(CLI) $(COMPOSITOR)
+binaries: $(DAEMON) $(CLI) $(WORKER) $(COMPOSITOR)
 
 bindir:
 	@mkdir -p bin
@@ -44,12 +45,13 @@ $(COMPOSITOR): bindir
 	@>&2 echo " -> building $(COMPOSITOR) ${COMMIT}${BUILD}"
 	@cd cmd/$(COMPOSITOR) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(COMPOSITOR)$(EXT) .
 
+$(WORKER): bindir
+	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD}"
+	@cd cmd/$(WORKER) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(WORKER)$(EXT) .
+
 vet:
 	@echo " -> $@"
 	@test -z "$$(go vet ${PACKAGES} 2>&1 | tee /dev/stderr)"
-
-worker:
-	@cd worker; vab build -r ${WORKER_IMAGE} -p -c ../ .
 
 lint:
 	@echo " -> $@"
@@ -67,4 +69,4 @@ test:
 clean:
 	@rm -rf bin/
 
-.PHONY: protos clean docs check test install $(DAEMON) $(CLI) binaries worker
+.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(COMPOSITOR) $(WORKER) binaries

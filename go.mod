@@ -9,9 +9,12 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20210430195122-5157aa65e8d4
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/copystructure v1.2.0
+	github.com/nats-io/nats.go v1.13.0
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
 	google.golang.org/grpc v1.37.0
+	k8s.io/apimachinery v0.23.1 // indirect
+	k8s.io/client-go v0.23.1 // indirect
 )

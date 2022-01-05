@@ -1,5 +1,35 @@
 package finca
 
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/nats-io/nats.go"
+)
+
+const (
+	// DefaultQueueSubject is the subject for queued messages
+	DefaultQueueSubject = "JOBS"
+)
+
+type duration struct {
+	time.Duration
+}
+
+func (d duration) MarshalText() (text []byte, err error) {
+	ds := fmt.Sprintf("%v", d.Duration)
+	text = []byte(ds)
+	return
+}
+
+func (d *duration) UnmarshalText(text []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(text))
+	return err
+}
+
 // Config is the configuration used for the server
 type Config struct {
 	// GRPCAddress is the address for the grpc server
@@ -24,14 +54,15 @@ type Config struct {
 	S3Bucket string
 	// S3UseSSL enables SSL for the S3 service
 	S3UseSSL bool
-	// NomadAddress is the endpoint for the Nomad cluster
-	NomadAddress string
-	// NomadRegion is the Nomad cluster region
-	NomadRegion string
-	// NomadNamespace is the Nomad cluster namespace
-	NomadNamespace string
-	// NomadDatacenters are the datacenters to use in jobs
-	NomadDatacenters []string
+	// NATSUrl is the URL for the NATS server
+	NATSURL string
+	// NATSSubject is the default job subject
+	NATSSubject string
+	// JobTimeout is the maximum amount of time a job can take
+	JobTimeout duration
+	// JobOutputDir is used by the worker for render results
+	JobOutputDir string
+
 	// JobPrefix is the prefix for all queued jobs
 	JobPrefix string
 	// JobPriority is the priority for queued jobs
@@ -44,4 +75,36 @@ type Config struct {
 	JobCPU int
 	// JobMemory is the amount of memory (in MB) that will be configured for each job
 	JobMemory int
+}
+
+func (c *Config) GetJobTimeout() time.Duration {
+	return c.JobTimeout.Duration
+}
+
+func DefaultConfig() *Config {
+	return &Config{
+		GRPCAddress:    "127.0.0.1:8080",
+		NATSURL:        nats.DefaultURL,
+		NATSSubject:    DefaultQueueSubject,
+		JobTimeout:     duration{time.Second * 28800},
+		JobOutputDir:   "/tmp/finca-render",
+		JobImage:       "r.underland.io/apps/finca:latest",
+		JobPriority:    50,
+		JobMaxAttempts: 2,
+		JobCPU:         1000,
+		JobMemory:      1024,
+	}
+}
+
+// LoadConfig returns a Finca config from the specified file path
+func LoadConfig(configPath string) (*Config, error) {
+	var cfg *Config
+	if _, err := toml.DecodeFile(configPath, &cfg); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("A config file must be specified.  Generate a new one with the \"finca config\" command.")
+		}
+		return nil, err
+	}
+
+	return cfg, nil
 }
