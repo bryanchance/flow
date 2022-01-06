@@ -12,6 +12,12 @@ import (
 const (
 	// DefaultQueueSubject is the subject for queued messages
 	DefaultQueueSubject = "JOBS"
+	// WorkerQueueGroupName is the name for the worker queue group
+	WorkerQueueGroupName = "finca-workers"
+	// S3ProjectBucket is the project for project files
+	S3ProjectPath = "projects"
+	// S3RenderBucket is the s3 bucket for final renders
+	S3RenderPath = "render"
 )
 
 type duration struct {

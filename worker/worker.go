@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"git.underland.io/ehazlett/finca"
@@ -43,7 +44,9 @@ func (w *Worker) Run() error {
 
 	// connect to nats stream and listen for messages
 	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSSubject)
-	sub, err := js.ChanSubscribe(w.config.NATSSubject+".*", msgCh, nats.Durable(w.id))
+	sub, err := js.PullSubscribe(w.config.NATSSubject+".*", finca.WorkerQueueGroupName,
+		nats.MaxDeliver(3),
+	)
 	if err != nil {
 		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSSubject)
 	}
@@ -66,18 +69,60 @@ func (w *Worker) Run() error {
 					logrus.WithError(err).Error("error unmarshaling api.Job from message")
 					continue
 				}
-				m.Ack()
+
+				//m.Ack()
+				m.InProgress(nats.AckWait(w.config.GetJobTimeout()))
+
 				logrus.Debugf("processing job with timeout %s", w.config.GetJobTimeout())
 				start := time.Now()
-				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
+				ctx, _ := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
 				if err := w.processJob(ctx, job); err != nil {
 					logrus.WithError(err).Errorf("error processing job %s", job.ID)
-					cancel()
+					if cErr := ctx.Err(); cErr != nil {
+						logrus.Warnf("job timeout occurred during processing for %s", job.ID)
+					} else {
+						// no timeout; requeue job
+						logrus.Warnf("requeueing job %s", job.ID)
+						m.Nak()
+					}
 					continue
 				}
-				logrus.Infof("processed job %s in %s", job.ID, time.Now().Sub(start))
-				cancel()
+				jobID := fmt.Sprintf("%s (frame: %04d)", job.ID, job.RenderFrame)
+				if job.Request.RenderSlices > 0 {
+					jobID = fmt.Sprintf("%s (frame: %04d slice: %0.2f %0.2f %0.2f %0.2f)",
+						job.ID,
+						job.RenderFrame,
+						job.RenderSliceMinX,
+						job.RenderSliceMaxX,
+						job.RenderSliceMinY,
+						job.RenderSliceMaxY,
+					)
+				}
+				logrus.Infof("completed job %s in %s", jobID, time.Now().Sub(start))
+
+				m.Ack()
 			}
+		}
+	}()
+
+	go func() {
+		for {
+			msgs, err := sub.Fetch(1)
+			if err != nil {
+				// if stop has been called the subscription will be drained and closed
+				// ignore the subscription error and exit
+				if !sub.IsValid() {
+					return
+				}
+				if err == nats.ErrTimeout {
+					// ignore NextMsg timeouts
+					continue
+				}
+				logrus.Warn(err)
+				return
+			}
+
+			msgCh <- msgs[0]
 		}
 	}()
 

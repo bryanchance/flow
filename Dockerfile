@@ -6,4 +6,5 @@ RUN make
 
 FROM r.underland.io/alpine:3.13
 COPY --from=build /src/bin/finca /usr/bin/finca
-CMD ["/usr/bin/finca"]
+ENTRYPOINT ["/usr/bin/finca"]
+CMD ["-h"]

@@ -58,10 +58,10 @@ func TestRenderJobTemplateRenderSlices(t *testing.T) {
 			RenderSlices:     int64(10),
 			RenderUseGPU:     false,
 		},
-		RenderSliceMinX: int64(1),
-		RenderSliceMaxX: int64(2),
-		RenderSliceMinY: int64(1),
-		RenderSliceMaxY: int64(2),
+		RenderSliceMinX: float32(1),
+		RenderSliceMaxX: float32(2),
+		RenderSliceMinY: float32(1),
+		RenderSliceMaxY: float32(2),
 		OutputDir:       "/tmp/render/test-render-job-slices",
 	}
 

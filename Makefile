@@ -4,7 +4,6 @@ COMMIT?=`git rev-parse --short HEAD`
 APP=finca
 DAEMON=finca
 CLI=fctl
-COMPOSITOR=finca-compositor
 WORKER=finca-worker
 REPO?=git.underland.io/ehazlett/$(APP)
 TAG?=dev
@@ -28,7 +27,7 @@ protos:
 	@>&2 echo " -> building protobufs for grpc"
 	@echo ${PACKAGES} | xargs protobuild -quiet
 
-binaries: $(DAEMON) $(CLI) $(WORKER) $(COMPOSITOR)
+binaries: $(DAEMON) $(CLI) $(WORKER)
 
 bindir:
 	@mkdir -p bin
@@ -40,10 +39,6 @@ $(CLI): bindir
 $(DAEMON): bindir
 	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD}"
 	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Finca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
-
-$(COMPOSITOR): bindir
-	@>&2 echo " -> building $(COMPOSITOR) ${COMMIT}${BUILD}"
-	@cd cmd/$(COMPOSITOR) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(COMPOSITOR)$(EXT) .
 
 $(WORKER): bindir
 	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD}"
@@ -69,4 +64,4 @@ test:
 clean:
 	@rm -rf bin/
 
-.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(COMPOSITOR) $(WORKER) binaries
+.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKER) binaries
