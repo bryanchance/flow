@@ -10,6 +10,7 @@ S3AccessKey = "c7752eff114aabc2562e3378a2f3a6eb"
 S3Bucket = "finca"
 S3UseSSL = true
 NATSURL = "nats://127.0.0.1:4222"
+#NATSURL = "nats://nats.int:4222"
 NATSSubject = "JOBS"
 JobTimeout = "8h"
 JobOutputDir = "/tmp/finca-render"

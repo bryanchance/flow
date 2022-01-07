@@ -37,6 +37,16 @@ filename = os.path.splitext(filename)[0]
 if filename:
     current_dir = os.getcwd()
 
+# Enable all CPU and GPU devices
+for device in prop.devices:
+    device.use = True
+for compute_device_type in ('OPTIX', 'CUDA', 'OPENCL', 'NONE'):
+    try:
+        prop.compute_device_type = compute_device_type
+        break
+    except TypeError:
+        pass
+
 {{ if .Request.RenderUseGPU }}
 prop.compute_device_type = 'OPTIX'
 # configure gpu
@@ -51,7 +61,7 @@ for scene in bpy.data.scenes:
     scene.render.resolution_x = {{ .Request.ResolutionX }}
     scene.render.resolution_y = {{ .Request.ResolutionY }}
     scene.render.resolution_percentage = {{ .Request.ResolutionScale }}
-    scene.render.filepath = os.path.join("{{ .OutputDir }}/{{ .Request.Name }}_{{ if gt .Request.RenderSlices 0 }}{{ .RenderSliceMinX }}_{{ .RenderSliceMaxX }}_{{ .RenderSliceMinY }}_{{ .RenderSliceMaxY }}_{{ end }}")
+    scene.render.filepath = '{{ .OutputDir }}_'
     {{ if gt .Request.RenderSlices 0 }}
     scene.render.border_min_x = {{ .RenderSliceMinX }}
     scene.render.border_max_x = {{ .RenderSliceMaxX }}
@@ -62,79 +72,112 @@ for scene in bpy.data.scenes:
 `
 )
 
-func (w *Worker) processJob(ctx context.Context, job *api.Job) error {
+func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, error) {
 	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
 
 	// render with blender
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.ID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
 
 	logrus.Debugf("temp work dir: %s", tmpDir)
 
 	// setup render dir
-	outputDir := filepath.Join(w.config.JobOutputDir, job.ID)
+	outputDir := filepath.Join(tmpDir, "render")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return err
+		return nil, err
 	}
-	job.OutputDir = outputDir
+	outputPrefix := fmt.Sprintf("%s", job.Request.Name)
+	if job.Request.RenderSlices > 0 {
+		outputPrefix += fmt.Sprintf("_%0.2f_%0.2f_%0.2f_%0.2f",
+			job.RenderSliceMinX,
+			job.RenderSliceMaxX,
+			job.RenderSliceMinY,
+			job.RenderSliceMaxY,
+		)
+	}
+	job.OutputDir = getPythonOutputDir(filepath.Join(outputDir, outputPrefix))
 
 	// fetch project source file
 	mc, err := w.getMinioClient()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	object, err := mc.GetObject(ctx, w.config.S3Bucket, job.JobSource, minio.GetObjectOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filepath.Join(tmpDir, job.JobSource)), 0755); err != nil {
-		return err
+		return nil, err
 	}
 
 	projectFile, err := os.Create(filepath.Join(tmpDir, job.JobSource))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := io.Copy(projectFile, object); err != nil {
-		return err
+		return nil, err
 	}
 
 	projectFilePath := projectFile.Name()
 
 	blenderCfg, err := generateBlenderRenderConfig(job)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	blenderConfigPath := filepath.Join(tmpDir, "render.py")
 
 	if err := ioutil.WriteFile(blenderConfigPath, []byte(blenderCfg), 0644); err != nil {
-		return err
+		return nil, err
 	}
 
-	blenderBinaryPath, err := exec.LookPath("blender")
-	if err != nil {
-		return err
+	// lookup binary path
+	// check config first and if not there attempt to resolve from PATH
+	blenderBinaryPath := ""
+	for _, engine := range w.config.RenderEngines {
+		logrus.Debugf("checking render engine config: %s", engine)
+		if strings.ToLower(engine.Name) == "blender" {
+			logrus.Infof("using blender render path: %s", engine.Path)
+			blenderBinaryPath = engine.Path
+			break
+		}
 	}
+	if blenderBinaryPath == "" {
+		bp, err := exec.LookPath(blenderExecutableName)
+		if err != nil {
+			return nil, err
+		}
+		blenderBinaryPath = bp
+	}
+
+	jobStatus := &api.JobStatus{
+		ID:   job.ID,
+		Name: job.Request.Name,
+	}
+
 	args := []string{
 		"-b",
+		"--factory-startup",
 		projectFilePath,
 		"-P",
 		blenderConfigPath,
 		"-f",
 		fmt.Sprintf("%d", job.RenderFrame),
 	}
+	args = append(args, blenderCommandPlatformArgs...)
+
 	logrus.Debugf("blender args: %v", args)
 	c := exec.CommandContext(ctx, blenderBinaryPath, args...)
+
 	out, err := c.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, string(out))
+		return nil, errors.Wrap(err, string(out))
 	}
 
 	logrus.Debug(string(out))
@@ -142,42 +185,66 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) error {
 	// upload results to minio
 	files, err := filepath.Glob(path.Join(outputDir, "*"))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	logrus.Debug(files)
 	for _, f := range files {
-		logrus.Debugf(f)
+		logrus.Debugf("uploading output file %s", f)
 		rf, err := os.Open(f)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer rf.Close()
 
 		fs, err := rf.Stat()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if fs.IsDir() {
 			continue
 		}
 
 		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.ID, filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
-			return err
+			return nil, err
 		}
+	}
+
+	// upload blender log for render
+	logFilename := fmt.Sprintf("%s_%04d.log", outputPrefix, job.RenderFrame)
+	logFile, err := os.Create(filepath.Join(tmpDir, logFilename))
+	if err != nil {
+		return nil, err
+	}
+	defer logFile.Close()
+
+	if _, err := logFile.Write(out); err != nil {
+		return nil, err
+	}
+
+	if _, err := logFile.Seek(0, 0); err != nil {
+		return nil, err
+	}
+
+	fi, err := logFile.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.ID, logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
+		return nil, err
 	}
 
 	// check for render slice job; if so, check s3 for number of renders. if matches render slices
 	// assume project is complete and composite images into single result
 	if job.Request.RenderSlices > 0 {
-		if err := w.compositeRender(ctx, job); err != nil {
-			return err
+		if err := w.compositeRender(ctx, job, outputDir); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return jobStatus, nil
 }
 
-func (w *Worker) compositeRender(ctx context.Context, job *api.Job) error {
+func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir string) error {
 	mc, err := w.getMinioClient()
 	if err != nil {
 		return err
@@ -235,7 +302,7 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job) error {
 	for i := renderStartFrame; i <= renderEndFrame; i++ {
 		slices := []image.Image{}
 		logrus.Debugf("processing frame %d", i)
-		files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("*_%04d.*", i)))
+		files, err := filepath.Glob(filepath.Join(outputDir, fmt.Sprintf("*_%04d.*", i)))
 		if err != nil {
 			return err
 		}

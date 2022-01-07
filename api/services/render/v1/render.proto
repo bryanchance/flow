@@ -3,6 +3,7 @@ syntax = "proto3";
 package finca.services.render.v1;
 
 import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
 //import weak "google/protobuf/empty.proto";
 
 option go_package = "git.underland.io/ehazlett/finca/api/services/render/v1;render";
@@ -37,6 +38,13 @@ message JobRequest {
 
 message QueueJobResponse {
         string uuid = 1 [(gogoproto.customname) = "UUID"];
+}
+
+message JobStatus {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string name = 2;
+        bool succeeded = 3;
+        google.protobuf.Duration duration = 4;
 }
 
 message Job {

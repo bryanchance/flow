@@ -45,11 +45,13 @@ func New(cfg *finca.Config) (services.Service, error) {
 	}
 
 	js.AddStream(&nats.StreamConfig{
-		Name:     cfg.NATSSubject,
-		Subjects: []string{cfg.NATSSubject + ".*"},
+		Name:      cfg.NATSSubject,
+		Retention: nats.WorkQueuePolicy,
 	})
 
 	logrus.Debugf("job timeout: %s", cfg.JobTimeout)
+
+	// TODO: start background listener for job updates from workers
 
 	return &service{
 		config:        cfg,

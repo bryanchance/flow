@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"github.com/jaypipes/ghw"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
@@ -16,21 +18,31 @@ import (
 )
 
 type Worker struct {
-	id     string
-	config *finca.Config
-	stopCh chan bool
+	id         string
+	config     *finca.Config
+	stopCh     chan bool
+	gpuEnabled bool
 }
 
 func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
+	if err := showHardwareInfo(); err != nil {
+		return nil, err
+	}
+	gpuEnabled, err := gpuEnabled()
+	if err != nil {
+		return nil, err
+	}
 	return &Worker{
-		id:     id,
-		config: cfg,
-		stopCh: make(chan bool, 1),
+		id:         id,
+		config:     cfg,
+		stopCh:     make(chan bool, 1),
+		gpuEnabled: gpuEnabled,
 	}, nil
 }
 
 func (w *Worker) Run() error {
 	logrus.Debugf("connecting to nats: %s", w.config.NATSURL)
+	logrus.Infof("GPU enabled: %v", w.gpuEnabled)
 	nc, err := nats.Connect(w.config.NATSURL)
 	if err != nil {
 		return errors.Wrap(err, "error connecting to nats")
@@ -44,9 +56,7 @@ func (w *Worker) Run() error {
 
 	// connect to nats stream and listen for messages
 	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSSubject)
-	sub, err := js.PullSubscribe(w.config.NATSSubject+".*", finca.WorkerQueueGroupName,
-		nats.MaxDeliver(3),
-	)
+	sub, err := js.PullSubscribe(finca.QueueJobsSubject, finca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
 	if err != nil {
 		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSSubject)
 	}
@@ -70,13 +80,21 @@ func (w *Worker) Run() error {
 					continue
 				}
 
-				//m.Ack()
+				// check for gpu
+				if job.Request.RenderUseGPU && !w.gpuEnabled {
+					logrus.Debug("skipping GPU job as worker does not have GPU")
+					m.Nak()
+					continue
+				}
+
+				// report message is in progress
 				m.InProgress(nats.AckWait(w.config.GetJobTimeout()))
 
 				logrus.Debugf("processing job with timeout %s", w.config.GetJobTimeout())
 				start := time.Now()
 				ctx, _ := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
-				if err := w.processJob(ctx, job); err != nil {
+				jobStatus, err := w.processJob(ctx, job)
+				if err != nil {
 					logrus.WithError(err).Errorf("error processing job %s", job.ID)
 					if cErr := ctx.Err(); cErr != nil {
 						logrus.Warnf("job timeout occurred during processing for %s", job.ID)
@@ -98,8 +116,12 @@ func (w *Worker) Run() error {
 						job.RenderSliceMaxY,
 					)
 				}
+				logrus.Debugf("%+v", jobStatus)
 				logrus.Infof("completed job %s in %s", jobID, time.Now().Sub(start))
 
+				// TODO: publish status event for server
+
+				// ack message for completion
 				m.Ack()
 			}
 		}
@@ -139,4 +161,46 @@ func (w *Worker) getMinioClient() (*minio.Client, error) {
 		Creds:  miniocreds.NewStaticV4(w.config.S3AccessID, w.config.S3AccessKey, ""),
 		Secure: w.config.S3UseSSL,
 	})
+}
+
+func showHardwareInfo() error {
+	cpu, err := ghw.CPU()
+	if err != nil {
+		return err
+	}
+	logrus.Infof("CPU: %d", cpu.TotalThreads)
+
+	mem, err := ghw.Memory()
+	if err != nil {
+		return err
+	}
+	m := strings.SplitN(mem.String(), " ", 2)
+	memInfo := strings.Trim(m[1], "()")
+	logrus.Infof("Memory: %s", memInfo)
+
+	gpu, err := ghw.GPU()
+	if err != nil {
+		return err
+	}
+
+	for _, card := range gpu.GraphicsCards {
+		logrus.Infof("Graphics Card: %s (%s)", card.DeviceInfo.Product.Name, card.DeviceInfo.Vendor.Name)
+	}
+
+	return nil
+}
+
+func gpuEnabled() (bool, error) {
+	gpu, err := ghw.GPU()
+	if err != nil {
+		return false, err
+	}
+
+	for _, card := range gpu.GraphicsCards {
+		if strings.Index(strings.ToLower(strings.TrimSpace(card.DeviceInfo.Vendor.Name)), "nvidia") > -1 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

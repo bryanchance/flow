@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	// DefaultQueueSubject is the subject for queued messages
-	DefaultQueueSubject = "JOBS"
+	// QueueJobsSubject is the subject for queued messages
+	QueueJobsSubject = "JOBS"
+	// QueueJobStatusSubject is the subject for job status updates
+	QueueJobStatusSubject = "STATUS"
 	// WorkerQueueGroupName is the name for the worker queue group
 	WorkerQueueGroupName = "finca-workers"
 	// S3ProjectBucket is the project for project files
@@ -66,21 +68,25 @@ type Config struct {
 	NATSSubject string
 	// JobTimeout is the maximum amount of time a job can take
 	JobTimeout duration
-	// JobOutputDir is used by the worker for render results
-	JobOutputDir string
+	// RenderEngines is a list of enabled render engines for the worker
+	RenderEngines []*RenderEngine
 
+	// TODO: cleanup
 	// JobPrefix is the prefix for all queued jobs
 	JobPrefix string
 	// JobPriority is the priority for queued jobs
 	JobPriority int
-	// JobImage is the container image that will be used to process the job
-	JobImage string
-	// JobMaxAttempts is the maximum number of attempts the job will be tried
-	JobMaxAttempts int
 	// JobCPU is the amount of CPU (in Mhz) that will be configured for each job
 	JobCPU int
 	// JobMemory is the amount of memory (in MB) that will be configured for each job
 	JobMemory int
+}
+
+type RenderEngine struct {
+	// Name is the name of the render engine
+	Name string
+	// Path is the path to the render engine executable
+	Path string
 }
 
 func (c *Config) GetJobTimeout() time.Duration {
@@ -89,16 +95,13 @@ func (c *Config) GetJobTimeout() time.Duration {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCAddress:    "127.0.0.1:8080",
-		NATSURL:        nats.DefaultURL,
-		NATSSubject:    DefaultQueueSubject,
-		JobTimeout:     duration{time.Second * 28800},
-		JobOutputDir:   "/tmp/finca-render",
-		JobImage:       "r.underland.io/apps/finca:latest",
-		JobPriority:    50,
-		JobMaxAttempts: 2,
-		JobCPU:         1000,
-		JobMemory:      1024,
+		GRPCAddress: "127.0.0.1:8080",
+		NATSURL:     nats.DefaultURL,
+		NATSSubject: QueueJobsSubject,
+		JobTimeout:  duration{time.Second * 28800},
+		JobPriority: 50,
+		JobCPU:      1000,
+		JobMemory:   1024,
 	}
 }
 

@@ -1,8 +1,17 @@
 # github.com/BurntSushi/toml v0.3.1
 ## explicit
 github.com/BurntSushi/toml
+# github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
+github.com/StackExchange/wmi
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/dustin/go-humanize v1.0.0
+## explicit
+# github.com/ghodss/yaml v1.0.0
+github.com/ghodss/yaml
+# github.com/go-ole/go-ole v1.2.4
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/gogo/googleapis v1.4.1
 ## explicit
 github.com/gogo/googleapis/google/api
@@ -21,18 +30,33 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/uuid v1.1.2
 github.com/google/uuid
-# github.com/gorilla/websocket v1.4.2
-github.com/gorilla/websocket
-# github.com/hashicorp/cronexpr v1.1.0
-github.com/hashicorp/cronexpr
-# github.com/hashicorp/go-cleanhttp v0.5.1
-github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-rootcerts v1.0.2
-github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/nomad/api v0.0.0-20210430195122-5157aa65e8d4
 ## explicit
-github.com/hashicorp/nomad/api
-github.com/hashicorp/nomad/api/contexts
+# github.com/jaypipes/ghw v0.8.0
+## explicit
+github.com/jaypipes/ghw
+github.com/jaypipes/ghw/pkg/baseboard
+github.com/jaypipes/ghw/pkg/bios
+github.com/jaypipes/ghw/pkg/block
+github.com/jaypipes/ghw/pkg/chassis
+github.com/jaypipes/ghw/pkg/context
+github.com/jaypipes/ghw/pkg/cpu
+github.com/jaypipes/ghw/pkg/gpu
+github.com/jaypipes/ghw/pkg/linuxdmi
+github.com/jaypipes/ghw/pkg/linuxpath
+github.com/jaypipes/ghw/pkg/marshal
+github.com/jaypipes/ghw/pkg/memory
+github.com/jaypipes/ghw/pkg/net
+github.com/jaypipes/ghw/pkg/option
+github.com/jaypipes/ghw/pkg/pci
+github.com/jaypipes/ghw/pkg/pci/address
+github.com/jaypipes/ghw/pkg/product
+github.com/jaypipes/ghw/pkg/snapshot
+github.com/jaypipes/ghw/pkg/topology
+github.com/jaypipes/ghw/pkg/unitutil
+github.com/jaypipes/ghw/pkg/util
+# github.com/jaypipes/pcidb v0.6.0
+github.com/jaypipes/pcidb
 # github.com/json-iterator/go v1.1.12
 github.com/json-iterator/go
 # github.com/klauspost/cpuid v1.3.1
@@ -56,10 +80,11 @@ github.com/minio/minio-go/v7/pkg/tags
 github.com/minio/sha256-simd
 # github.com/mitchellh/copystructure v1.2.0
 ## explicit
+github.com/mitchellh/copystructure
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
-# github.com/mitchellh/mapstructure v1.3.3
-github.com/mitchellh/mapstructure
+# github.com/mitchellh/reflectwalk v1.0.2
+github.com/mitchellh/reflectwalk
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.2
@@ -195,6 +220,10 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/ini.v1 v1.57.0
 gopkg.in/ini.v1
+# gopkg.in/yaml.v2 v2.4.0
+gopkg.in/yaml.v2
+# howett.net/plist v0.0.0-20181124034731-591f970eefbb
+howett.net/plist
 # k8s.io/apimachinery v0.23.1
 ## explicit
 # k8s.io/client-go v0.23.1

@@ -129,7 +129,7 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 		return err
 	}
 
-	subjectName := s.getSubjectName(req)
+	subjectName := finca.QueueJobsSubject
 	jobSourceFileName, err := getStorageJobPath(jobID, req)
 	if err != nil {
 		return err
@@ -210,6 +210,8 @@ func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {
 	switch strings.ToLower(req.ContentType) {
 	case "application/zip":
 		ext = "zip"
+	case "application/x-gzip":
+		ext = "gz"
 	case "application/octet-stream":
 		// assume binary is blend; worker will fail if not
 		ext = "blend"
