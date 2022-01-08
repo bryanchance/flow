@@ -21,6 +21,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		queueJobCommand,
+		workersCommand,
 	}
 	app.Flags = []cli.Flag{
 		&cli.BoolFlag{

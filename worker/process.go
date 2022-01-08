@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"fmt"
@@ -9,15 +10,18 @@ import (
 	"image/png"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -37,31 +41,31 @@ filename = os.path.splitext(filename)[0]
 if filename:
     current_dir = os.getcwd()
 
-# Enable all CPU and GPU devices
-for device in prop.devices:
-    device.use = True
-for compute_device_type in ('OPTIX', 'CUDA', 'OPENCL', 'NONE'):
+{{ if .Request.RenderUseGPU }}
+# TODO: detect OPTIX support and use
+for compute_device_type in ('CUDA', 'OPENCL', 'NONE'):
     try:
         prop.compute_device_type = compute_device_type
+        print("Enabled device " + compute_device_type)
         break
     except TypeError:
         pass
-
-{{ if .Request.RenderUseGPU }}
-prop.compute_device_type = 'OPTIX'
-# configure gpu
-for device in prop.devices:
-    if device.type == 'OPTIX':
-        device.use = True
+{{ else }}
+prop.compute_device_type = 'NONE'
 {{ end }}
 
 for scene in bpy.data.scenes:
     scene.cycles.device = '{{ if .Request.RenderUseGPU }}GPU{{ else }}CPU{{ end }}'
     scene.cycles.samples = {{ .Request.RenderSamples }}
+    # TODO: enable configurable render engines (i.e. EEVEE)
+    scene.render.engine = 'CYCLES'
     scene.render.resolution_x = {{ .Request.ResolutionX }}
     scene.render.resolution_y = {{ .Request.ResolutionY }}
     scene.render.resolution_percentage = {{ .Request.ResolutionScale }}
     scene.render.filepath = '{{ .OutputDir }}_'
+    # TODO: make output format, color mode, etc. configurable
+    scene.render.image_settings.file_format = 'PNG'
+    scene.render.image_settings.color_mode ='RGBA'
     {{ if gt .Request.RenderSlices 0 }}
     scene.render.border_min_x = {{ .RenderSliceMinX }}
     scene.render.border_max_x = {{ .RenderSliceMaxX }}
@@ -74,6 +78,7 @@ for scene in bpy.data.scenes:
 
 func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, error) {
 	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
+	start := time.Now()
 
 	// render with blender
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.ID))
@@ -91,12 +96,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	}
 	outputPrefix := fmt.Sprintf("%s", job.Request.Name)
 	if job.Request.RenderSlices > 0 {
-		outputPrefix += fmt.Sprintf("_%0.2f_%0.2f_%0.2f_%0.2f",
-			job.RenderSliceMinX,
-			job.RenderSliceMaxX,
-			job.RenderSliceMinY,
-			job.RenderSliceMaxY,
-		)
+		outputPrefix += fmt.Sprintf("_slice-%d", job.RenderSliceIndex)
 	}
 	job.OutputDir = getPythonOutputDir(filepath.Join(outputDir, outputPrefix))
 
@@ -124,7 +124,75 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		return nil, err
 	}
 
+	// TODO: check mimetype to see if zip and need to extract
+
 	projectFilePath := projectFile.Name()
+
+	logrus.Debugf("checking content type for %s", projectFile.Name())
+	contentType, err := getContentType(projectFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error getting content type for %s", projectFile.Name())
+	}
+
+	switch contentType {
+	case "application/zip":
+		logrus.Debug("zip archive detected; extracting")
+		a, err := zip.OpenReader(projectFilePath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error reading zip archive %s", projectFilePath)
+		}
+		defer a.Close()
+
+		for _, f := range a.File {
+			fp := filepath.Join(tmpDir, f.Name)
+			if !strings.HasPrefix(fp, filepath.Clean(tmpDir)+string(os.PathSeparator)) {
+				logrus.Warnf("invalid path for archive file %s", f.Name)
+				continue
+			}
+			if f.FileInfo().IsDir() {
+				if err := os.MkdirAll(fp, 0750); err != nil {
+					return nil, errors.Wrapf(err, "error creating dir from archive for %s", f.Name)
+				}
+				continue
+			}
+
+			if err := os.MkdirAll(filepath.Dir(fp), 0750); err != nil {
+				return nil, errors.Wrapf(err, "error creating parent dir from archive for %s", f.Name)
+			}
+
+			pf, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			if err != nil {
+				return nil, errors.Wrapf(err, "error creating file from archive for %s", f.Name)
+			}
+
+			fa, err := f.Open()
+			if err != nil {
+				return nil, errors.Wrapf(err, "error opening file in archive: %s", f.Name)
+			}
+
+			if _, err := io.Copy(pf, fa); err != nil {
+				return nil, errors.Wrapf(err, "error extracting file from archive: %s", f.Name)
+			}
+			pf.Close()
+			fa.Close()
+		}
+
+		// find blender project
+		projectFiles, err := filepath.Glob(filepath.Join(tmpDir, "*.blend"))
+		if err != nil {
+			return nil, err
+		}
+
+		if len(projectFiles) == 0 {
+			return nil, errors.New("Blender project file (.blend) not found in zip archive")
+		}
+
+		projectFilePath = projectFiles[0]
+		if len(projectFiles) > 1 {
+			logrus.Warnf("multiple Blender (.blend) projects found; using first detected: %s", projectFilePath)
+		}
+	default:
+	}
 
 	blenderCfg, err := generateBlenderRenderConfig(job)
 	if err != nil {
@@ -156,9 +224,13 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		blenderBinaryPath = bp
 	}
 
+	workerInfo := w.getWorkerInfo()
+
+	logrus.Debugf("worker info: %+v", workerInfo)
+
 	jobStatus := &api.JobStatus{
-		ID:   job.ID,
-		Name: job.Request.Name,
+		Job:    job,
+		Worker: workerInfo,
 	}
 
 	args := []string{
@@ -167,6 +239,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		projectFilePath,
 		"-P",
 		blenderConfigPath,
+		"--debug-python",
 		"-f",
 		fmt.Sprintf("%d", job.RenderFrame),
 	}
@@ -183,7 +256,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	logrus.Debug(string(out))
 
 	// upload results to minio
-	files, err := filepath.Glob(path.Join(outputDir, "*"))
+	files, err := filepath.Glob(filepath.Join(outputDir, "*"))
 	if err != nil {
 		return nil, err
 	}
@@ -241,6 +314,9 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		}
 	}
 
+	jobStatus.Succeeded = true
+	jobStatus.Duration = ptypes.DurationProto(time.Now().Sub(start))
+
 	return jobStatus, nil
 }
 
@@ -264,6 +340,12 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 	for o := range objCh {
 		if o.Err != nil {
 			return err
+		}
+
+		logrus.Debugf("checking key %s", o.Key)
+		// filter logs
+		if filepath.Ext(o.Key) == ".log" {
+			continue
 		}
 		slices = append(slices, o.Key)
 	}
@@ -302,7 +384,7 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 	for i := renderStartFrame; i <= renderEndFrame; i++ {
 		slices := []image.Image{}
 		logrus.Debugf("processing frame %d", i)
-		files, err := filepath.Glob(filepath.Join(outputDir, fmt.Sprintf("*_%04d.*", i)))
+		files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("*_%04d.*", i)))
 		if err != nil {
 			return err
 		}
@@ -384,4 +466,20 @@ func generateBlenderRenderConfig(job *api.Job) (string, error) {
 	}
 
 	return string(buf.Bytes()), nil
+}
+
+func getContentType(f *os.File) (string, error) {
+	buffer := make([]byte, 512)
+	if _, err := f.Seek(0, 0); err != nil {
+		return "", err
+	}
+	_, err := f.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	contentType := http.DetectContentType(buffer)
+	if _, err := f.Seek(0, 0); err != nil {
+		return "", err
+	}
+	return contentType, nil
 }

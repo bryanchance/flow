@@ -10,16 +10,23 @@ import (
 )
 
 const (
-	// QueueJobsSubject is the subject for queued messages
-	QueueJobsSubject = "JOBS"
-	// QueueJobStatusSubject is the subject for job status updates
-	QueueJobStatusSubject = "STATUS"
+	// ServerQueueGroupName is the name for the server queue group
+	ServerQueueGroupName = "finca-servers"
 	// WorkerQueueGroupName is the name for the worker queue group
 	WorkerQueueGroupName = "finca-workers"
 	// S3ProjectBucket is the project for project files
 	S3ProjectPath = "projects"
 	// S3RenderBucket is the s3 bucket for final renders
 	S3RenderPath = "render"
+	// KVBucketTTLWorkers is the TTL for the worker bucket
+	KVBucketTTLWorkers = time.Second * 10
+
+	// queueJobSubject is the subject for queued messages
+	queueJobSubject = "JOBS"
+	// queueJobStatusSubject is the subject for job status updates
+	queueJobStatusSubject = "STATUS"
+	// queueKVBucketNameWorkers is the name of the kv store in the queue for the workers
+	kvBucketNameWorkers = "finca-workers"
 )
 
 type duration struct {
@@ -64,8 +71,12 @@ type Config struct {
 	S3UseSSL bool
 	// NATSUrl is the URL for the NATS server
 	NATSURL string
-	// NATSSubject is the default job subject
-	NATSSubject string
+	// NATSWorkerSubject is the queue subject for the workers
+	NATSJobSubject string
+	// NATSServerSubject is the queue subject for the servers
+	NATSJobStatusSubject string
+	// NATSKVBucketNameWorkers is the name of the kv store in the queue
+	NATSKVBucketNameWorkers string
 	// JobTimeout is the maximum amount of time a job can take
 	JobTimeout duration
 	// RenderEngines is a list of enabled render engines for the worker
@@ -95,13 +106,15 @@ func (c *Config) GetJobTimeout() time.Duration {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCAddress: "127.0.0.1:8080",
-		NATSURL:     nats.DefaultURL,
-		NATSSubject: QueueJobsSubject,
-		JobTimeout:  duration{time.Second * 28800},
-		JobPriority: 50,
-		JobCPU:      1000,
-		JobMemory:   1024,
+		GRPCAddress:             "127.0.0.1:8080",
+		NATSURL:                 nats.DefaultURL,
+		NATSJobSubject:          queueJobSubject,
+		NATSJobStatusSubject:    queueJobStatusSubject,
+		NATSKVBucketNameWorkers: kvBucketNameWorkers,
+		JobTimeout:              duration{time.Second * 28800},
+		JobPriority:             50,
+		JobCPU:                  1000,
+		JobMemory:               1024,
 	}
 }
 

@@ -63,7 +63,6 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 		}
 		c := req.GetChunkData()
 		if err == io.EOF {
-			logrus.Debug("EOF stopping")
 			break
 		}
 		if err != nil {
@@ -129,7 +128,7 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 		return err
 	}
 
-	subjectName := finca.QueueJobsSubject
+	subjectName := s.config.NATSJobSubject
 	jobSourceFileName, err := getStorageJobPath(jobID, req)
 	if err != nil {
 		return err
@@ -144,10 +143,11 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 
 	for i := req.RenderStartFrame; i <= req.RenderEndFrame; i++ {
 		job := &api.Job{
-			ID:          jobID,
-			Request:     req,
-			JobSource:   jobSourceFileName,
-			RenderFrame: i,
+			ID:               jobID,
+			Request:          req,
+			JobSource:        jobSourceFileName,
+			RenderFrame:      i,
+			RenderSliceIndex: -1,
 		}
 
 		// queue slices
@@ -166,6 +166,7 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 					return err
 				}
 				sliceJob := te.(*api.Job)
+				sliceJob.RenderSliceIndex = int64(i)
 				sliceJob.RenderSliceMinX = float32(slice.MinX)
 				sliceJob.RenderSliceMaxX = float32(slice.MaxX)
 				sliceJob.RenderSliceMinY = float32(slice.MinY)
@@ -191,7 +192,6 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 			return err
 		}
 		js.Publish(subjectName, jobData)
-
 	}
 
 	return nil
@@ -202,7 +202,7 @@ func (s *service) getJobID(req *api.JobRequest) string {
 }
 
 func (s *service) getSubjectName(req *api.JobRequest) string {
-	return fmt.Sprintf("%s.%s", s.config.NATSSubject, s.getJobID(req))
+	return fmt.Sprintf("%s.%s", s.config.NATSJobSubject, s.getJobID(req))
 }
 
 func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {

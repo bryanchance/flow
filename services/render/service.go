@@ -18,9 +18,11 @@ var (
 )
 
 type service struct {
-	config        *finca.Config
-	natsClient    *nats.Conn
-	storageClient *minio.Client
+	config                  *finca.Config
+	natsClient              *nats.Conn
+	storageClient           *minio.Client
+	serverQueueSubscription *nats.Subscription
+	stopCh                  chan bool
 }
 
 func New(cfg *finca.Config) (services.Service, error) {
@@ -38,20 +40,6 @@ func New(cfg *finca.Config) (services.Service, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error connecting to nats")
 	}
-
-	js, err := nc.JetStream()
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting nats jetstream context")
-	}
-
-	js.AddStream(&nats.StreamConfig{
-		Name:      cfg.NATSSubject,
-		Retention: nats.WorkQueuePolicy,
-	})
-
-	logrus.Debugf("job timeout: %s", cfg.JobTimeout)
-
-	// TODO: start background listener for job updates from workers
 
 	return &service{
 		config:        cfg,
@@ -74,9 +62,38 @@ func (s *service) Requires() []services.Type {
 }
 
 func (s *service) Start() error {
+	js, err := s.natsClient.JetStream()
+	if err != nil {
+		return errors.Wrap(err, "error getting nats jetstream context")
+	}
+
+	// kv for workers
+	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
+		Bucket: s.config.NATSKVBucketNameWorkers,
+		TTL:    finca.KVBucketTTLWorkers,
+	}); err != nil {
+		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketNameWorkers)
+	}
+
+	for _, subject := range []string{s.config.NATSJobSubject, s.config.NATSJobStatusSubject} {
+		js.AddStream(&nats.StreamConfig{
+			Name:      subject,
+			Retention: nats.WorkQueuePolicy,
+		})
+	}
+
+	logrus.Debugf("job timeout: %s", s.config.JobTimeout)
+
+	// TODO: start background listener for job updates from workers
+	go s.jobStatusListener()
+
 	return nil
 }
 
 func (s *service) Stop() error {
+	if sub := s.serverQueueSubscription; sub != nil {
+		sub.Unsubscribe()
+		sub.Drain()
+	}
 	return nil
 }

@@ -11,6 +11,7 @@ option go_package = "git.underland.io/ehazlett/finca/api/services/render/v1;rend
 service Render {
         rpc QueueJob(stream QueueJobRequest) returns (QueueJobResponse);
         rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+        rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
 }
 
 message QueueJobRequest {
@@ -41,24 +42,39 @@ message QueueJobResponse {
 }
 
 message JobStatus {
-        string id = 1 [(gogoproto.customname) = "ID"];
-        string name = 2;
-        bool succeeded = 3;
-        google.protobuf.Duration duration = 4;
+        Job job = 1;
+        bool succeeded = 2;
+        google.protobuf.Duration duration = 3;
+        Worker worker = 4;
+}
+
+message Worker {
+        string name = 1;
+        string version = 2;
+        uint32 cpus = 3 [(gogoproto.customname) = "CPUs"];
+        int64 memory = 4;
+        repeated string gpus = 5 [(gogoproto.customname) = "GPUs"];
 }
 
 message Job {
         string id = 1 [(gogoproto.customname) = "ID"];
         JobRequest request = 2;
         string job_source = 3;
-        float render_slice_min_x = 4;
-        float render_slice_max_x = 5;
-        float render_slice_min_y = 6;
-        float render_slice_max_y = 7;
-        int64 render_frame = 8;
-        string output_dir = 9;
+        int64 render_slice_index = 4;
+        float render_slice_min_x = 5;
+        float render_slice_max_x = 6;
+        float render_slice_min_y = 7;
+        float render_slice_max_y = 8;
+        int64 render_frame = 9;
+        string output_dir = 10;
 }
 
 message ListJobsRequest {}
 
 message ListJobsResponse {}
+
+message ListWorkersRequest {}
+
+message ListWorkersResponse {
+        repeated Worker workers = 1;
+}
