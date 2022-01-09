@@ -105,7 +105,6 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 
 	logrus.Debugf("saved job %s to storage service (%d bytes)", jobName, jobStorageInfo.Size)
 
-	logrus.Debug("closing stream")
 	if err := stream.SendAndClose(&api.QueueJobResponse{
 		UUID: jobID,
 	}); err != nil {

@@ -54,7 +54,6 @@ func (s *service) jobStatusListener() {
 				logrus.WithError(err).Error("error unmarshaling api.JobStatus from message")
 				continue
 			}
-			logrus.Debugf("job status: %+v", jobStatus)
 			logrus.Infof("job %s [%s] (frame: %d slice: %d) completed in %s on worker %s: success: %v",
 				jobStatus.Job.ID,
 				jobStatus.Job.Request.Name,
