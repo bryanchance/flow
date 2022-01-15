@@ -61,10 +61,10 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 			}
 			return status.Errorf(codes.Unknown, "error receiving job content: %s", err)
 		}
-		c := req.GetChunkData()
 		if err == io.EOF {
 			break
 		}
+		c := req.GetChunkData()
 		if err != nil {
 			logrus.Error(err)
 			return status.Errorf(codes.Unknown, "error receiving job: %s", err)

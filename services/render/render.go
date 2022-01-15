@@ -1,19 +1,41 @@
 package render
 
 import (
+	"bytes"
 	"context"
+	"io"
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"github.com/pkg/errors"
 )
 
-func (s *service) GetLatestRender(ctx context.Context, r *api.GetLatestRenderRequest) (*api.GetLatestRenderResponse, error) {
-	data, err := s.ds.GetLatestRender(ctx, r.ID)
+func (s *service) GetLatestRender(req *api.GetLatestRenderRequest, stream api.Render_GetLatestRenderServer) error {
+	ctx := context.Background()
+	data, err := s.ds.GetLatestRender(ctx, req.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &api.GetLatestRenderResponse{
-		ID:   r.ID,
-		Data: data,
-	}, nil
+	rdr := bytes.NewBuffer(data)
+	buf := make([]byte, 4096)
+
+	for {
+		n, err := rdr.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "error reading file chunk")
+		}
+
+		resp := &api.GetLatestRenderResponse{
+			Data: buf[:n],
+		}
+
+		if err := stream.Send(resp); err != nil {
+			return errors.Wrap(err, "error sending file chunk")
+		}
+	}
+
+	return nil
 }

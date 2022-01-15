@@ -18,7 +18,7 @@ service Render {
         rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
         rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
-        rpc GetLatestRender(GetLatestRenderRequest) returns (GetLatestRenderResponse);
+        rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
 }
 
 message QueueJobRequest {
@@ -109,6 +109,5 @@ message GetLatestRenderRequest {
 }
 
 message GetLatestRenderResponse {
-        string id = 1 [(gogoproto.customname) = "ID"];
-        bytes data = 2;
+        bytes data = 1;
 }
