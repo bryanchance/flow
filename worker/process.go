@@ -78,6 +78,7 @@ for scene in bpy.data.scenes:
 
 func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, error) {
 	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
+
 	start := time.Now()
 
 	// render with blender
@@ -88,6 +89,8 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	defer os.RemoveAll(tmpDir)
 
 	logrus.Debugf("temp work dir: %s", tmpDir)
+
+	// TODO: defer job status
 
 	// setup render dir
 	outputDir := filepath.Join(tmpDir, "render")
@@ -123,8 +126,6 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	if _, err := io.Copy(projectFile, object); err != nil {
 		return nil, err
 	}
-
-	// TODO: check mimetype to see if zip and need to extract
 
 	projectFilePath := projectFile.Name()
 
@@ -229,8 +230,14 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	logrus.Debugf("worker info: %+v", workerInfo)
 
 	jobStatus := &api.JobStatus{
-		Job:    job,
-		Worker: workerInfo,
+		Job:       job,
+		Worker:    workerInfo,
+		Status:    api.JobStatus_RENDERING,
+		UpdatedAt: time.Now(),
+	}
+
+	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
+		return nil, err
 	}
 
 	args := []string{
@@ -316,6 +323,12 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 
 	jobStatus.Succeeded = true
 	jobStatus.Duration = ptypes.DurationProto(time.Now().Sub(start))
+	jobStatus.Status = api.JobStatus_FINISHED
+	jobStatus.UpdatedAt = time.Now()
+
+	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
+		return nil, err
+	}
 
 	return jobStatus, nil
 }

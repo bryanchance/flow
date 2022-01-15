@@ -3,6 +3,7 @@ package render
 import (
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/finca/datastore"
 	"git.underland.io/ehazlett/finca/services"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
@@ -21,6 +22,7 @@ type service struct {
 	config                  *finca.Config
 	natsClient              *nats.Conn
 	storageClient           *minio.Client
+	ds                      *datastore.Datastore
 	serverQueueSubscription *nats.Subscription
 	stopCh                  chan bool
 }
@@ -41,10 +43,16 @@ func New(cfg *finca.Config) (services.Service, error) {
 		return nil, errors.Wrap(err, "error connecting to nats")
 	}
 
+	ds, err := datastore.NewDatastore(cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error setting up datastore")
+	}
+
 	return &service{
 		config:        cfg,
 		natsClient:    nc,
 		storageClient: mc,
+		ds:            ds,
 	}, nil
 }
 

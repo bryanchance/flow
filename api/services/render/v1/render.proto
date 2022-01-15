@@ -4,14 +4,21 @@ package finca.services.render.v1;
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/duration.proto";
-//import weak "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import weak "google/protobuf/empty.proto";
 
 option go_package = "git.underland.io/ehazlett/finca/api/services/render/v1;render";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
 
 service Render {
         rpc QueueJob(stream QueueJobRequest) returns (QueueJobResponse);
         rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
         rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
+        rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
+        rpc GetLatestRender(GetLatestRenderRequest) returns (GetLatestRenderResponse);
 }
 
 message QueueJobRequest {
@@ -46,6 +53,16 @@ message JobStatus {
         bool succeeded = 2;
         google.protobuf.Duration duration = 3;
         Worker worker = 4;
+        enum Status {
+                UNKNOWN = 0;
+                PENDING = 1;
+                QUEUED = 2;
+                RENDERING = 3;
+                ERROR = 4;
+                FINISHED = 5;
+        }
+        Status status = 5;
+        google.protobuf.Timestamp updated_at = 6 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
 }
 
 message Worker {
@@ -67,14 +84,31 @@ message Job {
         float render_slice_max_y = 8;
         int64 render_frame = 9;
         string output_dir = 10;
+        google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        uint64 sequence_id = 12 [(gogoproto.customname) = "SequenceID"];
 }
 
 message ListJobsRequest {}
 
-message ListJobsResponse {}
+message ListJobsResponse {
+        repeated JobStatus jobs = 1;
+}
 
 message ListWorkersRequest {}
 
 message ListWorkersResponse {
         repeated Worker workers = 1;
+}
+
+message DeleteJobRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message GetLatestRenderRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message GetLatestRenderResponse {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        bytes data = 2;
 }

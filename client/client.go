@@ -14,12 +14,18 @@ import (
 
 type Client struct {
 	renderapi.RenderClient
-	conn *grpc.ClientConn
+	config *finca.Config
+	conn   *grpc.ClientConn
 }
 
-func NewClient(addr string, opts ...grpc.DialOption) (*Client, error) {
+func NewClient(cfg *finca.Config) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
+
+	opts, err := DialOptionsFromConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(opts) == 0 {
 		opts = []grpc.DialOption{
@@ -28,7 +34,7 @@ func NewClient(addr string, opts ...grpc.DialOption) (*Client, error) {
 	}
 
 	c, err := grpc.DialContext(ctx,
-		addr,
+		cfg.GRPCAddress,
 		opts...,
 	)
 	if err != nil {
@@ -37,6 +43,7 @@ func NewClient(addr string, opts ...grpc.DialOption) (*Client, error) {
 
 	client := &Client{
 		renderapi.NewRenderClient(c),
+		cfg,
 		c,
 	}
 

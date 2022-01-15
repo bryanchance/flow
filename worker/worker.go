@@ -9,6 +9,7 @@ import (
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/finca/datastore"
 	"git.underland.io/ehazlett/finca/version"
 	"github.com/dustin/go-humanize"
 	"github.com/jaypipes/ghw"
@@ -22,6 +23,7 @@ import (
 type Worker struct {
 	id         string
 	config     *finca.Config
+	ds         *datastore.Datastore
 	stopCh     chan bool
 	cpus       uint32
 	memory     int64
@@ -55,9 +57,15 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 		gpus = append(gpus, fmt.Sprintf("%s: %s", card.DeviceInfo.Vendor.Name, card.DeviceInfo.Product.Name))
 	}
 
+	ds, err := datastore.NewDatastore(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	w := &Worker{
 		id:         id,
 		config:     cfg,
+		ds:         ds,
 		stopCh:     make(chan bool, 1),
 		cpus:       cpu.TotalThreads,
 		memory:     mem.TotalUsableBytes,

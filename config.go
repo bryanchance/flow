@@ -14,10 +14,18 @@ const (
 	ServerQueueGroupName = "finca-servers"
 	// WorkerQueueGroupName is the name for the worker queue group
 	WorkerQueueGroupName = "finca-workers"
-	// S3ProjectBucket is the project for project files
+
+	// S3ProjectPath is the project for project files
 	S3ProjectPath = "projects"
-	// S3RenderBucket is the s3 bucket for final renders
+	// S3RenderPath is the s3 bucket for final renders
 	S3RenderPath = "render"
+	// S3JobsPath is the path to the render jobs
+	S3JobsPath = "jobs"
+	// S3JobStatus is the path to the render job status
+	S3JobStatusPath = "status"
+	// S3JobStatusContentType is the content type for job status objects
+	S3JobStatusContentType = "text/plain"
+
 	// KVBucketTTLWorkers is the TTL for the worker bucket
 	KVBucketTTLWorkers = time.Second * 10
 

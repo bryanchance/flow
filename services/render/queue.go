@@ -112,14 +112,15 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	}
 
 	logrus.Debugf("received uploaded job %s of size %d", jobName, jobSize)
-	if err := s.queueJob(jobID, jobReq); err != nil {
+	if err := s.queueJob(ctx, jobID, jobReq); err != nil {
 		return status.Errorf(codes.Internal, "error queueing compute job: %s", err)
 	}
+
 	logrus.Infof("queued job %s (%s)", jobName, jobID)
 	return nil
 }
 
-func (s *service) queueJob(jobID string, req *api.JobRequest) error {
+func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobRequest) error {
 	logrus.Infof("queueing job %s", jobID)
 
 	js, err := s.natsClient.JetStream()
@@ -142,6 +143,7 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 
 	for i := req.RenderStartFrame; i <= req.RenderEndFrame; i++ {
 		job := &api.Job{
+			CreatedAt:        time.Now(),
 			ID:               jobID,
 			Request:          req,
 			JobSource:        jobSourceFileName,
@@ -176,7 +178,19 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 					return err
 				}
 				logrus.Debugf("publishing job slice %s (%d)", job.ID, i)
-				js.Publish(subjectName, sliceData)
+				ack, err := js.Publish(subjectName, sliceData)
+				if err != nil {
+					return err
+				}
+				sliceJob.SequenceID = ack.Sequence
+
+				if err := s.ds.UpdateJobStatus(ctx, &api.JobStatus{
+					Job:       sliceJob,
+					Status:    api.JobStatus_QUEUED,
+					UpdatedAt: time.Now(),
+				}); err != nil {
+					return err
+				}
 			}
 
 			// slices queued; continue to next frame
@@ -190,7 +204,20 @@ func (s *service) queueJob(jobID string, req *api.JobRequest) error {
 		if err != nil {
 			return err
 		}
-		js.Publish(subjectName, jobData)
+
+		ack, err := js.Publish(subjectName, jobData)
+		if err != nil {
+			return err
+		}
+		job.SequenceID = ack.Sequence
+
+		if err := s.ds.UpdateJobStatus(ctx, &api.JobStatus{
+			Job:       job,
+			Status:    api.JobStatus_QUEUED,
+			UpdatedAt: time.Now(),
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -218,7 +245,11 @@ func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {
 		return "", fmt.Errorf("unknown content type: %s", req.ContentType)
 	}
 	objName := fmt.Sprintf("%s-%s.%s", jobID, req.GetName(), ext)
-	return path.Join(finca.S3ProjectPath, objName), nil
+	return path.Join(getStoragePath(jobID), objName), nil
+}
+
+func getStoragePath(jobID string) string {
+	return path.Join(finca.S3ProjectPath, jobID)
 }
 
 func calculateRenderSlices(workers int) ([]renderSlice, error) {
