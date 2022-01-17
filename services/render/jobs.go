@@ -21,13 +21,13 @@ func (s *service) ListJobs(ctx context.Context, r *api.ListJobsRequest) (*api.Li
 }
 
 func (s *service) GetJob(ctx context.Context, r *api.GetJobRequest) (*api.GetJobResponse, error) {
-	js, err := s.ds.GetJob(ctx, r.ID)
+	job, err := s.ds.GetJob(ctx, r.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.GetJobResponse{
-		Job: js,
+		Job: job,
 	}, nil
 }
 
