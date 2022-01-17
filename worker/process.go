@@ -233,7 +233,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		Job:       job,
 		Worker:    workerInfo,
 		Status:    api.JobStatus_RENDERING,
-		UpdatedAt: time.Now(),
+		StartedAt: time.Now(),
 	}
 
 	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
@@ -324,7 +324,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 	jobStatus.Succeeded = true
 	jobStatus.Duration = ptypes.DurationProto(time.Now().Sub(start))
 	jobStatus.Status = api.JobStatus_FINISHED
-	jobStatus.UpdatedAt = time.Now()
+	jobStatus.FinishedAt = time.Now()
 
 	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
 		return nil, err

@@ -56,3 +56,22 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string) ([]byte, 
 
 	return buf.Bytes(), nil
 }
+
+func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
+	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
+		Prefix:    path.Join(finca.S3RenderPath, id),
+		Recursive: true,
+	})
+
+	for o := range objCh {
+		if o.Err != nil {
+			return o.Err
+		}
+
+		if err := d.storageClient.RemoveObject(ctx, d.config.S3Bucket, o.Key, minio.RemoveObjectOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

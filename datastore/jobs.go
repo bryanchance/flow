@@ -69,7 +69,7 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.JobStatus, error) {
 }
 
 // GetJob returns a job by id from the datastore
-func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
+func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.JobStatus, error) {
 	statusPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobStatusPath)
 	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, statusPath, minio.GetObjectOptions{})
 	if err != nil {
@@ -86,7 +86,7 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) 
 		return nil, err
 	}
 
-	return j.Job, nil
+	return j, nil
 }
 
 // UpdateJobStatus updates the status of a job
@@ -108,12 +108,29 @@ func (d *Datastore) UpdateJobStatus(ctx context.Context, js *api.JobStatus) erro
 
 // DeleteJob deletes a job and all related files from the datastore
 func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
+	// delete project
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    path.Join(finca.S3ProjectPath, id),
 		Recursive: true,
 	})
 
 	for o := range objCh {
+		if o.Err != nil {
+			return o.Err
+		}
+
+		if err := d.storageClient.RemoveObject(ctx, d.config.S3Bucket, o.Key, minio.RemoveObjectOptions{}); err != nil {
+			return err
+		}
+	}
+
+	// delete renders
+	rObjCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
+		Prefix:    path.Join(finca.S3RenderPath, id),
+		Recursive: true,
+	})
+
+	for o := range rObjCh {
 		if o.Err != nil {
 			return o.Err
 		}

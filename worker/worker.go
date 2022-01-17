@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"git.underland.io/ehazlett/finca"
@@ -12,13 +11,17 @@ import (
 	"git.underland.io/ehazlett/finca/datastore"
 	"git.underland.io/ehazlett/finca/version"
 	"github.com/dustin/go-humanize"
-	"github.com/jaypipes/ghw"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+type GPU struct {
+	Vendor  string
+	Product string
+}
 
 type Worker struct {
 	id         string
@@ -27,22 +30,17 @@ type Worker struct {
 	stopCh     chan bool
 	cpus       uint32
 	memory     int64
-	gpus       []string
+	gpus       []*GPU
 	gpuEnabled bool
 }
 
 func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
-	cpu, err := ghw.CPU()
+	cpuThreads, err := getCPUThreads()
 	if err != nil {
 		return nil, err
 	}
 
-	mem, err := ghw.Memory()
-	if err != nil {
-		return nil, err
-	}
-
-	gpu, err := ghw.GPU()
+	memory, err := getMemory()
 	if err != nil {
 		return nil, err
 	}
@@ -52,9 +50,9 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 		return nil, err
 	}
 
-	gpus := []string{}
-	for _, card := range gpu.GraphicsCards {
-		gpus = append(gpus, fmt.Sprintf("%s: %s", card.DeviceInfo.Vendor.Name, card.DeviceInfo.Product.Name))
+	gpus, err := getGPUs()
+	if err != nil {
+		return nil, err
 	}
 
 	ds, err := datastore.NewDatastore(cfg)
@@ -67,8 +65,8 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 		config:     cfg,
 		ds:         ds,
 		stopCh:     make(chan bool, 1),
-		cpus:       cpu.TotalThreads,
-		memory:     mem.TotalUsableBytes,
+		cpus:       cpuThreads,
+		memory:     memory,
 		gpus:       gpus,
 		gpuEnabled: gpuEnabled,
 	}
@@ -203,12 +201,16 @@ func (w *Worker) getMinioClient() (*minio.Client, error) {
 }
 
 func (w *Worker) getWorkerInfo() *api.Worker {
+	gpuInfo := []string{}
+	for _, gpu := range w.gpus {
+		gpuInfo = append(gpuInfo, fmt.Sprintf("%s: %s", gpu.Vendor, gpu.Product))
+	}
 	return &api.Worker{
 		Name:    w.id,
 		Version: version.BuildVersion(),
 		CPUs:    w.cpus,
 		Memory:  w.memory,
-		GPUs:    w.gpus,
+		GPUs:    gpuInfo,
 	}
 }
 func (w *Worker) showHardwareInfo() error {
@@ -251,19 +253,4 @@ func (w *Worker) workerHeartbeat() {
 			continue
 		}
 	}
-}
-
-func gpuEnabled() (bool, error) {
-	gpu, err := ghw.GPU()
-	if err != nil {
-		return false, err
-	}
-
-	for _, card := range gpu.GraphicsCards {
-		if strings.Index(strings.ToLower(strings.TrimSpace(card.DeviceInfo.Vendor.Name)), "nvidia") > -1 {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }

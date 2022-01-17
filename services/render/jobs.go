@@ -20,17 +20,19 @@ func (s *service) ListJobs(ctx context.Context, r *api.ListJobsRequest) (*api.Li
 	}, nil
 }
 
-func (s *service) GetJob(ctx context.Context, id string) (*api.Job, error) {
-	job, err := s.ds.GetJob(ctx, id)
+func (s *service) GetJob(ctx context.Context, r *api.GetJobRequest) (*api.GetJobResponse, error) {
+	js, err := s.ds.GetJob(ctx, r.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &api.GetJobResponse{
+		Job: js,
+	}, nil
 }
 
 func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptypes.Empty, error) {
-	job, err := s.ds.GetJob(ctx, r.ID)
+	jobStatus, err := s.ds.GetJob(ctx, r.ID)
 	if err != nil {
 		return empty, errors.Wrapf(err, "error getting job %s from datastore", r.ID)
 	}
@@ -44,7 +46,9 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 		return empty, err
 	}
 
-	// TODO: check nats for the job and delete
+	job := jobStatus.Job
+
+	// check nats for the job and delete
 	if job.SequenceID != 0 {
 		if err := js.DeleteMsg(s.config.NATSJobSubject, job.SequenceID); err != nil {
 			return empty, err

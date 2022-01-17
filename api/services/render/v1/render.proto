@@ -16,6 +16,7 @@ option (gogoproto.sizer_all) = true;
 service Render {
         rpc QueueJob(stream QueueJobRequest) returns (QueueJobResponse);
         rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+        rpc GetJob(GetJobRequest) returns (GetJobResponse);
         rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
         rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
@@ -62,7 +63,9 @@ message JobStatus {
                 FINISHED = 5;
         }
         Status status = 5;
-        google.protobuf.Timestamp updated_at = 6 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp queued_at = 6 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
 }
 
 message Worker {
@@ -92,6 +95,14 @@ message ListJobsRequest {}
 
 message ListJobsResponse {
         repeated JobStatus jobs = 1;
+}
+
+message GetJobRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message GetJobResponse {
+        JobStatus job = 1;
 }
 
 message ListWorkersRequest {}
