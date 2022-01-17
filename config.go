@@ -19,12 +19,10 @@ const (
 	S3ProjectPath = "projects"
 	// S3RenderPath is the s3 bucket for final renders
 	S3RenderPath = "render"
-	// S3JobsPath is the path to the render jobs
-	S3JobsPath = "jobs"
-	// S3JobStatus is the path to the render job status
-	S3JobStatusPath = "status"
+	// S3JobPath is the path to the render job config
+	S3JobPath = "job.json"
 	// S3JobStatusContentType is the content type for job status objects
-	S3JobStatusContentType = "text/plain"
+	S3JobContentType = "application/json"
 
 	// KVBucketTTLWorkers is the TTL for the worker bucket
 	KVBucketTTLWorkers = time.Second * 10

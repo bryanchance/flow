@@ -76,7 +76,7 @@ for scene in bpy.data.scenes:
 `
 )
 
-func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, error) {
+func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error) {
 	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
 
 	start := time.Now()
@@ -225,21 +225,6 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		blenderBinaryPath = bp
 	}
 
-	workerInfo := w.getWorkerInfo()
-
-	logrus.Debugf("worker info: %+v", workerInfo)
-
-	jobStatus := &api.JobStatus{
-		Job:       job,
-		Worker:    workerInfo,
-		Status:    api.JobStatus_RENDERING,
-		StartedAt: time.Now(),
-	}
-
-	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
-		return nil, err
-	}
-
 	args := []string{
 		"-b",
 		"--factory-startup",
@@ -321,16 +306,12 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.JobStatus, 
 		}
 	}
 
-	jobStatus.Succeeded = true
-	jobStatus.Duration = ptypes.DurationProto(time.Now().Sub(start))
-	jobStatus.Status = api.JobStatus_FINISHED
-	jobStatus.FinishedAt = time.Now()
+	job.Succeeded = true
+	job.Duration = ptypes.DurationProto(time.Now().Sub(start))
+	job.Status = api.Job_FINISHED
+	job.FinishedAt = time.Now()
 
-	if err := w.ds.UpdateJobStatus(ctx, jobStatus); err != nil {
-		return nil, err
-	}
-
-	return jobStatus, nil
+	return job, nil
 }
 
 func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir string) error {

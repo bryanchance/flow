@@ -134,8 +134,20 @@ func (w *Worker) Run() error {
 
 				logrus.Debugf("processing job with timeout %s", w.config.GetJobTimeout())
 
+				workerInfo := w.getWorkerInfo()
+				logrus.Debugf("worker info: %+v", workerInfo)
 				ctx, _ := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
-				jobStatus, err := w.processJob(ctx, job)
+
+				job.Worker = workerInfo
+				job.Status = api.Job_RENDERING
+				job.StartedAt = time.Now()
+
+				if err := w.ds.UpdateJob(ctx, job); err != nil {
+					logrus.WithError(err).Error("error updating job")
+					continue
+				}
+
+				j, err := w.processJob(ctx, job)
 				if err != nil {
 					logrus.WithError(err).Errorf("error processing job %s", job.ID)
 					if cErr := ctx.Err(); cErr != nil {
@@ -147,16 +159,20 @@ func (w *Worker) Run() error {
 					}
 					continue
 				}
+				if err := w.ds.UpdateJob(ctx, j); err != nil {
+					logrus.WithError(err).Error("error updating job")
+					continue
+				}
 
-				logrus.Infof("completed job %s (frame: %d slice: %d) in %s", job.ID, job.RenderFrame, job.RenderSliceIndex, jobStatus.Duration)
+				logrus.Infof("completed job %s (frame: %d slice: %d) in %s", j.ID, j.RenderFrame, j.RenderSliceIndex, j.Duration)
 
 				// publish status event for server
-				jobStatusData, err := json.Marshal(jobStatus)
+				jobData, err := json.Marshal(j)
 				if err != nil {
 					logrus.WithError(err).Error("error publishing job status")
 					continue
 				}
-				js.Publish(w.config.NATSJobStatusSubject, jobStatusData)
+				js.Publish(w.config.NATSJobStatusSubject, jobData)
 
 				// ack message for completion
 				m.Ack()

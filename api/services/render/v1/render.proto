@@ -49,25 +49,6 @@ message QueueJobResponse {
         string uuid = 1 [(gogoproto.customname) = "UUID"];
 }
 
-message JobStatus {
-        Job job = 1;
-        bool succeeded = 2;
-        google.protobuf.Duration duration = 3;
-        Worker worker = 4;
-        enum Status {
-                UNKNOWN = 0;
-                PENDING = 1;
-                QUEUED = 2;
-                RENDERING = 3;
-                ERROR = 4;
-                FINISHED = 5;
-        }
-        Status status = 5;
-        google.protobuf.Timestamp queued_at = 6 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp started_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp finished_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-}
-
 message Worker {
         string name = 1;
         string version = 2;
@@ -89,12 +70,27 @@ message Job {
         string output_dir = 10;
         google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         uint64 sequence_id = 12 [(gogoproto.customname) = "SequenceID"];
+        bool succeeded = 13;
+        google.protobuf.Duration duration = 14;
+        Worker worker = 15;
+        enum Status {
+                UNKNOWN = 0;
+                PENDING = 1;
+                QUEUED = 2;
+                RENDERING = 3;
+                ERROR = 4;
+                FINISHED = 5;
+        }
+        Status status = 16;
+        google.protobuf.Timestamp queued_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 18 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 19 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
 }
 
 message ListJobsRequest {}
 
 message ListJobsResponse {
-        repeated JobStatus jobs = 1;
+        repeated Job jobs = 1;
 }
 
 message GetJobRequest {
@@ -102,7 +98,7 @@ message GetJobRequest {
 }
 
 message GetJobResponse {
-        JobStatus job = 1;
+        Job job = 1;
 }
 
 message ListWorkersRequest {}

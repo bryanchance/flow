@@ -32,7 +32,7 @@ func (s *service) GetJob(ctx context.Context, r *api.GetJobRequest) (*api.GetJob
 }
 
 func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptypes.Empty, error) {
-	jobStatus, err := s.ds.GetJob(ctx, r.ID)
+	job, err := s.ds.GetJob(ctx, r.ID)
 	if err != nil {
 		return empty, errors.Wrapf(err, "error getting job %s from datastore", r.ID)
 	}
@@ -45,8 +45,6 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 	if err != nil {
 		return empty, err
 	}
-
-	job := jobStatus.Job
 
 	// check nats for the job and delete
 	if job.SequenceID != 0 {

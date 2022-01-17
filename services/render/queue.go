@@ -184,11 +184,10 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 				}
 				sliceJob.SequenceID = ack.Sequence
 
-				if err := s.ds.UpdateJobStatus(ctx, &api.JobStatus{
-					Job:      sliceJob,
-					Status:   api.JobStatus_QUEUED,
-					QueuedAt: time.Now(),
-				}); err != nil {
+				job.Status = api.Job_QUEUED
+				job.QueuedAt = time.Now()
+
+				if err := s.ds.UpdateJob(ctx, job); err != nil {
 					return err
 				}
 			}
@@ -210,12 +209,9 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 			return err
 		}
 		job.SequenceID = ack.Sequence
-
-		if err := s.ds.UpdateJobStatus(ctx, &api.JobStatus{
-			Job:      job,
-			Status:   api.JobStatus_QUEUED,
-			QueuedAt: time.Now(),
-		}); err != nil {
+		job.Status = api.Job_QUEUED
+		job.QueuedAt = time.Now()
+		if err := s.ds.UpdateJob(ctx, job); err != nil {
 			return err
 		}
 	}

@@ -49,19 +49,19 @@ func (s *service) jobStatusListener() {
 		case <-s.stopCh:
 			return
 		case m := <-msgCh:
-			var jobStatus *api.JobStatus
-			if err := json.Unmarshal(m.Data, &jobStatus); err != nil {
-				logrus.WithError(err).Error("error unmarshaling api.JobStatus from message")
+			var job *api.Job
+			if err := json.Unmarshal(m.Data, &job); err != nil {
+				logrus.WithError(err).Error("error unmarshaling api.Job from message")
 				continue
 			}
 			logrus.Infof("job %s [%s] (frame: %d slice: %d) completed in %s on worker %s: success: %v",
-				jobStatus.Job.ID,
-				jobStatus.Job.Request.Name,
-				jobStatus.Job.RenderFrame,
-				jobStatus.Job.RenderSliceIndex,
-				jobStatus.Duration,
-				jobStatus.Worker.Name,
-				jobStatus.Succeeded,
+				job.ID,
+				job.Request.Name,
+				job.RenderFrame,
+				job.RenderSliceIndex,
+				job.Duration,
+				job.Worker.Name,
+				job.Succeeded,
 			)
 			// TODO: store to datastore for UI?
 			m.Ack()
