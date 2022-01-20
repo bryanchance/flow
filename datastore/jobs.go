@@ -33,7 +33,7 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 	jobs := []*api.Job{}
 	for o := range objCh {
 		if o.Err != nil {
-			return nil, o.Err
+			return nil, errors.Wrap(o.Err, "error reading jobs from datastore")
 		}
 
 		k := strings.SplitN(o.Key, "/", 2)
@@ -53,12 +53,12 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 
 		buf := &bytes.Buffer{}
 		if _, err := io.Copy(buf, obj); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "error reading object buffer from %s", jobPath)
 		}
 
 		j := &api.Job{}
 		if err := jsonpb.Unmarshal(buf, j); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "error unmarshaling object %s", jobPath)
 		}
 
 		jobs = append(jobs, j)

@@ -13,7 +13,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "finca"
-	app.Version = version.Version
+	app.Version = version.FullVersion()
 	app.Authors = []*cli.Author{
 		{
 			Name: "@ehazlett",
