@@ -31,8 +31,10 @@ const (
 	queueJobSubject = "JOBS"
 	// queueJobStatusSubject is the subject for job status updates
 	queueJobStatusSubject = "STATUS"
-	// queueKVBucketNameWorkers is the name of the kv store in the queue for the workers
+	// kvBucketNameWorkers is the name of the kv store in the queue for the worker info
 	kvBucketNameWorkers = "finca-workers"
+	// kvBucketWorkerControl is the name of the kv store in the queue for issueing worker control messages
+	kvBucketWorkerControl = "finca-worker-control"
 )
 
 type duration struct {
@@ -83,10 +85,14 @@ type Config struct {
 	NATSJobStatusSubject string
 	// NATSKVBucketNameWorkers is the name of the kv store in the queue
 	NATSKVBucketNameWorkers string
+	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
+	NATSKVBucketWorkerControl string
 	// JobTimeout is the maximum amount of time a job can take
 	JobTimeout duration
-	// RenderEngines is a list of enabled render engines for the worker
-	RenderEngines []*RenderEngine
+	// Workers are worker specific configuration
+	Workers []*Worker
+	// ProfilerAddress enables the performance profiler on the specified address
+	ProfilerAddress string
 
 	// TODO: cleanup
 	// JobPrefix is the prefix for all queued jobs
@@ -97,6 +103,16 @@ type Config struct {
 	JobCPU int
 	// JobMemory is the amount of memory (in MB) that will be configured for each job
 	JobMemory int
+}
+
+type Worker struct {
+	// Name is the name of the worker to apply the configuration
+	// leave blank for all
+	Name string
+	// MaxJobs is the maximum number of jobs this worker will perform and then exit
+	MaxJobs int
+	// RenderEngines is a list of enabled render engines for the worker
+	RenderEngines []*RenderEngine
 }
 
 type RenderEngine struct {
@@ -112,16 +128,35 @@ func (c *Config) GetJobTimeout() time.Duration {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCAddress:             "127.0.0.1:8080",
-		NATSURL:                 nats.DefaultURL,
-		NATSJobSubject:          queueJobSubject,
-		NATSJobStatusSubject:    queueJobStatusSubject,
-		NATSKVBucketNameWorkers: kvBucketNameWorkers,
-		JobTimeout:              duration{time.Second * 28800},
-		JobPriority:             50,
-		JobCPU:                  1000,
-		JobMemory:               1024,
+		GRPCAddress:               "127.0.0.1:8080",
+		NATSURL:                   nats.DefaultURL,
+		NATSJobSubject:            queueJobSubject,
+		NATSJobStatusSubject:      queueJobStatusSubject,
+		NATSKVBucketNameWorkers:   kvBucketNameWorkers,
+		NATSKVBucketWorkerControl: kvBucketWorkerControl,
+		JobTimeout:                duration{time.Second * 28800},
+		JobPriority:               50,
+		JobCPU:                    1000,
+		JobMemory:                 1024,
+		ProfilerAddress:           "",
 	}
+}
+
+// GetWorkerConfig returns the node specific configuration or default if not found
+func (c *Config) GetWorkerConfig(name string) *Worker {
+	worker := &Worker{
+		MaxJobs: 0,
+	}
+	for _, w := range c.Workers {
+		if w.Name == name {
+			return w
+		}
+		if w.Name == "" {
+			worker = w
+		}
+	}
+	// if no specific configuration found return default
+	return worker
 }
 
 // LoadConfig returns a Finca config from the specified file path

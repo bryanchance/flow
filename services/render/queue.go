@@ -13,6 +13,7 @@ import (
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	cs "github.com/mitchellh/copystructure"
 	uuid "github.com/satori/go.uuid"
@@ -173,12 +174,13 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 				sliceJob.RenderSliceMinY = float32(slice.MinY)
 				sliceJob.RenderSliceMaxY = float32(slice.MaxY)
 				// queue slice job
-				sliceData, err := json.Marshal(sliceJob)
-				if err != nil {
+				buf := &bytes.Buffer{}
+				m := &jsonpb.Marshaler{}
+				if err := m.Marshal(buf, sliceJob); err != nil {
 					return err
 				}
 				logrus.Debugf("publishing job slice %s (%d)", job.ID, i)
-				ack, err := js.Publish(subjectName, sliceData)
+				ack, err := js.Publish(subjectName, buf.Bytes())
 				if err != nil {
 					return err
 				}

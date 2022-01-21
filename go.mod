@@ -7,6 +7,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gogo/googleapis v1.4.1
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/nomad/api v0.0.0-20210430195122-5157aa65e8d4 // indirect
 	github.com/jaypipes/ghw v0.8.0
 	github.com/minio/minio-go/v7 v7.0.10

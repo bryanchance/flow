@@ -24,6 +24,13 @@ func main() {
 		&cli.BoolFlag{
 			Name:    "debug",
 			Aliases: []string{"D"},
+			Usage:   "enable debug logging",
+		},
+		&cli.StringFlag{
+			Name:    "profiler-address",
+			Aliases: []string{"p"},
+			Usage:   "enable profiler on this address",
+			Value:   "",
 		},
 	}
 	app.Before = func(clix *cli.Context) error {

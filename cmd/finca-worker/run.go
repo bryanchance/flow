@@ -23,22 +23,36 @@ func runAction(clix *cli.Context) error {
 		return err
 	}
 
-	w, err := worker.NewWorker(id, cfg)
-	if err != nil {
-		return err
+	// check for profiler
+	if v := clix.String("profiler-address"); v != "" {
+		cfg.ProfilerAddress = v
 	}
 
-	if err := w.Run(); err != nil {
+	w, err := worker.NewWorker(id, cfg)
+	if err != nil {
 		return err
 	}
 
 	signals := make(chan os.Signal)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	doneCh := make(chan bool, 1)
+	errCh := make(chan error, 1)
 
+	go func() {
+		if err := w.Run(); err != nil {
+			errCh <- err
+		}
+		doneCh <- true
+	}()
+
+	var runErr error
 	go func() {
 		for {
 			select {
+			case err := <-errCh:
+				runErr = err
+				doneCh <- true
+				return
 			case sig := <-signals:
 				switch sig {
 				case syscall.SIGTERM, syscall.SIGINT:
@@ -47,6 +61,7 @@ func runAction(clix *cli.Context) error {
 						logrus.Error(err)
 					}
 					doneCh <- true
+					return
 				default:
 					logrus.Warnf("unhandled signal %s", sig)
 				}
@@ -56,5 +71,5 @@ func runAction(clix *cli.Context) error {
 
 	<-doneCh
 
-	return w.Run()
+	return runErr
 }

@@ -7,6 +7,7 @@ github.com/StackExchange/wmi
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
+github.com/dustin/go-humanize
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
 # github.com/go-ole/go-ole v1.2.4
@@ -18,11 +19,13 @@ github.com/gogo/googleapis/google/api
 # github.com/gogo/protobuf v1.3.2
 ## explicit
 github.com/gogo/protobuf/gogoproto
+github.com/gogo/protobuf/jsonpb
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/types
 # github.com/golang/protobuf v1.5.2
+## explicit
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any

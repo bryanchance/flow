@@ -20,6 +20,7 @@ service Render {
         rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
         rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
+        rpc ControlWorker(ControlWorkerRequest) returns (ControlWorkerResponse);
 }
 
 message QueueJobRequest {
@@ -70,16 +71,14 @@ message Job {
         string output_dir = 10;
         google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         uint64 sequence_id = 12 [(gogoproto.customname) = "SequenceID"];
-        bool succeeded = 13;
+        repeated uint64 slice_sequence_ids = 13 [(gogoproto.customname) = "SliceSequenceIDs"];
         google.protobuf.Duration duration = 14;
         Worker worker = 15;
         enum Status {
-                UNKNOWN = 0;
-                PENDING = 1;
-                QUEUED = 2;
-                RENDERING = 3;
-                ERROR = 4;
-                FINISHED = 5;
+                QUEUED = 0;
+                RENDERING = 1;
+                FINISHED = 2;
+                ERROR = 3;
         }
         Status status = 16;
         google.protobuf.Timestamp queued_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
@@ -118,3 +117,14 @@ message GetLatestRenderRequest {
 message GetLatestRenderResponse {
         bytes data = 1;
 }
+
+message ControlWorkerRequest {
+        string worker_id = 1 [(gogoproto.customname) = "WorkerID"];
+        oneof message {
+                WorkerStop stop = 2;
+        }
+}
+
+message WorkerStop {}
+
+message ControlWorkerResponse {}

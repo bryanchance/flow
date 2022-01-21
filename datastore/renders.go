@@ -6,11 +6,12 @@ import (
 	"io"
 	"path"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"git.underland.io/ehazlett/finca"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func (d *Datastore) GetLatestRender(ctx context.Context, jobID string) ([]byte, error) {
@@ -30,12 +31,15 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string) ([]byte, 
 		if filepath.Ext(o.Key) != ".png" {
 			continue
 		}
-
 		// ignore slice renders
-		if strings.Contains(o.Key, "slice") {
+		sliceMatch, err := regexp.MatchString(".*_slice-\\d+_\\d+\\.[png]", o.Key)
+		if err != nil {
+			return nil, err
+		}
+		if sliceMatch {
+			logrus.Debugf("skipping slice render %s", o.Key)
 			continue
 		}
-
 		latestRenderPath = o.Key
 	}
 

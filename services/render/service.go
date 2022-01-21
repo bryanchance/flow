@@ -1,6 +1,8 @@
 package render
 
 import (
+	"time"
+
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"git.underland.io/ehazlett/finca/datastore"
@@ -15,7 +17,9 @@ import (
 )
 
 var (
-	empty = &ptypes.Empty{}
+	// timeout for worker control messages to expire
+	workerControlMessageTTL = time.Second * 300
+	empty                   = &ptypes.Empty{}
 )
 
 type service struct {
@@ -82,6 +86,12 @@ func (s *service) Start() error {
 	}); err != nil {
 		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketNameWorkers)
 	}
+	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
+		Bucket: s.config.NATSKVBucketWorkerControl,
+		TTL:    workerControlMessageTTL,
+	}); err != nil {
+		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketWorkerControl)
+	}
 
 	for _, subject := range []string{s.config.NATSJobSubject, s.config.NATSJobStatusSubject} {
 		js.AddStream(&nats.StreamConfig{
@@ -92,7 +102,7 @@ func (s *service) Start() error {
 
 	logrus.Debugf("job timeout: %s", s.config.JobTimeout)
 
-	// TODO: start background listener for job updates from workers
+	// start background listener for job updates from workers
 	go s.jobStatusListener()
 
 	return nil

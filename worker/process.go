@@ -78,6 +78,8 @@ for scene in bpy.data.scenes:
 
 func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error) {
 	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
+	w.jobLock.Lock()
+	defer w.jobLock.Unlock()
 
 	start := time.Now()
 
@@ -89,8 +91,6 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 	defer os.RemoveAll(tmpDir)
 
 	logrus.Debugf("temp work dir: %s", tmpDir)
-
-	// TODO: defer job status
 
 	// setup render dir
 	outputDir := filepath.Join(tmpDir, "render")
@@ -209,7 +209,9 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 	// lookup binary path
 	// check config first and if not there attempt to resolve from PATH
 	blenderBinaryPath := ""
-	for _, engine := range w.config.RenderEngines {
+	workerConfig := w.config.GetWorkerConfig(w.id)
+	logrus.Debugf("worker config: %+v", workerConfig)
+	for _, engine := range workerConfig.RenderEngines {
 		logrus.Debugf("checking render engine config: %s", engine)
 		if strings.ToLower(engine.Name) == "blender" {
 			logrus.Infof("using blender render path: %s", engine.Path)
@@ -306,7 +308,6 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 		}
 	}
 
-	job.Succeeded = true
 	job.Duration = ptypes.DurationProto(time.Now().Sub(start))
 	job.Status = api.Job_FINISHED
 	job.FinishedAt = time.Now()
@@ -336,7 +337,6 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 			return err
 		}
 
-		logrus.Debugf("checking key %s", o.Key)
 		// filter logs
 		if filepath.Ext(o.Key) == ".log" {
 			continue

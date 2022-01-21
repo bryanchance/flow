@@ -12,7 +12,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "finca-worker"
-	app.Version = version.Version
+	app.Version = version.FullVersion()
 	app.Authors = []*cli.Author{
 		{
 			Name: "@ehazlett",
@@ -35,6 +35,12 @@ func main() {
 			Aliases: []string{"c"},
 			Usage:   "path to finca config",
 			Value:   "finca.toml",
+		},
+		&cli.StringFlag{
+			Name:    "profiler-address",
+			Aliases: []string{"p"},
+			Usage:   "enable profiler on address",
+			Value:   "",
 		},
 	}
 	app.Before = func(clix *cli.Context) error {

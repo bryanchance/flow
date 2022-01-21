@@ -33,6 +33,11 @@ func serverAction(clix *cli.Context) error {
 		return err
 	}
 
+	// check for profiler
+	if v := clix.String("profiler-address"); v != "" {
+		cfg.ProfilerAddress = v
+	}
+
 	srv, err := server.NewServer(cfg)
 	if err != nil {
 		return err

@@ -1,16 +1,20 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"git.underland.io/ehazlett/finca/datastore"
+	"git.underland.io/ehazlett/finca/pkg/profiler"
 	"git.underland.io/ehazlett/finca/version"
 	"github.com/dustin/go-humanize"
+	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
@@ -32,9 +36,19 @@ type Worker struct {
 	memory     int64
 	gpus       []*GPU
 	gpuEnabled bool
+	maxJobs    int
+	jobLock    *sync.Mutex
 }
 
 func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
+	if v := cfg.ProfilerAddress; v != "" {
+		p := profiler.NewProfiler(v)
+		go func() {
+			if err := p.Run(); err != nil {
+				logrus.WithError(err).Errorf("error starting profiler on %s", v)
+			}
+		}()
+	}
 	cpuThreads, err := getCPUThreads()
 	if err != nil {
 		return nil, err
@@ -60,6 +74,8 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 		return nil, err
 	}
 
+	workerConfig := cfg.GetWorkerConfig(id)
+
 	w := &Worker{
 		id:         id,
 		config:     cfg,
@@ -69,6 +85,8 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 		memory:     memory,
 		gpus:       gpus,
 		gpuEnabled: gpuEnabled,
+		maxJobs:    workerConfig.MaxJobs,
+		jobLock:    &sync.Mutex{},
 	}
 
 	return w, nil
@@ -94,16 +112,31 @@ func (w *Worker) Run() error {
 	// start worker heartbeat
 	go w.workerHeartbeat()
 
-	msgCh := make(chan *nats.Msg)
+	// start background listener for worker control
+	go w.workerControlListener()
+
+	msgCh := make(chan *nats.Msg, 1)
+	doneCh := make(chan bool)
 
 	// connect to nats stream and listen for messages
 	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSJobSubject)
 	sub, err := js.PullSubscribe(w.config.NATSJobSubject, finca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
+	//sub, err := js.SubscribeSync(w.config.NATSJobSubject, nats.AckWait(w.config.GetJobTimeout()))
+	//sub, err := js.ChanQueueSubscribe(w.config.NATSJobSubject, finca.WorkerQueueGroupName, msgCh, nats.AckWait(w.config.GetJobTimeout()))
 	if err != nil {
 		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSJobSubject)
 	}
 
+	logrus.Debugf("worker max jobs: %d", w.maxJobs)
+	jobTickerInterval := time.Second * 5
+	jobTicker := time.NewTicker(jobTickerInterval)
+
+	jobsProcessed := 0
 	go func() {
+		defer func() {
+			doneCh <- true
+		}()
+
 		for {
 			select {
 			case <-w.stopCh:
@@ -115,9 +148,26 @@ func (w *Worker) Run() error {
 
 				close(msgCh)
 				return
-			case m := <-msgCh:
-				var job *api.Job
-				if err := json.Unmarshal(m.Data, &job); err != nil {
+			case <-jobTicker.C:
+				msgs, err := sub.Fetch(1)
+				if err != nil {
+					// if stop has been called the subscription will be drained and closed
+					// ignore the subscription error and exit
+					if !sub.IsValid() {
+						continue
+					}
+					if err == nats.ErrTimeout {
+						// ignore NextMsg timeouts
+						continue
+					}
+					logrus.Warn(err)
+					continue
+				}
+				m := msgs[0]
+
+				buf := bytes.NewBuffer(m.Data)
+				job := &api.Job{}
+				if err := jsonpb.Unmarshal(buf, job); err != nil {
 					logrus.WithError(err).Error("error unmarshaling api.Job from message")
 					continue
 				}
@@ -144,6 +194,8 @@ func (w *Worker) Run() error {
 
 				if err := w.ds.UpdateJob(ctx, job); err != nil {
 					logrus.WithError(err).Error("error updating job")
+					// requeue
+					m.Nak()
 					continue
 				}
 
@@ -160,51 +212,47 @@ func (w *Worker) Run() error {
 					continue
 				}
 				if err := w.ds.UpdateJob(ctx, j); err != nil {
-					logrus.WithError(err).Error("error updating job")
+					logrus.WithError(err).Error("error updating job status")
 					continue
 				}
 
-				logrus.Infof("completed job %s (frame: %d slice: %d) in %s", j.ID, j.RenderFrame, j.RenderSliceIndex, j.Duration)
+				logrus.Infof("completed job %s (%s) (frame: %d slice: %d) in %s", j.ID, j.Request.Name, j.RenderFrame, j.RenderSliceIndex, j.Duration)
 
 				// publish status event for server
-				jobData, err := json.Marshal(j)
-				if err != nil {
+				b := &bytes.Buffer{}
+				jm := &jsonpb.Marshaler{}
+				if err := jm.Marshal(b, j); err != nil {
 					logrus.WithError(err).Error("error publishing job status")
 					continue
 				}
-				js.Publish(w.config.NATSJobStatusSubject, jobData)
+				js.Publish(w.config.NATSJobStatusSubject, b.Bytes())
 
 				// ack message for completion
 				m.Ack()
-			}
-		}
-	}()
 
-	go func() {
-		for {
-			msgs, err := sub.Fetch(1)
-			if err != nil {
-				// if stop has been called the subscription will be drained and closed
-				// ignore the subscription error and exit
-				if !sub.IsValid() {
+				// check for max processed jobs
+				jobsProcessed += 1
+				if w.maxJobs != 0 && jobsProcessed >= w.maxJobs {
+					logrus.Infof("worker reached max jobs (%d), exiting", w.maxJobs)
+					sub.Unsubscribe()
+					sub.Drain()
+					close(msgCh)
 					return
 				}
-				if err == nats.ErrTimeout {
-					// ignore NextMsg timeouts
-					continue
-				}
-				logrus.Warn(err)
-				return
 			}
-
-			msgCh <- msgs[0]
 		}
 	}()
+
+	<-doneCh
+	logrus.Debug("worker finished")
 
 	return nil
 }
 
 func (w *Worker) Stop() error {
+	w.jobLock.Lock()
+	defer w.jobLock.Unlock()
+
 	w.stopCh <- true
 	return nil
 }

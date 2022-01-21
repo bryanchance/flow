@@ -8,12 +8,15 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	"github.com/gogo/protobuf/jsonpb"
+	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type ByCreatedAt []*api.Job
@@ -45,23 +48,12 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 
 		found[jobID] = struct{}{}
 
-		jobPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobPath)
-		obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+		job, err := d.GetJob(ctx, jobID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error getting object from storage %s", jobPath)
+			return nil, errors.Wrapf(err, "error getting job from datastore: %s", jobID)
 		}
 
-		buf := &bytes.Buffer{}
-		if _, err := io.Copy(buf, obj); err != nil {
-			return nil, errors.Wrapf(err, "error reading object buffer from %s", jobPath)
-		}
-
-		j := &api.Job{}
-		if err := jsonpb.Unmarshal(buf, j); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling object %s", jobPath)
-		}
-
-		jobs = append(jobs, j)
+		jobs = append(jobs, job)
 	}
 	sort.Sort(ByCreatedAt(jobs))
 
@@ -71,8 +63,10 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 // GetJob returns a job by id from the datastore
 func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
 	jobPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobPath)
+	logrus.Debugf("getting job from path: %s", jobPath)
 	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
 	if err != nil {
+		logrus.Errorf("key not found: %s", jobPath)
 		return nil, err
 	}
 
@@ -84,6 +78,44 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) 
 	j := &api.Job{}
 	if err := jsonpb.Unmarshal(buf, j); err != nil {
 		return nil, err
+	}
+
+	// check for render slices
+	if j.Request.RenderSlices > 0 {
+		sliceJobs := []*api.Job{}
+		for i := int64(0); i < j.Request.RenderSlices; i++ {
+			jobPath := path.Join(finca.S3ProjectPath, jobID, fmt.Sprintf("%s.%d", finca.S3JobPath, i))
+			logrus.Debugf("loading job slice from %s", jobPath)
+			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+			if err != nil {
+				return nil, err
+			}
+
+			buf := &bytes.Buffer{}
+			if _, err := io.Copy(buf, obj); err != nil {
+				// if job output doesn't exist it is most likely queued and hasn't started yet
+				if strings.Contains(err.Error(), "key does not exist") {
+					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
+					sliceJobs = append(sliceJobs, j)
+					continue
+				}
+				return nil, err
+			}
+
+			j := &api.Job{}
+			if err := jsonpb.Unmarshal(buf, j); err != nil {
+				return nil, err
+			}
+
+			sliceJobs = append(sliceJobs, j)
+		}
+
+		// "merge" slice jobs
+		mergedJob, err := mergeSliceJobs(sliceJobs)
+		if err != nil {
+			return nil, err
+		}
+		j = mergedJob
 	}
 
 	return j, nil
@@ -175,4 +207,46 @@ func getJobPath(jobID string, renderSliceIndex int) string {
 		jobPath = path.Join(jobPath) + fmt.Sprintf(".%d", idx)
 	}
 	return jobPath
+}
+
+// mergeSliceJobs "merges" all slice jobs into a single job
+// it will set the status at the least progressed and set the
+// render time at the longest time of the individual slices
+func mergeSliceJobs(sliceJobs []*api.Job) (*api.Job, error) {
+	// start with base job
+	job := sliceJobs[0]
+	job.SliceSequenceIDs = []uint64{}
+
+	renderTimeSeconds := int64(0)
+	if job.Duration != nil {
+		renderTimeSeconds = job.Duration.Seconds
+	}
+
+	for _, j := range sliceJobs {
+		logrus.Debugf("merging slice job %s", j.ID)
+		if api.Job_Status_value[j.Status.String()] < api.Job_Status_value[job.Status.String()] {
+			job.Status = j.Status
+		}
+		if j.StartedAt.Before(job.StartedAt) {
+			job.StartedAt = job.StartedAt
+		}
+
+		if j.FinishedAt.After(job.FinishedAt) {
+			job.FinishedAt = j.FinishedAt
+		}
+		// set slice sequence ids
+		logrus.Debugf("appending slice sequence id %d", j.SequenceID)
+		job.SliceSequenceIDs = append(job.SliceSequenceIDs, j.SequenceID)
+		if job.Duration != nil {
+			renderTimeSeconds += job.Duration.Seconds
+		}
+	}
+
+	renderTime, err := time.ParseDuration(fmt.Sprintf("%ds", renderTimeSeconds))
+	if err != nil {
+		return nil, err
+	}
+	job.Duration = ptypes.DurationProto(renderTime)
+
+	return job, nil
 }
