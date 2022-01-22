@@ -217,10 +217,7 @@ func mergeSliceJobs(sliceJobs []*api.Job) (*api.Job, error) {
 	job := sliceJobs[0]
 	job.SliceSequenceIDs = []uint64{}
 
-	renderTimeSeconds := int64(0)
-	if job.Duration != nil {
-		renderTimeSeconds = job.Duration.Seconds
-	}
+	renderTimeSeconds := float64(0.0)
 
 	for _, j := range sliceJobs {
 		logrus.Debugf("merging slice job %s", j.ID)
@@ -238,11 +235,11 @@ func mergeSliceJobs(sliceJobs []*api.Job) (*api.Job, error) {
 		logrus.Debugf("appending slice sequence id %d", j.SequenceID)
 		job.SliceSequenceIDs = append(job.SliceSequenceIDs, j.SequenceID)
 		if job.Duration != nil {
-			renderTimeSeconds += job.Duration.Seconds
+			renderTimeSeconds += float64(job.Duration.Seconds)
 		}
 	}
 
-	renderTime, err := time.ParseDuration(fmt.Sprintf("%ds", renderTimeSeconds))
+	renderTime, err := time.ParseDuration(fmt.Sprintf("%0.2fs", renderTimeSeconds))
 	if err != nil {
 		return nil, err
 	}

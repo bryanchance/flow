@@ -4,7 +4,7 @@ COPY . /src
 WORKDIR /src
 RUN make
 
-FROM r.underland.io/alpine:3.13
+FROM alpine:3.15
 COPY --from=build /src/bin/finca /usr/bin/finca
 ENTRYPOINT ["/usr/bin/finca"]
 CMD ["-h"]

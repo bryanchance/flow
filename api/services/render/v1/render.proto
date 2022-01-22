@@ -77,8 +77,8 @@ message Job {
         enum Status {
                 QUEUED = 0;
                 RENDERING = 1;
-                FINISHED = 2;
-                ERROR = 3;
+                ERROR = 2;
+                FINISHED = 3;
         }
         Status status = 16;
         google.protobuf.Timestamp queued_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
