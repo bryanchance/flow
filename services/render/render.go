@@ -11,7 +11,7 @@ import (
 
 func (s *service) GetLatestRender(req *api.GetLatestRenderRequest, stream api.Render_GetLatestRenderServer) error {
 	ctx := context.Background()
-	data, err := s.ds.GetLatestRender(ctx, req.ID)
+	data, err := s.ds.GetLatestRender(ctx, req.ID, req.Frame)
 	if err != nil {
 		return err
 	}

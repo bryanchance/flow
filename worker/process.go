@@ -5,9 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"image"
-	"image/draw"
-	"image/png"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -344,23 +341,29 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 		slices = append(slices, o.Key)
 	}
 
-	for _, p := range slices {
-		logrus.Debugf("getting object: %s", p)
-		obj, err := mc.GetObject(ctx, w.config.S3Bucket, p, minio.GetObjectOptions{})
-		if err != nil {
-			return err
-		}
-		fileName := filepath.Base(p)
-		logrus.Debugf("creating local %s", fileName)
-		f, err := os.Create(filepath.Join(tmpDir, fileName))
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(f, obj); err != nil {
-			return err
-		}
-		f.Close()
+	if int64(len(slices)) < job.Request.RenderSlices {
+		logrus.Infof("render for project %s is still in progress; skipping compositing", job.ID)
+		return nil
 	}
+
+	logrus.Infof("detected complete render; compositing %s", job.ID)
+	//for _, p := range slices {
+	//	logrus.Debugf("getting object: %s", p)
+	//	obj, err := mc.GetObject(ctx, w.config.S3Bucket, p, minio.GetObjectOptions{})
+	//	if err != nil {
+	//		return err
+	//	}
+	//	fileName := filepath.Base(p)
+	//	logrus.Debugf("creating local %s", fileName)
+	//	f, err := os.Create(filepath.Join(tmpDir, fileName))
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if _, err := io.Copy(f, obj); err != nil {
+	//		return err
+	//	}
+	//	f.Close()
+	//}
 
 	// process images
 	renderStartFrame := job.Request.RenderStartFrame
@@ -370,75 +373,79 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 	}
 	logrus.Debugf("processing %d -> %d frames", renderStartFrame, renderEndFrame)
 	for i := renderStartFrame; i <= renderEndFrame; i++ {
-		slices := []image.Image{}
-		logrus.Debugf("processing frame %d", i)
-		files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("*_%04d.*", i)))
+		//slices := []image.Image{}
+		//logrus.Debugf("processing frame %d", i)
+		//files, err := filepath.Glob(filepath.Join(tmpDir, fmt.Sprintf("*_%04d.*", i)))
+		//if err != nil {
+		//	return err
+		//}
+		//for _, f := range files {
+		//	if ext := filepath.Ext(f); strings.ToLower(ext) != ".png" {
+		//		logrus.Warnf("only .png files can be composited; skipping %s", f)
+		//		continue
+		//	}
+		//	logrus.Debugf("adding slice %s", f)
+		//	imgFile, err := os.Open(f)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	img, err := png.Decode(imgFile)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	slices = append(slices, img)
+		//	imgFile.Close()
+		//}
+		//if len(slices) == 0 {
+		//	logrus.Warnf("unable to find any render slices for frame %d", i)
+		//	continue
+		//}
+
+		//logrus.Infof("compositing frame %d from %d slices", i, len(slices))
+		//bounds := slices[0].Bounds()
+		//finalImage := image.NewRGBA(bounds)
+		//for _, img := range slices {
+		//	draw.Draw(finalImage, bounds, img, image.ZP, draw.Over)
+		//}
+
+		//finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", job.Request.Name, i))
+		//logrus.Debugf("creating final composite %s", finalFilePath)
+		//final, err := os.Create(finalFilePath)
+		//if err != nil {
+		//	return err
+		//}
+		//// TODO: allow for configurable compression levels
+		//enc := &png.Encoder{
+		//	CompressionLevel: png.NoCompression,
+		//}
+		//if err := enc.Encode(final, finalImage); err != nil {
+		//	return err
+		//}
+
+		//st, err := final.Stat()
+		//if err != nil {
+		//	return err
+		//}
+		//final.Close()
+
+		//ff, err := os.Open(finalFilePath)
+		//if err != nil {
+		//	return err
+		//}
+
+		data, err := w.ds.GetCompositeRender(ctx, job.ID, i)
 		if err != nil {
 			return err
 		}
-		for _, f := range files {
-			if ext := filepath.Ext(f); strings.ToLower(ext) != ".png" {
-				logrus.Warnf("only .png files can be composited; skipping %s", f)
-				continue
-			}
-			logrus.Debugf("adding slice %s", f)
-			imgFile, err := os.Open(f)
-			if err != nil {
-				return err
-			}
-			img, err := png.Decode(imgFile)
-			if err != nil {
-				return err
-			}
-			slices = append(slices, img)
-			imgFile.Close()
-		}
-		if len(slices) == 0 {
-			logrus.Warnf("unable to find any render slices for frame %d", i)
-			continue
-		}
+		buf := bytes.NewBuffer(data)
 
-		logrus.Infof("compositing frame %d from %d slices", i, len(slices))
-		bounds := slices[0].Bounds()
-		finalImage := image.NewRGBA(bounds)
-		for _, img := range slices {
-			draw.Draw(finalImage, bounds, img, image.ZP, draw.Over)
-		}
-
-		finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", job.Request.Name, i))
-		logrus.Debugf("creating final composite %s", finalFilePath)
-		final, err := os.Create(finalFilePath)
-		if err != nil {
-			return err
-		}
-		// TODO: allow for configurable compression levels
-		enc := &png.Encoder{
-			CompressionLevel: png.NoCompression,
-		}
-		if err := enc.Encode(final, finalImage); err != nil {
-			return err
-		}
-
-		st, err := final.Stat()
-		if err != nil {
-			return err
-		}
-		final.Close()
-
-		ff, err := os.Open(finalFilePath)
-		if err != nil {
-			return err
-		}
 		// sync final composite back to s3
 		objectName := path.Join(finca.S3RenderPath, job.ID, fmt.Sprintf("%s_%04d.png", job.Request.Name, i))
-		logrus.Infof("uploading composited frame %d (%s) to bucket %s (%d bytes)", i, objectName, w.config.S3Bucket, st.Size())
-		if _, err := mc.PutObject(ctx, w.config.S3Bucket, objectName, ff, st.Size(), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {
+		logrus.Infof("uploading composited frame %d (%s) to bucket %s (%d bytes)", i, objectName, w.config.S3Bucket, buf.Len())
+		if _, err := mc.PutObject(ctx, w.config.S3Bucket, objectName, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {
 			return errors.Wrapf(err, "error uploading final composite %s", objectName)
 		}
-		ff.Close()
 	}
-
-	// TODO: remove render slice from s3?
 
 	return nil
 }
