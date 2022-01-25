@@ -2,6 +2,7 @@ package render
 
 import (
 	"context"
+	"strings"
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	ptypes "github.com/gogo/protobuf/types"
@@ -37,10 +38,6 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 		return empty, errors.Wrapf(err, "error getting job %s from datastore", r.ID)
 	}
 
-	if err := s.ds.DeleteJob(ctx, r.ID); err != nil {
-		return empty, errors.Wrapf(err, "error deleting job %s from datastore", r.ID)
-	}
-
 	js, err := s.natsClient.JetStream()
 	if err != nil {
 		return empty, err
@@ -49,8 +46,25 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 	// check nats for the job and delete
 	if job.SequenceID != 0 {
 		if err := js.DeleteMsg(s.config.NATSJobSubject, job.SequenceID); err != nil {
-			return empty, err
+			// ignore missing
+			if !strings.Contains(err.Error(), "no message found") {
+				return empty, err
+			}
 		}
+	}
+	// delete slice jobs
+	for _, j := range job.SliceJobs {
+		if err := js.DeleteMsg(s.config.NATSJobSubject, j.SequenceID); err != nil {
+			// ignore missing
+			if !strings.Contains(err.Error(), "no message found") {
+				return empty, err
+			}
+		}
+	}
+
+	// delete from datastore
+	if err := s.ds.DeleteJob(ctx, r.ID); err != nil {
+		return empty, errors.Wrapf(err, "error deleting job %s from datastore", r.ID)
 	}
 
 	logrus.Infof("deleted job %s", r.ID)

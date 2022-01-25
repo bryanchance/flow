@@ -11,7 +11,6 @@ import (
 	"git.underland.io/ehazlett/finca"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 func (d *Datastore) GetLatestRender(ctx context.Context, jobID string) ([]byte, error) {
@@ -37,7 +36,6 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string) ([]byte, 
 			return nil, err
 		}
 		if sliceMatch {
-			logrus.Debugf("skipping slice render %s", o.Key)
 			continue
 		}
 		latestRenderPath = o.Key

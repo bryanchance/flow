@@ -344,12 +344,6 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 		slices = append(slices, o.Key)
 	}
 
-	if int64(len(slices)) < job.Request.RenderSlices {
-		logrus.Infof("render for project %s is still in progress; skipping compositing", job.ID)
-		return nil
-	}
-
-	logrus.Infof("detected complete render; compositing %s", job.ID)
 	for _, p := range slices {
 		logrus.Debugf("getting object: %s", p)
 		obj, err := mc.GetObject(ctx, w.config.S3Bucket, p, minio.GetObjectOptions{})

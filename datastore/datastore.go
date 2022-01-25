@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"git.underland.io/ehazlett/finca"
+	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -24,4 +25,11 @@ func NewDatastore(cfg *finca.Config) (*Datastore, error) {
 		storageClient: mc,
 		config:        cfg,
 	}, nil
+}
+
+func (d *Datastore) Marshaler() *jsonpb.Marshaler {
+	m := &jsonpb.Marshaler{
+		EmitDefaults: true,
+	}
+	return m
 }

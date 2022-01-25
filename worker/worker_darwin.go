@@ -1,12 +1,14 @@
 package worker
 
+import "runtime"
+
 var (
 	blenderExecutableName      = "blender"
 	blenderCommandPlatformArgs = []string{}
 )
 
 func getCPUThreads() (uint32, error) {
-	return uint32(0), nil
+	return uint32(runtime.NumCPU()), nil
 }
 
 func getMemory() (int64, error) {

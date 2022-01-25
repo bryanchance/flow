@@ -71,19 +71,20 @@ message Job {
         string output_dir = 10;
         google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         uint64 sequence_id = 12 [(gogoproto.customname) = "SequenceID"];
-        repeated uint64 slice_sequence_ids = 13 [(gogoproto.customname) = "SliceSequenceIDs"];
-        google.protobuf.Duration duration = 14;
-        Worker worker = 15;
+        google.protobuf.Duration duration = 13;
+        Worker worker = 14;
         enum Status {
                 QUEUED = 0;
                 RENDERING = 1;
                 ERROR = 2;
                 FINISHED = 3;
         }
-        Status status = 16;
-        google.protobuf.Timestamp queued_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp started_at = 18 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp finished_at = 19 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        Status status = 15;
+        google.protobuf.Timestamp queued_at = 16 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 18 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        // SliceJobs are used by the datastore to relate slice jobs to the job ID
+        repeated Job slice_jobs = 19;
 }
 
 message ListJobsRequest {}

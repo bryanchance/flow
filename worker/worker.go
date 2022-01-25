@@ -220,8 +220,7 @@ func (w *Worker) Run() error {
 
 				// publish status event for server
 				b := &bytes.Buffer{}
-				jm := &jsonpb.Marshaler{}
-				if err := jm.Marshal(b, j); err != nil {
+				if err := w.ds.Marshaler().Marshal(b, j); err != nil {
 					logrus.WithError(err).Error("error publishing job status")
 					continue
 				}

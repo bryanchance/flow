@@ -13,7 +13,6 @@ import (
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
-	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	cs "github.com/mitchellh/copystructure"
 	uuid "github.com/satori/go.uuid"
@@ -175,8 +174,7 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 				sliceJob.RenderSliceMaxY = float32(slice.MaxY)
 				// queue slice job
 				buf := &bytes.Buffer{}
-				m := &jsonpb.Marshaler{}
-				if err := m.Marshal(buf, sliceJob); err != nil {
+				if err := s.ds.Marshaler().Marshal(buf, sliceJob); err != nil {
 					return err
 				}
 				logrus.Debugf("publishing job slice %s (%d)", job.ID, i)
@@ -186,12 +184,18 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 				}
 				sliceJob.SequenceID = ack.Sequence
 
-				job.Status = api.Job_QUEUED
-				job.QueuedAt = time.Now()
+				sliceJob.Status = api.Job_QUEUED
+				sliceJob.QueuedAt = time.Now()
 
-				if err := s.ds.UpdateJob(ctx, job); err != nil {
+				if err := s.ds.UpdateJob(ctx, sliceJob); err != nil {
 					return err
 				}
+			}
+			// update parent job
+			job.Status = api.Job_QUEUED
+			job.QueuedAt = time.Now()
+			if err := s.ds.UpdateJob(ctx, job); err != nil {
+				return err
 			}
 
 			// slices queued; continue to next frame

@@ -63,7 +63,6 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 // GetJob returns a job by id from the datastore
 func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
 	jobPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobPath)
-	logrus.Debugf("getting job from path: %s", jobPath)
 	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
 	if err != nil {
 		logrus.Errorf("key not found: %s", jobPath)
@@ -75,50 +74,46 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) 
 		return nil, err
 	}
 
-	j := &api.Job{}
-	if err := jsonpb.Unmarshal(buf, j); err != nil {
+	job := &api.Job{}
+	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return nil, err
 	}
 
 	// check for render slices
-	if j.Request.RenderSlices > 0 {
-		sliceJobs := []*api.Job{}
-		for i := int64(0); i < j.Request.RenderSlices; i++ {
+	if job.Request.RenderSlices > 0 {
+		for i := int64(0); i < job.Request.RenderSlices; i++ {
 			jobPath := path.Join(finca.S3ProjectPath, jobID, fmt.Sprintf("%s.%d", finca.S3JobPath, i))
-			logrus.Debugf("loading job slice from %s", jobPath)
 			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
 			if err != nil {
 				return nil, err
 			}
 
+			j := &api.Job{}
 			buf := &bytes.Buffer{}
 			if _, err := io.Copy(buf, obj); err != nil {
 				// if job output doesn't exist it is most likely queued and hasn't started yet
 				if strings.Contains(err.Error(), "key does not exist") {
 					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
-					sliceJobs = append(sliceJobs, j)
+					job.SliceJobs = append(job.SliceJobs, j)
 					continue
 				}
 				return nil, err
 			}
 
-			j := &api.Job{}
 			if err := jsonpb.Unmarshal(buf, j); err != nil {
 				return nil, err
 			}
 
-			sliceJobs = append(sliceJobs, j)
+			job.SliceJobs = append(job.SliceJobs, j)
 		}
 
 		// "merge" slice jobs
-		mergedJob, err := mergeSliceJobs(sliceJobs)
-		if err != nil {
+		if err := mergeSliceJobs(job); err != nil {
 			return nil, err
 		}
-		j = mergedJob
 	}
 
-	return j, nil
+	return job, nil
 }
 
 // UpdateJob updates the status of a job
@@ -147,8 +142,7 @@ func (d *Datastore) UpdateJob(ctx context.Context, job *api.Job) error {
 	}
 
 	buf := &bytes.Buffer{}
-	m := &jsonpb.Marshaler{}
-	if err := m.Marshal(buf, job); err != nil {
+	if err := d.Marshaler().Marshal(buf, job); err != nil {
 		return err
 	}
 
@@ -209,41 +203,75 @@ func getJobPath(jobID string, renderSliceIndex int) string {
 	return jobPath
 }
 
-// mergeSliceJobs "merges" all slice jobs into a single job
+// mergeSliceJobs "merges" and "resolves" all slice jobs in the passed job
 // it will set the status at the least progressed and set the
 // render time at the longest time of the individual slices
-func mergeSliceJobs(sliceJobs []*api.Job) (*api.Job, error) {
-	// start with base job
-	job := sliceJobs[0]
-	job.SliceSequenceIDs = []uint64{}
-
+func mergeSliceJobs(job *api.Job) error {
 	renderTimeSeconds := float64(0.0)
+	job.Status = api.Job_QUEUED
+	finishedJobs := 0
+	for i := 0; i < len(job.SliceJobs); i++ {
+		sliceJob := job.SliceJobs[i]
+		// check status based upon slice
+		sliceStatusV := api.Job_Status_value[sliceJob.Status.String()]
+		jobStatusV := api.Job_Status_value[job.Status.String()]
+		if sliceJob.Status == api.Job_FINISHED {
+			finishedJobs += 1
+		}
+		if sliceStatusV > jobStatusV {
+			switch job.Status {
+			case api.Job_RENDERING, api.Job_ERROR:
+				// leave current status
+			case api.Job_QUEUED, api.Job_FINISHED:
+				// only update if not finished
+				switch sliceJob.Status {
+				case api.Job_FINISHED:
+					job.Status = api.Job_RENDERING
+				default:
+					job.Status = sliceJob.Status
+				}
+			}
+		}
+		if sliceStatusV < jobStatusV {
+			switch sliceJob.Status {
+			case api.Job_RENDERING, api.Job_ERROR:
+				job.Status = sliceJob.Status
+			case api.Job_QUEUED:
+				switch job.Status {
+				case api.Job_RENDERING, api.Job_ERROR:
+					// leave
+				default:
+					job.Status = sliceJob.Status
+				}
+			}
+		}
 
-	for _, j := range sliceJobs {
-		logrus.Debugf("merging slice job %s", j.ID)
-		if api.Job_Status_value[j.Status.String()] < api.Job_Status_value[job.Status.String()] {
-			job.Status = j.Status
+		// set time to default if zero
+		if job.StartedAt.IsZero() {
+			job.StartedAt = sliceJob.StartedAt
 		}
-		if j.StartedAt.Before(job.StartedAt) {
-			job.StartedAt = job.StartedAt
+		// update times
+		if sliceJob.StartedAt.Before(job.StartedAt) {
+			job.StartedAt = sliceJob.StartedAt
 		}
 
-		if j.FinishedAt.After(job.FinishedAt) {
-			job.FinishedAt = j.FinishedAt
+		if sliceJob.FinishedAt.After(job.FinishedAt) {
+			job.FinishedAt = sliceJob.FinishedAt
 		}
-		// set slice sequence ids
-		logrus.Debugf("appending slice sequence id %d", j.SequenceID)
-		job.SliceSequenceIDs = append(job.SliceSequenceIDs, j.SequenceID)
-		if job.Duration != nil {
-			renderTimeSeconds += float64(job.Duration.Seconds)
+		if sliceJob.Duration != nil {
+			renderTimeSeconds += float64(sliceJob.Duration.Seconds)
 		}
+	}
+	// check for finished jobs to mark as finished
+	if finishedJobs == len(job.SliceJobs) {
+		job.Status = api.Job_FINISHED
 	}
 
 	renderTime, err := time.ParseDuration(fmt.Sprintf("%0.2fs", renderTimeSeconds))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	job.Duration = ptypes.DurationProto(renderTime)
 
-	return job, nil
+	return nil
 }
