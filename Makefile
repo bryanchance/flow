@@ -3,6 +3,7 @@ GOARCH?=
 COMMIT?=`git rev-parse --short HEAD`
 APP=finca
 DAEMON=finca
+CGO_ENABLED=0
 CLI=fctl
 WORKER=finca-worker
 REPO?=git.underland.io/ehazlett/$(APP)

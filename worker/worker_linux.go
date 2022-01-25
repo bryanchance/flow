@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/jaypipes/ghw"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 var (
@@ -11,22 +13,20 @@ var (
 	blenderCommandPlatformArgs = []string{}
 )
 
-func getCPUThreads() (uint32, error) {
-	cpu, err := ghw.CPU()
+func getCPUs() (uint32, error) {
+	cpus, err := cpu.Counts(true)
 	if err != nil {
-		return uint32(0), err
+		return 0, err
 	}
-
-	return cpu.TotalThreads, nil
+	return uint32(cpus), nil
 }
 
 func getMemory() (int64, error) {
-	mem, err := ghw.Memory()
+	m, err := mem.VirtualMemory()
 	if err != nil {
-		return int64(0), err
+		return -1, err
 	}
-
-	return mem.TotalUsableBytes, nil
+	return int64(m.Total), nil
 }
 
 func getGPUs() ([]*GPU, error) {

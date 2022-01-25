@@ -1,18 +1,29 @@
 package worker
 
-import "runtime"
+import (
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+)
 
 var (
 	blenderExecutableName      = "blender"
 	blenderCommandPlatformArgs = []string{}
 )
 
-func getCPUThreads() (uint32, error) {
-	return uint32(runtime.NumCPU()), nil
+func getCPUs() (uint32, error) {
+	cpus, err := cpu.Counts(true)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(cpus), nil
 }
 
 func getMemory() (int64, error) {
-	return int64(0), nil
+	m, err := mem.VirtualMemory()
+	if err != nil {
+		return -1, err
+	}
+	return int64(m.Total), nil
 }
 
 func getGPUs() ([]*GPU, error) {

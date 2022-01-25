@@ -49,7 +49,7 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 			}
 		}()
 	}
-	cpuThreads, err := getCPUThreads()
+	cpuThreads, err := getCPUs()
 	if err != nil {
 		return nil, err
 	}
