@@ -25,8 +25,20 @@ func (s ByCreatedAt) Len() int           { return len(s) }
 func (s ByCreatedAt) Less(i, j int) bool { return s[i].CreatedAt.After(s[j].CreatedAt) }
 func (s ByCreatedAt) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
+type JobOptConfig struct {
+	excludeFrames bool
+	excludeSlices bool
+}
+
+type JobOpt func(c *JobOptConfig)
+
 // GetJobs returns a list of jobs
-func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
+func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job, error) {
+	cfg := &JobOptConfig{}
+	for _, o := range jobOpts {
+		o(cfg)
+	}
+
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    finca.S3ProjectPath,
 		Recursive: true,
@@ -48,7 +60,7 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 
 		found[jobID] = struct{}{}
 
-		job, err := d.GetJob(ctx, jobID)
+		job, err := d.GetJob(ctx, jobID, jobOpts...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error getting job from datastore: %s", jobID)
 		}
@@ -61,12 +73,16 @@ func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
 }
 
 // GetJob returns a job by id from the datastore
-func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
-	jobPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobPath)
+func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt) (*api.Job, error) {
+	cfg := &JobOptConfig{}
+	for _, o := range jobOpts {
+		o(cfg)
+	}
+
+	jobPath := getJobPath(jobID)
 	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
 	if err != nil {
-		logrus.Errorf("key not found: %s", jobPath)
-		return nil, err
+		return nil, errors.Wrapf(err, "error getting job %s", jobPath)
 	}
 
 	buf := &bytes.Buffer{}
@@ -78,76 +94,144 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) 
 	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return nil, err
 	}
-
-	// check for render slices
-	if job.Request.RenderSlices > 0 {
-		for i := int64(0); i < job.Request.RenderSlices; i++ {
-			jobPath := path.Join(finca.S3ProjectPath, jobID, fmt.Sprintf("%s.%d", finca.S3JobPath, i))
-			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
-			if err != nil {
-				return nil, err
-			}
-
-			j := &api.Job{}
-			buf := &bytes.Buffer{}
-			if _, err := io.Copy(buf, obj); err != nil {
-				// if job output doesn't exist it is most likely queued and hasn't started yet
-				if strings.Contains(err.Error(), "key does not exist") {
-					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
-					job.SliceJobs = append(job.SliceJobs, j)
-					continue
-				}
-				return nil, err
-			}
-
-			if err := jsonpb.Unmarshal(buf, j); err != nil {
-				return nil, err
-			}
-
-			job.SliceJobs = append(job.SliceJobs, j)
+	// filter
+	if cfg.excludeSlices {
+		for _, j := range job.FrameJobs {
+			j.SliceJobs = []*api.SliceJob{}
 		}
-
-		// "merge" slice jobs
-		if err := mergeSliceJobs(job); err != nil {
-			return nil, err
-		}
+	}
+	if cfg.excludeFrames {
+		job.FrameJobs = []*api.FrameJob{}
 	}
 
 	return job, nil
 }
 
-// UpdateJob updates the status of a job
-func (d *Datastore) UpdateJob(ctx context.Context, job *api.Job) error {
-	jobPath := getJobPath(job.ID, int(job.RenderSliceIndex))
-
-	j, err := d.GetJob(ctx, job.ID)
+// ResolveJob resolves a job from all frame and slice jobs
+func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
+	jobPath := getJobPath(jobID)
+	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
 	if err != nil {
-		if !strings.Contains(err.Error(), "key does not exist") {
-			return err
-		}
-	}
-
-	// update from existing if zero
-	if j != nil {
-		if job.QueuedAt.IsZero() {
-			job.QueuedAt = j.QueuedAt
-		}
-		if job.StartedAt.IsZero() {
-			job.StartedAt = j.StartedAt
-		}
-		if job.FinishedAt.IsZero() {
-			job.FinishedAt = j.FinishedAt
-		}
-
+		return errors.Wrapf(err, "error getting job %s", jobPath)
 	}
 
 	buf := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(buf, job); err != nil {
+	if _, err := io.Copy(buf, obj); err != nil {
 		return err
 	}
 
-	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, jobPath, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: finca.S3JobContentType}); err != nil {
+	job := &api.Job{}
+	if err := jsonpb.Unmarshal(buf, job); err != nil {
+		return err
+	}
+
+	frameJobs := []*api.FrameJob{}
+
+	// load frames
+	for _, f := range job.FrameJobs {
+		// check if non-slice job
+		if job.Request.RenderSlices == 0 {
+			framePath := getFrameJobPath(jobID, f.RenderFrame)
+			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, framePath, minio.GetObjectOptions{})
+			if err != nil {
+				if strings.Contains(err.Error(), "key does not exist") {
+					logrus.Debugf("key not found for %s; assuming frame job is queued", jobPath)
+					continue
+				}
+				return errors.Wrapf(err, "error getting frame job object %s", framePath)
+			}
+
+			buf := &bytes.Buffer{}
+			if _, err := io.Copy(buf, obj); err != nil {
+				return err
+			}
+
+			frameJob := &api.FrameJob{}
+			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
+				return err
+			}
+			frameJobs = append(frameJobs, frameJob)
+			continue
+		}
+		// load slices
+		sliceJobs := []*api.SliceJob{}
+		for _, slice := range f.SliceJobs {
+			slicePath := getSliceJobPath(jobID, slice.RenderFrame, slice.RenderSliceIndex)
+			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, slicePath, minio.GetObjectOptions{})
+			if err != nil {
+				if strings.Contains(err.Error(), "key does not exist") {
+					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
+					continue
+				}
+				return err
+			}
+			sliceJob := &api.SliceJob{}
+			buf := &bytes.Buffer{}
+			if _, err := io.Copy(buf, obj); err != nil {
+				return err
+			}
+
+			if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
+				return err
+			}
+
+			sliceJobs = append(sliceJobs, sliceJob)
+		}
+		f.SliceJobs = sliceJobs
+		frameJobs = append(frameJobs, f)
+	}
+
+	job.FrameJobs = frameJobs
+
+	if err := resolveJob(job); err != nil {
+		return err
+	}
+
+	if err := d.UpdateJob(ctx, jobID, job); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateJob updates the status of a job
+func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) error {
+	dbPath := ""
+	buf := &bytes.Buffer{}
+
+	resolveJob := false
+
+	switch v := o.(type) {
+	case *api.Job:
+		dbPath = getJobPath(jobID)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+	case *api.FrameJob:
+		dbPath = getFrameJobPath(jobID, v.RenderFrame)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+		resolveJob = true
+	case *api.SliceJob:
+		dbPath = getSliceJobPath(jobID, v.RenderFrame, v.RenderSliceIndex)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+		resolveJob = true
+	default:
+		return fmt.Errorf("job type %+T is unknown", v)
+	}
+
+	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, dbPath, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: finca.S3JobContentType}); err != nil {
 		return errors.Wrap(err, "error updating job status")
+	}
+
+	if resolveJob {
+		logrus.Debugf("resolving job %s", jobID)
+		if err := d.ResolveJob(ctx, jobID); err != nil {
+			return errors.Wrapf(err, "error resolving job %s", jobID)
+		}
 	}
 
 	return nil
@@ -155,6 +239,8 @@ func (d *Datastore) UpdateJob(ctx context.Context, job *api.Job) error {
 
 // DeleteJob deletes a job and all related files from the datastore
 func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
+	// TODO: can just the top level keys be deleted and recurse instead of iterating objects?
+
 	// delete project
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    path.Join(finca.S3ProjectPath, id),
@@ -194,77 +280,170 @@ func getStoragePath(jobID string) string {
 	return path.Join(finca.S3ProjectPath, jobID)
 }
 
-func getJobPath(jobID string, renderSliceIndex int) string {
+func getJobPath(jobID string) string {
 	jobPath := path.Join(getStoragePath(jobID), finca.S3JobPath)
-	// check for render slice
-	if idx := renderSliceIndex; idx > -1 {
-		jobPath = path.Join(jobPath) + fmt.Sprintf(".%d", idx)
-	}
 	return jobPath
 }
 
-// mergeSliceJobs "merges" and "resolves" all slice jobs in the passed job
-// it will set the status at the least progressed and set the
-// render time at the longest time of the individual slices
-func mergeSliceJobs(job *api.Job) error {
+func getFrameJobPath(jobID string, frame int64) string {
+	return path.Join(getStoragePath(jobID), fmt.Sprintf("frame_%04d_%s", frame, finca.S3JobPath))
+}
+
+func getSliceJobPath(jobID string, frame int64, renderSliceIndex int64) string {
+	return fmt.Sprintf("%s.%d", getFrameJobPath(jobID, frame), renderSliceIndex)
+}
+
+// WARNING: dragons ahead....
+//
+// resolveJob "merges" and "resolves" all frame and slice jobs
+// in the passed job and will set the status at the least progressed and set the
+// render time at the longest time of the individual frames and slices
+func resolveJob(job *api.Job) error {
 	renderTimeSeconds := float64(0.0)
-	job.Status = api.Job_QUEUED
-	finishedJobs := 0
-	for i := 0; i < len(job.SliceJobs); i++ {
-		sliceJob := job.SliceJobs[i]
-		// check status based upon slice
-		sliceStatusV := api.Job_Status_value[sliceJob.Status.String()]
-		jobStatusV := api.Job_Status_value[job.Status.String()]
-		if sliceJob.Status == api.Job_FINISHED {
-			finishedJobs += 1
-		}
-		if sliceStatusV > jobStatusV {
-			switch job.Status {
-			case api.Job_RENDERING, api.Job_ERROR:
-				// leave current status
-			case api.Job_QUEUED, api.Job_FINISHED:
-				// only update if not finished
+	job.Status = api.JobStatus_QUEUED
+	finishedFrames := 0
+	for _, frameJob := range job.FrameJobs {
+		finishedSlices := 0
+		frameRenderSeconds := float64(0.0)
+		for _, sliceJob := range frameJob.SliceJobs {
+			// check status based upon slice
+			sliceStatusV := api.JobStatus_value[sliceJob.Status.String()]
+			jobStatusV := api.JobStatus_value[job.Status.String()]
+			if sliceJob.Status == api.JobStatus_FINISHED {
+				finishedSlices += 1
+			}
+			if sliceStatusV > jobStatusV {
+				switch job.Status {
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+					// leave current status
+				case api.JobStatus_QUEUED, api.JobStatus_FINISHED:
+					// only update if not finished
+					switch sliceJob.Status {
+					case api.JobStatus_FINISHED:
+						job.Status = api.JobStatus_RENDERING
+						frameJob.Status = api.JobStatus_RENDERING
+					default:
+						job.Status = sliceJob.Status
+						frameJob.Status = sliceJob.Status
+					}
+				}
+			}
+			if sliceStatusV < jobStatusV {
 				switch sliceJob.Status {
-				case api.Job_FINISHED:
-					job.Status = api.Job_RENDERING
-				default:
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
 					job.Status = sliceJob.Status
+				case api.JobStatus_QUEUED:
+					switch job.Status {
+					case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+						// leave
+					default:
+						job.Status = sliceJob.Status
+						frameJob.Status = sliceJob.Status
+					}
+				}
+			}
+
+			// update frame times
+			// set time to default if zero
+			if frameJob.StartedAt.IsZero() {
+				frameJob.StartedAt = sliceJob.StartedAt
+			}
+			// update times
+			if sliceJob.StartedAt.Before(frameJob.StartedAt) {
+				frameJob.StartedAt = sliceJob.StartedAt
+			}
+
+			if sliceJob.FinishedAt.After(frameJob.FinishedAt) {
+				frameJob.FinishedAt = sliceJob.FinishedAt
+			}
+
+			// update job times
+			// set time to default if zero
+			if job.StartedAt.IsZero() {
+				job.StartedAt = sliceJob.StartedAt
+			}
+			// update times
+			if sliceJob.StartedAt.Before(job.StartedAt) {
+				job.StartedAt = sliceJob.StartedAt
+			}
+
+			if sliceJob.FinishedAt.After(job.FinishedAt) {
+				job.FinishedAt = sliceJob.FinishedAt
+			}
+			// calculate slice duration
+			if !sliceJob.StartedAt.IsZero() {
+				if !sliceJob.FinishedAt.IsZero() {
+					frameRenderSeconds += float64(sliceJob.FinishedAt.Sub(sliceJob.StartedAt).Seconds())
 				}
 			}
 		}
-		if sliceStatusV < jobStatusV {
-			switch sliceJob.Status {
-			case api.Job_RENDERING, api.Job_ERROR:
-				job.Status = sliceJob.Status
-			case api.Job_QUEUED:
+
+		// slices
+		if job.Request.RenderSlices > 0 && finishedSlices == len(frameJob.SliceJobs) {
+			//finishedFrames += 1
+			frameJob.Status = api.JobStatus_FINISHED
+			renderTimeSeconds += frameRenderSeconds
+		}
+
+		// frame status
+		frameStatusV := api.JobStatus_value[frameJob.Status.String()]
+		jobStatusV := api.JobStatus_value[job.Status.String()]
+		if frameJob.Status == api.JobStatus_FINISHED {
+			finishedFrames += 1
+		}
+		if frameStatusV > jobStatusV {
+			switch job.Status {
+			case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+				// leave current status
+			case api.JobStatus_QUEUED, api.JobStatus_FINISHED:
+				// only update if not finished
+				switch frameJob.Status {
+				case api.JobStatus_FINISHED:
+					job.Status = api.JobStatus_RENDERING
+					//frameJob.Status = api.JobStatus_RENDERING
+				default:
+					job.Status = frameJob.Status
+				}
+			}
+		}
+		if frameStatusV < jobStatusV {
+			switch frameJob.Status {
+			case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+				job.Status = frameJob.Status
+			case api.JobStatus_QUEUED:
 				switch job.Status {
-				case api.Job_RENDERING, api.Job_ERROR:
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
 					// leave
 				default:
-					job.Status = sliceJob.Status
+					job.Status = frameJob.Status
 				}
 			}
 		}
-
+		// update job times
 		// set time to default if zero
 		if job.StartedAt.IsZero() {
-			job.StartedAt = sliceJob.StartedAt
+			job.StartedAt = frameJob.StartedAt
 		}
 		// update times
-		if sliceJob.StartedAt.Before(job.StartedAt) {
-			job.StartedAt = sliceJob.StartedAt
+		if frameJob.StartedAt.Before(job.StartedAt) {
+			job.StartedAt = frameJob.StartedAt
 		}
 
-		if sliceJob.FinishedAt.After(job.FinishedAt) {
-			job.FinishedAt = sliceJob.FinishedAt
+		if frameJob.FinishedAt.After(job.FinishedAt) {
+			job.FinishedAt = frameJob.FinishedAt
 		}
-		if sliceJob.Duration != nil {
-			renderTimeSeconds += float64(sliceJob.Duration.Seconds)
+
+		// calculate frame duration if not using slices
+		if job.Request.RenderSlices == 0 && !frameJob.StartedAt.IsZero() {
+			if !frameJob.FinishedAt.IsZero() {
+				renderTimeSeconds += float64(frameJob.FinishedAt.Sub(frameJob.StartedAt).Seconds())
+			}
 		}
 	}
+
 	// check for finished jobs to mark as finished
-	if finishedJobs == len(job.SliceJobs) {
-		job.Status = api.Job_FINISHED
+	if finishedFrames == len(job.FrameJobs) {
+		job.Status = api.JobStatus_FINISHED
 	}
 
 	renderTime, err := time.ParseDuration(fmt.Sprintf("%0.2fs", renderTimeSeconds))

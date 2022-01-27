@@ -32,35 +32,35 @@ var _ = time.Kitchen
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type Job_Status int32
+type JobStatus int32
 
 const (
-	Job_QUEUED    Job_Status = 0
-	Job_RENDERING Job_Status = 1
-	Job_ERROR     Job_Status = 2
-	Job_FINISHED  Job_Status = 3
+	JobStatus_QUEUED    JobStatus = 0
+	JobStatus_RENDERING JobStatus = 1
+	JobStatus_ERROR     JobStatus = 2
+	JobStatus_FINISHED  JobStatus = 3
 )
 
-var Job_Status_name = map[int32]string{
+var JobStatus_name = map[int32]string{
 	0: "QUEUED",
 	1: "RENDERING",
 	2: "ERROR",
 	3: "FINISHED",
 }
 
-var Job_Status_value = map[string]int32{
+var JobStatus_value = map[string]int32{
 	"QUEUED":    0,
 	"RENDERING": 1,
 	"ERROR":     2,
 	"FINISHED":  3,
 }
 
-func (x Job_Status) String() string {
-	return proto.EnumName(Job_Status_name, int32(x))
+func (x JobStatus) String() string {
+	return proto.EnumName(JobStatus_name, int32(x))
 }
 
-func (Job_Status) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{4, 0}
+func (JobStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{0}
 }
 
 type QueueJobRequest struct {
@@ -421,29 +421,20 @@ func (m *Worker) GetGPUs() []string {
 }
 
 type Job struct {
-	ID               string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Request          *JobRequest     `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
-	JobSource        string          `protobuf:"bytes,3,opt,name=job_source,json=jobSource,proto3" json:"job_source,omitempty"`
-	RenderSliceIndex int64           `protobuf:"varint,4,opt,name=render_slice_index,json=renderSliceIndex,proto3" json:"render_slice_index,omitempty"`
-	RenderSliceMinX  float32         `protobuf:"fixed32,5,opt,name=render_slice_min_x,json=renderSliceMinX,proto3" json:"render_slice_min_x,omitempty"`
-	RenderSliceMaxX  float32         `protobuf:"fixed32,6,opt,name=render_slice_max_x,json=renderSliceMaxX,proto3" json:"render_slice_max_x,omitempty"`
-	RenderSliceMinY  float32         `protobuf:"fixed32,7,opt,name=render_slice_min_y,json=renderSliceMinY,proto3" json:"render_slice_min_y,omitempty"`
-	RenderSliceMaxY  float32         `protobuf:"fixed32,8,opt,name=render_slice_max_y,json=renderSliceMaxY,proto3" json:"render_slice_max_y,omitempty"`
-	RenderFrame      int64           `protobuf:"varint,9,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
-	OutputDir        string          `protobuf:"bytes,10,opt,name=output_dir,json=outputDir,proto3" json:"output_dir,omitempty"`
-	CreatedAt        time.Time       `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3,stdtime" json:"created_at"`
-	SequenceID       uint64          `protobuf:"varint,12,opt,name=sequence_id,json=sequenceId,proto3" json:"sequence_id,omitempty"`
-	Duration         *types.Duration `protobuf:"bytes,13,opt,name=duration,proto3" json:"duration,omitempty"`
-	Worker           *Worker         `protobuf:"bytes,14,opt,name=worker,proto3" json:"worker,omitempty"`
-	Status           Job_Status      `protobuf:"varint,15,opt,name=status,proto3,enum=finca.services.render.v1.Job_Status" json:"status,omitempty"`
-	QueuedAt         time.Time       `protobuf:"bytes,16,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
-	StartedAt        time.Time       `protobuf:"bytes,17,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
-	FinishedAt       time.Time       `protobuf:"bytes,18,opt,name=finished_at,json=finishedAt,proto3,stdtime" json:"finished_at"`
-	// SliceJobs are used by the datastore to relate slice jobs to the job ID
-	SliceJobs            []*Job   `protobuf:"bytes,19,rep,name=slice_jobs,json=sliceJobs,proto3" json:"slice_jobs,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ID                   string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Request              *JobRequest     `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	JobSource            string          `protobuf:"bytes,3,opt,name=job_source,json=jobSource,proto3" json:"job_source,omitempty"`
+	OutputDir            string          `protobuf:"bytes,4,opt,name=output_dir,json=outputDir,proto3" json:"output_dir,omitempty"`
+	Status               JobStatus       `protobuf:"varint,5,opt,name=status,proto3,enum=finca.services.render.v1.JobStatus" json:"status,omitempty"`
+	FrameJobs            []*FrameJob     `protobuf:"bytes,6,rep,name=frame_jobs,json=frameJobs,proto3" json:"frame_jobs,omitempty"`
+	CreatedAt            time.Time       `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3,stdtime" json:"created_at"`
+	QueuedAt             time.Time       `protobuf:"bytes,8,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
+	StartedAt            time.Time       `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
+	FinishedAt           time.Time       `protobuf:"bytes,10,opt,name=finished_at,json=finishedAt,proto3,stdtime" json:"finished_at"`
+	Duration             *types.Duration `protobuf:"bytes,11,opt,name=duration,proto3" json:"duration,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
 func (m *Job) Reset()         { *m = Job{} }
@@ -500,48 +491,6 @@ func (m *Job) GetJobSource() string {
 	return ""
 }
 
-func (m *Job) GetRenderSliceIndex() int64 {
-	if m != nil {
-		return m.RenderSliceIndex
-	}
-	return 0
-}
-
-func (m *Job) GetRenderSliceMinX() float32 {
-	if m != nil {
-		return m.RenderSliceMinX
-	}
-	return 0
-}
-
-func (m *Job) GetRenderSliceMaxX() float32 {
-	if m != nil {
-		return m.RenderSliceMaxX
-	}
-	return 0
-}
-
-func (m *Job) GetRenderSliceMinY() float32 {
-	if m != nil {
-		return m.RenderSliceMinY
-	}
-	return 0
-}
-
-func (m *Job) GetRenderSliceMaxY() float32 {
-	if m != nil {
-		return m.RenderSliceMaxY
-	}
-	return 0
-}
-
-func (m *Job) GetRenderFrame() int64 {
-	if m != nil {
-		return m.RenderFrame
-	}
-	return 0
-}
-
 func (m *Job) GetOutputDir() string {
 	if m != nil {
 		return m.OutputDir
@@ -549,39 +498,25 @@ func (m *Job) GetOutputDir() string {
 	return ""
 }
 
+func (m *Job) GetStatus() JobStatus {
+	if m != nil {
+		return m.Status
+	}
+	return JobStatus_QUEUED
+}
+
+func (m *Job) GetFrameJobs() []*FrameJob {
+	if m != nil {
+		return m.FrameJobs
+	}
+	return nil
+}
+
 func (m *Job) GetCreatedAt() time.Time {
 	if m != nil {
 		return m.CreatedAt
 	}
 	return time.Time{}
-}
-
-func (m *Job) GetSequenceID() uint64 {
-	if m != nil {
-		return m.SequenceID
-	}
-	return 0
-}
-
-func (m *Job) GetDuration() *types.Duration {
-	if m != nil {
-		return m.Duration
-	}
-	return nil
-}
-
-func (m *Job) GetWorker() *Worker {
-	if m != nil {
-		return m.Worker
-	}
-	return nil
-}
-
-func (m *Job) GetStatus() Job_Status {
-	if m != nil {
-		return m.Status
-	}
-	return Job_QUEUED
 }
 
 func (m *Job) GetQueuedAt() time.Time {
@@ -605,14 +540,502 @@ func (m *Job) GetFinishedAt() time.Time {
 	return time.Time{}
 }
 
-func (m *Job) GetSliceJobs() []*Job {
+func (m *Job) GetDuration() *types.Duration {
+	if m != nil {
+		return m.Duration
+	}
+	return nil
+}
+
+type FrameJob struct {
+	ID                   string      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Request              *JobRequest `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	JobSource            string      `protobuf:"bytes,3,opt,name=job_source,json=jobSource,proto3" json:"job_source,omitempty"`
+	RenderFrame          int64       `protobuf:"varint,4,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
+	SequenceID           uint64      `protobuf:"varint,5,opt,name=sequence_id,json=sequenceId,proto3" json:"sequence_id,omitempty"`
+	Worker               *Worker     `protobuf:"bytes,6,opt,name=worker,proto3" json:"worker,omitempty"`
+	SliceJobs            []*SliceJob `protobuf:"bytes,7,rep,name=slice_jobs,json=sliceJobs,proto3" json:"slice_jobs,omitempty"`
+	QueuedAt             time.Time   `protobuf:"bytes,8,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
+	StartedAt            time.Time   `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
+	FinishedAt           time.Time   `protobuf:"bytes,10,opt,name=finished_at,json=finishedAt,proto3,stdtime" json:"finished_at"`
+	Status               JobStatus   `protobuf:"varint,11,opt,name=status,proto3,enum=finca.services.render.v1.JobStatus" json:"status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *FrameJob) Reset()         { *m = FrameJob{} }
+func (m *FrameJob) String() string { return proto.CompactTextString(m) }
+func (*FrameJob) ProtoMessage()    {}
+func (*FrameJob) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{5}
+}
+func (m *FrameJob) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FrameJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FrameJob.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FrameJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FrameJob.Merge(m, src)
+}
+func (m *FrameJob) XXX_Size() int {
+	return m.Size()
+}
+func (m *FrameJob) XXX_DiscardUnknown() {
+	xxx_messageInfo_FrameJob.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FrameJob proto.InternalMessageInfo
+
+func (m *FrameJob) GetID() string {
+	if m != nil {
+		return m.ID
+	}
+	return ""
+}
+
+func (m *FrameJob) GetRequest() *JobRequest {
+	if m != nil {
+		return m.Request
+	}
+	return nil
+}
+
+func (m *FrameJob) GetJobSource() string {
+	if m != nil {
+		return m.JobSource
+	}
+	return ""
+}
+
+func (m *FrameJob) GetRenderFrame() int64 {
+	if m != nil {
+		return m.RenderFrame
+	}
+	return 0
+}
+
+func (m *FrameJob) GetSequenceID() uint64 {
+	if m != nil {
+		return m.SequenceID
+	}
+	return 0
+}
+
+func (m *FrameJob) GetWorker() *Worker {
+	if m != nil {
+		return m.Worker
+	}
+	return nil
+}
+
+func (m *FrameJob) GetSliceJobs() []*SliceJob {
 	if m != nil {
 		return m.SliceJobs
 	}
 	return nil
 }
 
+func (m *FrameJob) GetQueuedAt() time.Time {
+	if m != nil {
+		return m.QueuedAt
+	}
+	return time.Time{}
+}
+
+func (m *FrameJob) GetStartedAt() time.Time {
+	if m != nil {
+		return m.StartedAt
+	}
+	return time.Time{}
+}
+
+func (m *FrameJob) GetFinishedAt() time.Time {
+	if m != nil {
+		return m.FinishedAt
+	}
+	return time.Time{}
+}
+
+func (m *FrameJob) GetStatus() JobStatus {
+	if m != nil {
+		return m.Status
+	}
+	return JobStatus_QUEUED
+}
+
+type SliceJob struct {
+	ID                   string      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Request              *JobRequest `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	JobSource            string      `protobuf:"bytes,3,opt,name=job_source,json=jobSource,proto3" json:"job_source,omitempty"`
+	SequenceID           uint64      `protobuf:"varint,4,opt,name=sequence_id,json=sequenceId,proto3" json:"sequence_id,omitempty"`
+	RenderSliceIndex     int64       `protobuf:"varint,5,opt,name=render_slice_index,json=renderSliceIndex,proto3" json:"render_slice_index,omitempty"`
+	RenderSliceMinX      float32     `protobuf:"fixed32,6,opt,name=render_slice_min_x,json=renderSliceMinX,proto3" json:"render_slice_min_x,omitempty"`
+	RenderSliceMaxX      float32     `protobuf:"fixed32,7,opt,name=render_slice_max_x,json=renderSliceMaxX,proto3" json:"render_slice_max_x,omitempty"`
+	RenderSliceMinY      float32     `protobuf:"fixed32,8,opt,name=render_slice_min_y,json=renderSliceMinY,proto3" json:"render_slice_min_y,omitempty"`
+	RenderSliceMaxY      float32     `protobuf:"fixed32,9,opt,name=render_slice_max_y,json=renderSliceMaxY,proto3" json:"render_slice_max_y,omitempty"`
+	RenderFrame          int64       `protobuf:"varint,10,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
+	Worker               *Worker     `protobuf:"bytes,11,opt,name=worker,proto3" json:"worker,omitempty"`
+	QueuedAt             time.Time   `protobuf:"bytes,12,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
+	StartedAt            time.Time   `protobuf:"bytes,13,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
+	FinishedAt           time.Time   `protobuf:"bytes,14,opt,name=finished_at,json=finishedAt,proto3,stdtime" json:"finished_at"`
+	Status               JobStatus   `protobuf:"varint,15,opt,name=status,proto3,enum=finca.services.render.v1.JobStatus" json:"status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *SliceJob) Reset()         { *m = SliceJob{} }
+func (m *SliceJob) String() string { return proto.CompactTextString(m) }
+func (*SliceJob) ProtoMessage()    {}
+func (*SliceJob) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{6}
+}
+func (m *SliceJob) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SliceJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SliceJob.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SliceJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SliceJob.Merge(m, src)
+}
+func (m *SliceJob) XXX_Size() int {
+	return m.Size()
+}
+func (m *SliceJob) XXX_DiscardUnknown() {
+	xxx_messageInfo_SliceJob.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SliceJob proto.InternalMessageInfo
+
+func (m *SliceJob) GetID() string {
+	if m != nil {
+		return m.ID
+	}
+	return ""
+}
+
+func (m *SliceJob) GetRequest() *JobRequest {
+	if m != nil {
+		return m.Request
+	}
+	return nil
+}
+
+func (m *SliceJob) GetJobSource() string {
+	if m != nil {
+		return m.JobSource
+	}
+	return ""
+}
+
+func (m *SliceJob) GetSequenceID() uint64 {
+	if m != nil {
+		return m.SequenceID
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderSliceIndex() int64 {
+	if m != nil {
+		return m.RenderSliceIndex
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderSliceMinX() float32 {
+	if m != nil {
+		return m.RenderSliceMinX
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderSliceMaxX() float32 {
+	if m != nil {
+		return m.RenderSliceMaxX
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderSliceMinY() float32 {
+	if m != nil {
+		return m.RenderSliceMinY
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderSliceMaxY() float32 {
+	if m != nil {
+		return m.RenderSliceMaxY
+	}
+	return 0
+}
+
+func (m *SliceJob) GetRenderFrame() int64 {
+	if m != nil {
+		return m.RenderFrame
+	}
+	return 0
+}
+
+func (m *SliceJob) GetWorker() *Worker {
+	if m != nil {
+		return m.Worker
+	}
+	return nil
+}
+
+func (m *SliceJob) GetQueuedAt() time.Time {
+	if m != nil {
+		return m.QueuedAt
+	}
+	return time.Time{}
+}
+
+func (m *SliceJob) GetStartedAt() time.Time {
+	if m != nil {
+		return m.StartedAt
+	}
+	return time.Time{}
+}
+
+func (m *SliceJob) GetFinishedAt() time.Time {
+	if m != nil {
+		return m.FinishedAt
+	}
+	return time.Time{}
+}
+
+func (m *SliceJob) GetStatus() JobStatus {
+	if m != nil {
+		return m.Status
+	}
+	return JobStatus_QUEUED
+}
+
+type WorkerJob struct {
+	// Types that are valid to be assigned to Job:
+	//	*WorkerJob_FrameJob
+	//	*WorkerJob_SliceJob
+	Job                  isWorkerJob_Job `protobuf_oneof:"job"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *WorkerJob) Reset()         { *m = WorkerJob{} }
+func (m *WorkerJob) String() string { return proto.CompactTextString(m) }
+func (*WorkerJob) ProtoMessage()    {}
+func (*WorkerJob) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{7}
+}
+func (m *WorkerJob) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *WorkerJob) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_WorkerJob.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *WorkerJob) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_WorkerJob.Merge(m, src)
+}
+func (m *WorkerJob) XXX_Size() int {
+	return m.Size()
+}
+func (m *WorkerJob) XXX_DiscardUnknown() {
+	xxx_messageInfo_WorkerJob.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_WorkerJob proto.InternalMessageInfo
+
+type isWorkerJob_Job interface {
+	isWorkerJob_Job()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type WorkerJob_FrameJob struct {
+	FrameJob *FrameJob `protobuf:"bytes,1,opt,name=frame_job,json=frameJob,proto3,oneof" json:"frame_job,omitempty"`
+}
+type WorkerJob_SliceJob struct {
+	SliceJob *SliceJob `protobuf:"bytes,2,opt,name=slice_job,json=sliceJob,proto3,oneof" json:"slice_job,omitempty"`
+}
+
+func (*WorkerJob_FrameJob) isWorkerJob_Job() {}
+func (*WorkerJob_SliceJob) isWorkerJob_Job() {}
+
+func (m *WorkerJob) GetJob() isWorkerJob_Job {
+	if m != nil {
+		return m.Job
+	}
+	return nil
+}
+
+func (m *WorkerJob) GetFrameJob() *FrameJob {
+	if x, ok := m.GetJob().(*WorkerJob_FrameJob); ok {
+		return x.FrameJob
+	}
+	return nil
+}
+
+func (m *WorkerJob) GetSliceJob() *SliceJob {
+	if x, ok := m.GetJob().(*WorkerJob_SliceJob); ok {
+		return x.SliceJob
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*WorkerJob) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*WorkerJob_FrameJob)(nil),
+		(*WorkerJob_SliceJob)(nil),
+	}
+}
+
+type JobResult struct {
+	// Types that are valid to be assigned to Result:
+	//	*JobResult_FrameJob
+	//	*JobResult_SliceJob
+	Result               isJobResult_Result `protobuf_oneof:"result"`
+	Duration             *types.Duration    `protobuf:"bytes,3,opt,name=duration,proto3" json:"duration,omitempty"`
+	RenderFrame          int64              `protobuf:"varint,4,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
+	Complete             bool               `protobuf:"varint,5,opt,name=complete,proto3" json:"complete,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *JobResult) Reset()         { *m = JobResult{} }
+func (m *JobResult) String() string { return proto.CompactTextString(m) }
+func (*JobResult) ProtoMessage()    {}
+func (*JobResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{8}
+}
+func (m *JobResult) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *JobResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_JobResult.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *JobResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_JobResult.Merge(m, src)
+}
+func (m *JobResult) XXX_Size() int {
+	return m.Size()
+}
+func (m *JobResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_JobResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_JobResult proto.InternalMessageInfo
+
+type isJobResult_Result interface {
+	isJobResult_Result()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type JobResult_FrameJob struct {
+	FrameJob *FrameJob `protobuf:"bytes,1,opt,name=frame_job,json=frameJob,proto3,oneof" json:"frame_job,omitempty"`
+}
+type JobResult_SliceJob struct {
+	SliceJob *SliceJob `protobuf:"bytes,2,opt,name=slice_job,json=sliceJob,proto3,oneof" json:"slice_job,omitempty"`
+}
+
+func (*JobResult_FrameJob) isJobResult_Result() {}
+func (*JobResult_SliceJob) isJobResult_Result() {}
+
+func (m *JobResult) GetResult() isJobResult_Result {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
+func (m *JobResult) GetFrameJob() *FrameJob {
+	if x, ok := m.GetResult().(*JobResult_FrameJob); ok {
+		return x.FrameJob
+	}
+	return nil
+}
+
+func (m *JobResult) GetSliceJob() *SliceJob {
+	if x, ok := m.GetResult().(*JobResult_SliceJob); ok {
+		return x.SliceJob
+	}
+	return nil
+}
+
+func (m *JobResult) GetDuration() *types.Duration {
+	if m != nil {
+		return m.Duration
+	}
+	return nil
+}
+
+func (m *JobResult) GetRenderFrame() int64 {
+	if m != nil {
+		return m.RenderFrame
+	}
+	return 0
+}
+
+func (m *JobResult) GetComplete() bool {
+	if m != nil {
+		return m.Complete
+	}
+	return false
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*JobResult) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*JobResult_FrameJob)(nil),
+		(*JobResult_SliceJob)(nil),
+	}
+}
+
 type ListJobsRequest struct {
+	ExcludeFrames        bool     `protobuf:"varint,1,opt,name=exclude_frames,json=excludeFrames,proto3" json:"exclude_frames,omitempty"`
+	ExcludeSlices        bool     `protobuf:"varint,2,opt,name=exclude_slices,json=excludeSlices,proto3" json:"exclude_slices,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -622,7 +1045,7 @@ func (m *ListJobsRequest) Reset()         { *m = ListJobsRequest{} }
 func (m *ListJobsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListJobsRequest) ProtoMessage()    {}
 func (*ListJobsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{5}
+	return fileDescriptor_faa69ac579737354, []int{9}
 }
 func (m *ListJobsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -651,6 +1074,20 @@ func (m *ListJobsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListJobsRequest proto.InternalMessageInfo
 
+func (m *ListJobsRequest) GetExcludeFrames() bool {
+	if m != nil {
+		return m.ExcludeFrames
+	}
+	return false
+}
+
+func (m *ListJobsRequest) GetExcludeSlices() bool {
+	if m != nil {
+		return m.ExcludeSlices
+	}
+	return false
+}
+
 type ListJobsResponse struct {
 	Jobs                 []*Job   `protobuf:"bytes,1,rep,name=jobs,proto3" json:"jobs,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -662,7 +1099,7 @@ func (m *ListJobsResponse) Reset()         { *m = ListJobsResponse{} }
 func (m *ListJobsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListJobsResponse) ProtoMessage()    {}
 func (*ListJobsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{6}
+	return fileDescriptor_faa69ac579737354, []int{10}
 }
 func (m *ListJobsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -709,7 +1146,7 @@ func (m *GetJobRequest) Reset()         { *m = GetJobRequest{} }
 func (m *GetJobRequest) String() string { return proto.CompactTextString(m) }
 func (*GetJobRequest) ProtoMessage()    {}
 func (*GetJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{7}
+	return fileDescriptor_faa69ac579737354, []int{11}
 }
 func (m *GetJobRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -756,7 +1193,7 @@ func (m *GetJobResponse) Reset()         { *m = GetJobResponse{} }
 func (m *GetJobResponse) String() string { return proto.CompactTextString(m) }
 func (*GetJobResponse) ProtoMessage()    {}
 func (*GetJobResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{8}
+	return fileDescriptor_faa69ac579737354, []int{12}
 }
 func (m *GetJobResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -802,7 +1239,7 @@ func (m *ListWorkersRequest) Reset()         { *m = ListWorkersRequest{} }
 func (m *ListWorkersRequest) String() string { return proto.CompactTextString(m) }
 func (*ListWorkersRequest) ProtoMessage()    {}
 func (*ListWorkersRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{9}
+	return fileDescriptor_faa69ac579737354, []int{13}
 }
 func (m *ListWorkersRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -842,7 +1279,7 @@ func (m *ListWorkersResponse) Reset()         { *m = ListWorkersResponse{} }
 func (m *ListWorkersResponse) String() string { return proto.CompactTextString(m) }
 func (*ListWorkersResponse) ProtoMessage()    {}
 func (*ListWorkersResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{10}
+	return fileDescriptor_faa69ac579737354, []int{14}
 }
 func (m *ListWorkersResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -889,7 +1326,7 @@ func (m *DeleteJobRequest) Reset()         { *m = DeleteJobRequest{} }
 func (m *DeleteJobRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteJobRequest) ProtoMessage()    {}
 func (*DeleteJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{11}
+	return fileDescriptor_faa69ac579737354, []int{15}
 }
 func (m *DeleteJobRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -937,7 +1374,7 @@ func (m *GetLatestRenderRequest) Reset()         { *m = GetLatestRenderRequest{}
 func (m *GetLatestRenderRequest) String() string { return proto.CompactTextString(m) }
 func (*GetLatestRenderRequest) ProtoMessage()    {}
 func (*GetLatestRenderRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{12}
+	return fileDescriptor_faa69ac579737354, []int{16}
 }
 func (m *GetLatestRenderRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -991,7 +1428,7 @@ func (m *GetLatestRenderResponse) Reset()         { *m = GetLatestRenderResponse
 func (m *GetLatestRenderResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLatestRenderResponse) ProtoMessage()    {}
 func (*GetLatestRenderResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{13}
+	return fileDescriptor_faa69ac579737354, []int{17}
 }
 func (m *GetLatestRenderResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1041,7 +1478,7 @@ func (m *ControlWorkerRequest) Reset()         { *m = ControlWorkerRequest{} }
 func (m *ControlWorkerRequest) String() string { return proto.CompactTextString(m) }
 func (*ControlWorkerRequest) ProtoMessage()    {}
 func (*ControlWorkerRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{14}
+	return fileDescriptor_faa69ac579737354, []int{18}
 }
 func (m *ControlWorkerRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1120,7 +1557,7 @@ func (m *WorkerStop) Reset()         { *m = WorkerStop{} }
 func (m *WorkerStop) String() string { return proto.CompactTextString(m) }
 func (*WorkerStop) ProtoMessage()    {}
 func (*WorkerStop) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{15}
+	return fileDescriptor_faa69ac579737354, []int{19}
 }
 func (m *WorkerStop) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1159,7 +1596,7 @@ func (m *ControlWorkerResponse) Reset()         { *m = ControlWorkerResponse{} }
 func (m *ControlWorkerResponse) String() string { return proto.CompactTextString(m) }
 func (*ControlWorkerResponse) ProtoMessage()    {}
 func (*ControlWorkerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_faa69ac579737354, []int{16}
+	return fileDescriptor_faa69ac579737354, []int{20}
 }
 func (m *ControlWorkerResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1188,13 +1625,127 @@ func (m *ControlWorkerResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ControlWorkerResponse proto.InternalMessageInfo
 
+type VersionRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *VersionRequest) Reset()         { *m = VersionRequest{} }
+func (m *VersionRequest) String() string { return proto.CompactTextString(m) }
+func (*VersionRequest) ProtoMessage()    {}
+func (*VersionRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{21}
+}
+func (m *VersionRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VersionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VersionRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VersionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VersionRequest.Merge(m, src)
+}
+func (m *VersionRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *VersionRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_VersionRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VersionRequest proto.InternalMessageInfo
+
+type VersionResponse struct {
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version              string   `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Build                string   `protobuf:"bytes,3,opt,name=build,proto3" json:"build,omitempty"`
+	Commit               string   `protobuf:"bytes,4,opt,name=commit,proto3" json:"commit,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *VersionResponse) Reset()         { *m = VersionResponse{} }
+func (m *VersionResponse) String() string { return proto.CompactTextString(m) }
+func (*VersionResponse) ProtoMessage()    {}
+func (*VersionResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_faa69ac579737354, []int{22}
+}
+func (m *VersionResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VersionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VersionResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VersionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VersionResponse.Merge(m, src)
+}
+func (m *VersionResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *VersionResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_VersionResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VersionResponse proto.InternalMessageInfo
+
+func (m *VersionResponse) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *VersionResponse) GetVersion() string {
+	if m != nil {
+		return m.Version
+	}
+	return ""
+}
+
+func (m *VersionResponse) GetBuild() string {
+	if m != nil {
+		return m.Build
+	}
+	return ""
+}
+
+func (m *VersionResponse) GetCommit() string {
+	if m != nil {
+		return m.Commit
+	}
+	return ""
+}
+
 func init() {
-	proto.RegisterEnum("finca.services.render.v1.Job_Status", Job_Status_name, Job_Status_value)
+	proto.RegisterEnum("finca.services.render.v1.JobStatus", JobStatus_name, JobStatus_value)
 	proto.RegisterType((*QueueJobRequest)(nil), "finca.services.render.v1.QueueJobRequest")
 	proto.RegisterType((*JobRequest)(nil), "finca.services.render.v1.JobRequest")
 	proto.RegisterType((*QueueJobResponse)(nil), "finca.services.render.v1.QueueJobResponse")
 	proto.RegisterType((*Worker)(nil), "finca.services.render.v1.Worker")
 	proto.RegisterType((*Job)(nil), "finca.services.render.v1.Job")
+	proto.RegisterType((*FrameJob)(nil), "finca.services.render.v1.FrameJob")
+	proto.RegisterType((*SliceJob)(nil), "finca.services.render.v1.SliceJob")
+	proto.RegisterType((*WorkerJob)(nil), "finca.services.render.v1.WorkerJob")
+	proto.RegisterType((*JobResult)(nil), "finca.services.render.v1.JobResult")
 	proto.RegisterType((*ListJobsRequest)(nil), "finca.services.render.v1.ListJobsRequest")
 	proto.RegisterType((*ListJobsResponse)(nil), "finca.services.render.v1.ListJobsResponse")
 	proto.RegisterType((*GetJobRequest)(nil), "finca.services.render.v1.GetJobRequest")
@@ -1207,6 +1758,8 @@ func init() {
 	proto.RegisterType((*ControlWorkerRequest)(nil), "finca.services.render.v1.ControlWorkerRequest")
 	proto.RegisterType((*WorkerStop)(nil), "finca.services.render.v1.WorkerStop")
 	proto.RegisterType((*ControlWorkerResponse)(nil), "finca.services.render.v1.ControlWorkerResponse")
+	proto.RegisterType((*VersionRequest)(nil), "finca.services.render.v1.VersionRequest")
+	proto.RegisterType((*VersionResponse)(nil), "finca.services.render.v1.VersionResponse")
 }
 
 func init() {
@@ -1214,92 +1767,109 @@ func init() {
 }
 
 var fileDescriptor_faa69ac579737354 = []byte{
-	// 1349 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x57, 0x5d, 0x73, 0xda, 0x46,
-	0x17, 0xb6, 0x0c, 0xc6, 0xe8, 0x80, 0x6d, 0xb2, 0xf1, 0xeb, 0x28, 0xbc, 0x89, 0xe1, 0xd5, 0xdb,
-	0x4e, 0x48, 0x9a, 0x40, 0xec, 0x4e, 0x3b, 0x9d, 0x34, 0xed, 0xd4, 0x18, 0x62, 0x93, 0xa6, 0x89,
-	0xb3, 0x84, 0xa9, 0xd3, 0x5e, 0x30, 0x02, 0xad, 0x89, 0x1c, 0xd0, 0x2a, 0xd2, 0xca, 0x35, 0x9d,
-	0xfe, 0x80, 0x4e, 0xaf, 0xf2, 0xb3, 0x72, 0xd9, 0xab, 0x5e, 0xd2, 0x0e, 0xd7, 0xfd, 0x11, 0x9d,
-	0xfd, 0x10, 0x60, 0xf0, 0x67, 0xef, 0xa4, 0xe7, 0x3c, 0xe7, 0x6b, 0xf5, 0x9c, 0xc3, 0x02, 0xdb,
-	0x1d, 0x87, 0x15, 0x43, 0xd7, 0x26, 0x7e, 0xd7, 0x72, 0xed, 0xa2, 0x43, 0x4b, 0xe4, 0x8d, 0xf5,
-	0x73, 0x97, 0x30, 0x56, 0x3a, 0x70, 0xdc, 0xb6, 0x55, 0xb2, 0x3c, 0xa7, 0x14, 0x10, 0xff, 0xc8,
-	0x69, 0x93, 0xa0, 0xe4, 0x13, 0xce, 0x2c, 0x1d, 0x6d, 0xa8, 0xa7, 0xa2, 0xe7, 0x53, 0x46, 0x91,
-	0x21, 0xa8, 0xc5, 0x88, 0x56, 0x54, 0xc6, 0xa3, 0x8d, 0xec, 0x6a, 0x87, 0x76, 0xa8, 0x20, 0x95,
-	0xf8, 0x93, 0xe4, 0x67, 0xd7, 0x3b, 0x94, 0x76, 0xba, 0xa4, 0x24, 0xde, 0x5a, 0xe1, 0x41, 0xc9,
-	0x0e, 0x7d, 0x8b, 0x39, 0xd4, 0x55, 0xf6, 0xdc, 0xb4, 0x9d, 0x39, 0x3d, 0x12, 0x30, 0xab, 0xe7,
-	0x29, 0xc2, 0x7f, 0xa7, 0x09, 0xa4, 0xe7, 0xb1, 0xbe, 0x34, 0x9a, 0xbf, 0xc0, 0xca, 0xcb, 0x90,
-	0x84, 0xe4, 0x29, 0x6d, 0x61, 0xf2, 0x2e, 0x24, 0x01, 0x43, 0xdf, 0xc0, 0xa2, 0x2f, 0x1f, 0x0d,
-	0x2d, 0xaf, 0x15, 0x52, 0x9b, 0x1f, 0x15, 0xcf, 0x2a, 0xb9, 0x38, 0x76, 0xdb, 0x9d, 0xc3, 0x91,
-	0x1b, 0xca, 0x01, 0xb4, 0xdf, 0x84, 0xee, 0xdb, 0xa6, 0x6d, 0x31, 0xcb, 0x98, 0xcf, 0x6b, 0x85,
-	0xf4, 0xee, 0x1c, 0xd6, 0x05, 0x56, 0xb1, 0x98, 0x55, 0x4e, 0x40, 0x9c, 0x9b, 0xcc, 0xbf, 0x63,
-	0x00, 0x13, 0x99, 0x11, 0xc4, 0x5d, 0xab, 0x47, 0x44, 0x5a, 0x1d, 0x8b, 0x67, 0xf4, 0x3f, 0x48,
-	0xfb, 0x24, 0xa0, 0xdd, 0x90, 0xb7, 0xdc, 0x3c, 0x16, 0xd1, 0x62, 0x38, 0x35, 0xc6, 0xf6, 0xa7,
-	0x28, 0x7d, 0x23, 0x36, 0x4d, 0x79, 0x8d, 0xee, 0x42, 0x66, 0x82, 0x12, 0xb4, 0xad, 0x2e, 0x31,
-	0xe2, 0x82, 0xb6, 0x32, 0xc6, 0xeb, 0x1c, 0x46, 0x1f, 0xc3, 0xb2, 0xec, 0xaf, 0x19, 0x58, 0x3d,
-	0xaf, 0x4b, 0x02, 0x63, 0x41, 0x10, 0x97, 0x24, 0x5a, 0x97, 0x20, 0xba, 0x0f, 0x28, 0xa2, 0x31,
-	0xcb, 0x67, 0xcd, 0x03, 0x9f, 0x57, 0x9e, 0x10, 0xd4, 0x8c, 0xa2, 0x72, 0xc3, 0x13, 0x8e, 0xa3,
-	0x02, 0x28, 0xac, 0x49, 0x5c, 0x5b, 0x71, 0x17, 0x05, 0x57, 0x25, 0xab, 0xba, 0xb6, 0x64, 0x7e,
-	0x3e, 0x4a, 0x1f, 0x06, 0xa4, 0xd9, 0xf1, 0x42, 0x23, 0x99, 0xd7, 0x0a, 0xc9, 0x72, 0x66, 0x38,
-	0xc8, 0xa5, 0xb1, 0xb0, 0x34, 0x02, 0xb2, 0xb3, 0xd7, 0xc0, 0x69, 0x7f, 0xf4, 0xe6, 0x85, 0xe8,
-	0x0e, 0xac, 0x28, 0x3f, 0xcf, 0x77, 0xa8, 0xef, 0xb0, 0xbe, 0xa1, 0x4f, 0x26, 0xd8, 0x53, 0x28,
-	0xba, 0x09, 0xb1, 0xb6, 0x17, 0x1a, 0xc0, 0x8d, 0xe5, 0xc5, 0xe1, 0x20, 0x17, 0xdb, 0xde, 0x6b,
-	0x60, 0x8e, 0xa1, 0x35, 0x48, 0xf4, 0x48, 0x8f, 0xfa, 0x7d, 0x23, 0x25, 0x5c, 0xd5, 0x1b, 0xfa,
-	0x3f, 0x2c, 0x45, 0xbd, 0x76, 0xb9, 0x00, 0x8c, 0xb4, 0x30, 0xab, 0x02, 0xea, 0x02, 0xe3, 0x5f,
-	0xa1, 0x4d, 0x5d, 0x46, 0x5c, 0xd6, 0x64, 0x7d, 0x8f, 0x18, 0x4b, 0xe2, 0x23, 0xa6, 0x14, 0xf6,
-	0xaa, 0xef, 0x11, 0xf3, 0x21, 0x64, 0xc6, 0x62, 0x0b, 0x3c, 0xea, 0x06, 0x04, 0xdd, 0x82, 0x78,
-	0x18, 0x3a, 0xb6, 0xfc, 0xe6, 0xe5, 0xe4, 0x70, 0x90, 0x8b, 0x37, 0x1a, 0xb5, 0x0a, 0x16, 0xa8,
-	0xf9, 0x9b, 0x06, 0x89, 0xef, 0xa9, 0xff, 0x96, 0xf8, 0xa7, 0x8a, 0xc3, 0x80, 0xc5, 0x23, 0xe2,
-	0x07, 0x0e, 0x75, 0x85, 0x2e, 0x74, 0x1c, 0xbd, 0xf2, 0xb0, 0x6d, 0x2f, 0x0c, 0x84, 0x16, 0x96,
-	0x64, 0xd8, 0xed, 0xbd, 0x46, 0x80, 0x05, 0x3a, 0xd1, 0x68, 0xfc, 0x44, 0xa3, 0xb7, 0x20, 0xde,
-	0xe1, 0x5e, 0x0b, 0xf9, 0x58, 0x54, 0xcc, 0x8e, 0xf0, 0xe2, 0xa8, 0xf9, 0x3e, 0x09, 0xb1, 0xa7,
-	0xb4, 0x85, 0xd6, 0x60, 0x7e, 0x54, 0x70, 0x62, 0x38, 0xc8, 0xcd, 0xd7, 0x2a, 0x78, 0xde, 0xb1,
-	0xd1, 0xd7, 0xe3, 0xc1, 0x99, 0xbf, 0xfc, 0xe0, 0x8c, 0xc7, 0xe6, 0x36, 0xc0, 0x21, 0x6d, 0x35,
-	0x03, 0x1a, 0xfa, 0x6d, 0x22, 0x2a, 0xd7, 0xb1, 0x7e, 0x48, 0x5b, 0x75, 0x01, 0x4c, 0x2a, 0x8e,
-	0x9f, 0x78, 0xd3, 0x71, 0x6d, 0x72, 0xac, 0x1a, 0xc8, 0x4c, 0x7c, 0x8a, 0x1a, 0xc7, 0xd1, 0x27,
-	0x53, 0xec, 0x9e, 0xc3, 0xa7, 0x87, 0x4b, 0x79, 0x1e, 0xaf, 0x4c, 0xb0, 0xbf, 0x73, 0xdc, 0xfd,
-	0x59, 0xb2, 0x75, 0xdc, 0x3c, 0x16, 0x62, 0x9e, 0x22, 0x5b, 0xc7, 0xfb, 0xa7, 0x46, 0xee, 0x0b,
-	0x35, 0xcf, 0x44, 0x7e, 0x7d, 0x6a, 0xe4, 0xbe, 0x90, 0xf4, 0x4c, 0xe4, 0xd7, 0x72, 0x90, 0x05,
-	0x59, 0x4e, 0x88, 0x1e, 0x0d, 0x32, 0xc7, 0xe4, 0x78, 0xdc, 0x06, 0xa0, 0x21, 0xf3, 0x42, 0xd6,
-	0xb4, 0x1d, 0x5f, 0x88, 0x58, 0xc7, 0xba, 0x44, 0x2a, 0x8e, 0x8f, 0xb6, 0x01, 0xda, 0x3e, 0xb1,
-	0x18, 0xb1, 0x9b, 0x16, 0x13, 0x2a, 0x4e, 0x6d, 0x66, 0x8b, 0x72, 0x01, 0x16, 0xa3, 0x05, 0x58,
-	0x7c, 0x15, 0x6d, 0xc8, 0x72, 0xf2, 0xc3, 0x20, 0x37, 0xf7, 0xfe, 0xcf, 0x9c, 0x86, 0x75, 0xe5,
-	0xb7, 0xc5, 0x50, 0x09, 0x52, 0x01, 0xff, 0x24, 0x2e, 0x3f, 0x64, 0x5b, 0x88, 0x3d, 0x5e, 0x5e,
-	0x1e, 0x0e, 0x72, 0x50, 0x57, 0x70, 0xad, 0x82, 0x21, 0xa2, 0xd4, 0x6c, 0xf4, 0x19, 0x24, 0xa3,
-	0xa5, 0x2c, 0x64, 0x9f, 0xda, 0xbc, 0x39, 0x93, 0xb3, 0xa2, 0x08, 0x78, 0x44, 0x45, 0x5f, 0x40,
-	0xe2, 0x27, 0xa1, 0x6d, 0x63, 0x59, 0x38, 0xe5, 0xcf, 0x96, 0x8b, 0x9c, 0x01, 0xac, 0xf8, 0xe8,
-	0x31, 0x24, 0x02, 0x66, 0xb1, 0x30, 0x30, 0x56, 0xf2, 0x5a, 0x61, 0xf9, 0x02, 0xa1, 0x15, 0xeb,
-	0x82, 0x8b, 0x95, 0x0f, 0xda, 0x02, 0xfd, 0x1d, 0x1f, 0x43, 0x71, 0x46, 0x99, 0x2b, 0x9c, 0x51,
-	0x52, 0xba, 0x6d, 0x31, 0x7e, 0xce, 0x62, 0xed, 0xc9, 0x18, 0xd7, 0xae, 0x72, 0xce, 0xca, 0x6f,
-	0x8b, 0xa1, 0x2a, 0xa4, 0x0e, 0x1c, 0xd7, 0x09, 0xde, 0xc8, 0x28, 0xe8, 0x0a, 0x51, 0x20, 0x72,
-	0xdc, 0x62, 0xe8, 0x31, 0x80, 0xd4, 0xd6, 0x21, 0x6d, 0x05, 0xc6, 0xf5, 0x7c, 0xac, 0x90, 0xda,
-	0xbc, 0x7d, 0xfe, 0xe4, 0xe9, 0xc2, 0xe1, 0x29, 0x6d, 0x05, 0xe6, 0x63, 0x48, 0xc8, 0xe3, 0x41,
-	0x00, 0x89, 0x97, 0x8d, 0x6a, 0xa3, 0x5a, 0xc9, 0xcc, 0xa1, 0x25, 0xd0, 0x71, 0xf5, 0x79, 0xa5,
-	0x8a, 0x6b, 0xcf, 0x77, 0x32, 0x1a, 0xd2, 0x61, 0xa1, 0x8a, 0xf1, 0x0b, 0x9c, 0x99, 0x47, 0x69,
-	0x48, 0x3e, 0xa9, 0x3d, 0xaf, 0xd5, 0x77, 0xab, 0x95, 0x4c, 0xcc, 0xbc, 0x06, 0x2b, 0xcf, 0x9c,
-	0x80, 0xf1, 0x48, 0x6a, 0x9c, 0xcd, 0x2a, 0x64, 0xc6, 0x90, 0x5a, 0x72, 0x1b, 0x10, 0x17, 0xc5,
-	0x69, 0x97, 0x29, 0x4e, 0x50, 0xcd, 0x3b, 0xb0, 0xb4, 0x43, 0xd8, 0xc4, 0x8f, 0xe3, 0x19, 0x5b,
-	0xc7, 0xdc, 0x82, 0xe5, 0x88, 0xa8, 0xb2, 0x95, 0x20, 0x76, 0x48, 0x5b, 0xea, 0xc7, 0xfb, 0x82,
-	0x64, 0x9c, 0x69, 0xae, 0x02, 0xe2, 0x25, 0x4b, 0x91, 0x8d, 0x1a, 0x79, 0x09, 0xd7, 0x4f, 0xa0,
-	0x2a, 0xfa, 0x23, 0x58, 0x94, 0x2a, 0x8c, 0xda, 0xb9, 0x58, 0xb6, 0x91, 0x83, 0x79, 0x0f, 0x32,
-	0x15, 0xd2, 0x25, 0x8c, 0x5c, 0xa2, 0xaf, 0x27, 0xb0, 0xb6, 0x43, 0xd8, 0x33, 0x8b, 0xf1, 0x1d,
-	0x29, 0x22, 0x5e, 0xe0, 0x81, 0x56, 0x61, 0x41, 0xee, 0x0d, 0x79, 0x47, 0x90, 0x2f, 0xe6, 0x03,
-	0xb8, 0x31, 0x13, 0x47, 0xb5, 0x82, 0xe4, 0x35, 0x44, 0x84, 0x4a, 0x63, 0x79, 0x25, 0xf9, 0x55,
-	0x83, 0xd5, 0x6d, 0xea, 0x32, 0x9f, 0x76, 0x55, 0xf5, 0x2a, 0xeb, 0x5d, 0xd0, 0x65, 0x1b, 0xcd,
-	0x51, 0xf2, 0xf4, 0x70, 0x90, 0x4b, 0x4a, 0x56, 0xad, 0x82, 0x93, 0xd2, 0x5c, 0xb3, 0xd1, 0x23,
-	0x88, 0x07, 0x8c, 0x7a, 0x17, 0xff, 0x0a, 0x48, 0xdf, 0x3a, 0xa3, 0xde, 0xee, 0x1c, 0x16, 0x3e,
-	0x65, 0x1d, 0x16, 0x7b, 0x24, 0x08, 0xac, 0x0e, 0x31, 0xd3, 0x00, 0x63, 0x82, 0x79, 0x03, 0xfe,
-	0x33, 0x55, 0x97, 0xec, 0x62, 0xf3, 0x8f, 0x05, 0x48, 0xc8, 0xc6, 0x50, 0x1b, 0x92, 0xd1, 0x0f,
-	0x2c, 0xba, 0x7b, 0x76, 0xda, 0xa9, 0x1b, 0x5f, 0xf6, 0xde, 0x65, 0xa8, 0x32, 0x5b, 0x41, 0x43,
-	0x16, 0x24, 0x23, 0x81, 0x9f, 0x97, 0x64, 0x6a, 0x2e, 0xce, 0x4b, 0x32, 0x33, 0x2f, 0x3f, 0x42,
-	0x42, 0x6a, 0x1a, 0xdd, 0x39, 0xdb, 0xeb, 0xc4, 0x78, 0x64, 0x0b, 0x17, 0x13, 0x55, 0xf0, 0x43,
-	0x48, 0x4d, 0xe8, 0x1a, 0xdd, 0x3f, 0xbf, 0xae, 0x93, 0x43, 0x91, 0x7d, 0x70, 0x49, 0xb6, 0xca,
-	0xf5, 0x02, 0xf4, 0x91, 0xe0, 0xd1, 0x39, 0x27, 0x30, 0x3d, 0x15, 0xd9, 0xb5, 0x99, 0x35, 0x58,
-	0xe5, 0xb7, 0x76, 0x74, 0x0c, 0x2b, 0x53, 0x6a, 0x46, 0x0f, 0xcf, 0xed, 0xfc, 0x94, 0x01, 0xca,
-	0x6e, 0x5c, 0xc1, 0x43, 0x36, 0xf2, 0x50, 0x43, 0x1e, 0x2c, 0x9d, 0xd0, 0x1f, 0x2a, 0x9e, 0x1d,
-	0xe5, 0xb4, 0x01, 0xca, 0x96, 0x2e, 0xcd, 0x97, 0x39, 0xcb, 0xdf, 0x7e, 0x18, 0xae, 0x6b, 0xbf,
-	0x0f, 0xd7, 0xb5, 0xbf, 0x86, 0xeb, 0xda, 0x0f, 0x5f, 0xfd, 0xbb, 0x3f, 0x5f, 0x5f, 0xca, 0xa7,
-	0xfd, 0x58, 0x2b, 0x21, 0x8e, 0xf2, 0xd3, 0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0x7d, 0xa8, 0x16,
-	0xf8, 0xc6, 0x0d, 0x00, 0x00,
+	// 1623 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x58, 0xdd, 0x6e, 0xdb, 0xc6,
+	0x12, 0xb6, 0x7e, 0x2c, 0x91, 0x23, 0xc9, 0x12, 0xf6, 0xf8, 0x38, 0x8a, 0x4e, 0x62, 0xf9, 0x30,
+	0x27, 0x88, 0x9d, 0x93, 0x48, 0xb1, 0x8b, 0x16, 0x45, 0x82, 0xfe, 0x48, 0x96, 0x62, 0x2b, 0x4d,
+	0x13, 0x87, 0x8a, 0x5a, 0xa7, 0x05, 0x2a, 0x50, 0xe2, 0x5a, 0xa1, 0x23, 0x91, 0x0c, 0xb9, 0x74,
+	0xad, 0xa2, 0x0f, 0x50, 0xf4, 0xaa, 0xbd, 0xeb, 0x93, 0xf4, 0x19, 0x72, 0xd9, 0x27, 0x50, 0x0b,
+	0x5d, 0xf4, 0xaa, 0xaf, 0x50, 0xa0, 0xd8, 0x1f, 0xea, 0xd7, 0x96, 0xa5, 0x36, 0x40, 0x8a, 0xde,
+	0x91, 0xb3, 0xdf, 0xcc, 0xce, 0xee, 0x7e, 0xdf, 0x0c, 0x97, 0xb0, 0xdb, 0x32, 0x48, 0xce, 0x33,
+	0x75, 0xec, 0xb4, 0x35, 0x53, 0xcf, 0x19, 0x56, 0x1e, 0x3f, 0xd7, 0xbe, 0x6a, 0x63, 0x42, 0xf2,
+	0x47, 0x86, 0xd9, 0xd4, 0xf2, 0x9a, 0x6d, 0xe4, 0x5d, 0xec, 0x9c, 0x18, 0x4d, 0xec, 0xe6, 0x1d,
+	0x4c, 0x91, 0xf9, 0x93, 0x6d, 0xf1, 0x94, 0xb3, 0x1d, 0x8b, 0x58, 0x28, 0xcd, 0xa0, 0x39, 0x1f,
+	0x96, 0x13, 0x83, 0x27, 0xdb, 0x99, 0xd5, 0x96, 0xd5, 0xb2, 0x18, 0x28, 0x4f, 0x9f, 0x38, 0x3e,
+	0xb3, 0xde, 0xb2, 0xac, 0x56, 0x1b, 0xe7, 0xd9, 0x5b, 0xc3, 0x3b, 0xca, 0xeb, 0x9e, 0xa3, 0x11,
+	0xc3, 0x32, 0xc5, 0x78, 0x76, 0x72, 0x9c, 0x18, 0x1d, 0xec, 0x12, 0xad, 0x63, 0x0b, 0xc0, 0x7f,
+	0x26, 0x01, 0xb8, 0x63, 0x93, 0x2e, 0x1f, 0x54, 0xbe, 0x86, 0xe4, 0x13, 0x0f, 0x7b, 0xf8, 0x81,
+	0xd5, 0x50, 0xf1, 0x4b, 0x0f, 0xbb, 0x04, 0x7d, 0x08, 0x51, 0x87, 0x3f, 0xa6, 0x03, 0x1b, 0x81,
+	0xcd, 0xd8, 0xce, 0xff, 0x72, 0xe7, 0xa5, 0x9c, 0x1b, 0xba, 0xed, 0x2f, 0xa9, 0xbe, 0x1b, 0xca,
+	0x02, 0x34, 0x9f, 0x7b, 0xe6, 0x8b, 0xba, 0xae, 0x11, 0x2d, 0x1d, 0xdc, 0x08, 0x6c, 0xc6, 0xf7,
+	0x97, 0x54, 0x99, 0xd9, 0x4a, 0x1a, 0xd1, 0x8a, 0x11, 0x08, 0xd3, 0x21, 0xe5, 0xb7, 0x10, 0xc0,
+	0xc8, 0xcc, 0x08, 0xc2, 0xa6, 0xd6, 0xc1, 0x6c, 0x5a, 0x59, 0x65, 0xcf, 0xe8, 0xbf, 0x10, 0x77,
+	0xb0, 0x6b, 0xb5, 0x3d, 0xba, 0xe4, 0xfa, 0x29, 0x8b, 0x16, 0x52, 0x63, 0x43, 0xdb, 0xe1, 0x04,
+	0xa4, 0x9b, 0x0e, 0x4d, 0x42, 0x9e, 0xa1, 0x2d, 0x48, 0x8d, 0x40, 0xdc, 0xa6, 0xd6, 0xc6, 0xe9,
+	0x30, 0x83, 0x25, 0x87, 0xf6, 0x2a, 0x35, 0xa3, 0xeb, 0xb0, 0xc2, 0xd7, 0x57, 0x77, 0xb5, 0x8e,
+	0xdd, 0xc6, 0x6e, 0x7a, 0x99, 0x01, 0x13, 0xdc, 0x5a, 0xe5, 0x46, 0x74, 0x0b, 0x90, 0x0f, 0x23,
+	0x9a, 0x43, 0xea, 0x47, 0x0e, 0xcd, 0x3c, 0xc2, 0xa0, 0x29, 0x01, 0xa5, 0x03, 0xf7, 0xa9, 0x1d,
+	0x6d, 0x82, 0xb0, 0xd5, 0xb1, 0xa9, 0x0b, 0x6c, 0x94, 0x61, 0xc5, 0x64, 0x65, 0x53, 0xe7, 0xc8,
+	0x77, 0x06, 0xd3, 0x7b, 0x2e, 0xae, 0xb7, 0x6c, 0x2f, 0x2d, 0x6d, 0x04, 0x36, 0xa5, 0x62, 0xaa,
+	0xdf, 0xcb, 0xc6, 0x55, 0x36, 0x52, 0x73, 0xf1, 0xde, 0x41, 0x4d, 0x8d, 0x3b, 0x83, 0x37, 0xdb,
+	0x43, 0x37, 0x20, 0x29, 0xfc, 0x6c, 0xc7, 0xb0, 0x1c, 0x83, 0x74, 0xd3, 0xf2, 0xe8, 0x04, 0x07,
+	0xc2, 0x8a, 0x2e, 0x43, 0xa8, 0x69, 0x7b, 0x69, 0xa0, 0x83, 0xc5, 0x68, 0xbf, 0x97, 0x0d, 0xed,
+	0x1e, 0xd4, 0x54, 0x6a, 0x43, 0x6b, 0x10, 0xe9, 0xe0, 0x8e, 0xe5, 0x74, 0xd3, 0x31, 0xe6, 0x2a,
+	0xde, 0xd0, 0x35, 0x48, 0xf8, 0x6b, 0x6d, 0x53, 0x02, 0xa4, 0xe3, 0x6c, 0x58, 0x24, 0x50, 0x65,
+	0x36, 0x7a, 0x0a, 0x4d, 0xcb, 0x24, 0xd8, 0x24, 0x75, 0xd2, 0xb5, 0x71, 0x3a, 0xc1, 0x0e, 0x31,
+	0x26, 0x6c, 0x4f, 0xbb, 0x36, 0x56, 0xee, 0x40, 0x6a, 0x48, 0x36, 0xd7, 0xb6, 0x4c, 0x17, 0xa3,
+	0x2b, 0x10, 0xf6, 0x3c, 0x43, 0xe7, 0x67, 0x5e, 0x94, 0xfa, 0xbd, 0x6c, 0xb8, 0x56, 0xab, 0x94,
+	0x54, 0x66, 0x55, 0xbe, 0x0d, 0x40, 0xe4, 0x53, 0xcb, 0x79, 0x81, 0x9d, 0x33, 0xc9, 0x91, 0x86,
+	0xe8, 0x09, 0x76, 0x5c, 0xc3, 0x32, 0x19, 0x2f, 0x64, 0xd5, 0x7f, 0xa5, 0x61, 0x9b, 0xb6, 0xe7,
+	0x32, 0x2e, 0x24, 0x78, 0xd8, 0xdd, 0x83, 0x9a, 0xab, 0x32, 0xeb, 0xc8, 0x42, 0xc3, 0x63, 0x0b,
+	0xbd, 0x02, 0xe1, 0x16, 0xf5, 0x5a, 0xde, 0x08, 0xf9, 0xc9, 0xec, 0x31, 0x2f, 0x6a, 0x55, 0x7e,
+	0x0d, 0x43, 0xe8, 0x81, 0xd5, 0x40, 0x6b, 0x10, 0x1c, 0x24, 0x1c, 0xe9, 0xf7, 0xb2, 0xc1, 0x4a,
+	0x49, 0x0d, 0x1a, 0x3a, 0x7a, 0x7f, 0x28, 0x9c, 0xe0, 0xfc, 0xc2, 0x19, 0xca, 0xe6, 0x2a, 0xc0,
+	0xb1, 0xd5, 0xa8, 0xbb, 0x96, 0xe7, 0x34, 0x31, 0xcb, 0x5c, 0x56, 0xe5, 0x63, 0xab, 0x51, 0x65,
+	0x06, 0x3a, 0x6c, 0x79, 0xc4, 0xf6, 0x48, 0x5d, 0x37, 0x1c, 0x96, 0xb8, 0xac, 0xca, 0xdc, 0x52,
+	0x32, 0x1c, 0x74, 0x0f, 0x22, 0x2e, 0xd1, 0x88, 0xc7, 0xf9, 0xba, 0xb2, 0x73, 0x6d, 0xe6, 0xe4,
+	0x55, 0x06, 0x55, 0x85, 0x0b, 0x2a, 0x00, 0x30, 0x52, 0xd6, 0x8f, 0xad, 0x86, 0x9b, 0x8e, 0x6c,
+	0x84, 0x36, 0x63, 0x3b, 0xca, 0xf9, 0x01, 0x18, 0x55, 0xe9, 0x12, 0xe4, 0x23, 0xf1, 0xe4, 0xa2,
+	0x5d, 0x80, 0xa6, 0x83, 0x35, 0x82, 0xf5, 0xba, 0x46, 0x18, 0xb9, 0x63, 0x3b, 0x99, 0x1c, 0xaf,
+	0x3d, 0x39, 0xbf, 0xf6, 0xe4, 0x9e, 0xfa, 0xc5, 0xa9, 0x28, 0xbd, 0xea, 0x65, 0x97, 0xbe, 0xfb,
+	0x39, 0x1b, 0x50, 0x65, 0xe1, 0x57, 0x20, 0xa8, 0x00, 0xf2, 0x4b, 0xca, 0x10, 0x16, 0x43, 0x5a,
+	0x20, 0x86, 0xc4, 0xdd, 0x0a, 0x84, 0xe6, 0xc1, 0x14, 0xc9, 0x63, 0xc8, 0x8b, 0xe4, 0x21, 0xfc,
+	0x0a, 0x04, 0x95, 0x21, 0x76, 0x64, 0x98, 0x86, 0xfb, 0x9c, 0x47, 0x81, 0x05, 0xa2, 0x80, 0xef,
+	0x58, 0x20, 0xe8, 0x6d, 0x90, 0xfc, 0x6a, 0xcd, 0x24, 0x15, 0xdb, 0xb9, 0x3c, 0x15, 0xa3, 0x24,
+	0x00, 0xea, 0x00, 0xaa, 0xf4, 0xc2, 0x20, 0xf9, 0x5b, 0xfc, 0xa6, 0xd8, 0xc6, 0x8a, 0x2a, 0xd3,
+	0x3c, 0xaf, 0x56, 0x61, 0xbf, 0xa8, 0x52, 0x1b, 0x2f, 0x55, 0x79, 0x88, 0xb9, 0x34, 0x98, 0xd9,
+	0xc4, 0x75, 0x43, 0x67, 0xb4, 0x0b, 0x17, 0x57, 0xfa, 0xbd, 0x2c, 0x54, 0x85, 0xb9, 0x52, 0x52,
+	0xc1, 0x87, 0x54, 0x74, 0xf4, 0x2e, 0x44, 0xbe, 0x64, 0x62, 0x66, 0x75, 0x32, 0xb6, 0xb3, 0x71,
+	0x7e, 0xc6, 0x5c, 0xf4, 0xaa, 0xc0, 0x53, 0x7e, 0xb2, 0xd2, 0xc3, 0xf9, 0x19, 0xbd, 0x88, 0x9f,
+	0xac, 0x24, 0x31, 0x7e, 0xba, 0xe2, 0xc9, 0xfd, 0xa7, 0x51, 0x6b, 0x28, 0xf7, 0xd8, 0xc2, 0x72,
+	0x57, 0x7e, 0x5f, 0x06, 0xc9, 0xdf, 0xa3, 0x37, 0x45, 0xb0, 0x09, 0xf6, 0x84, 0x2f, 0x64, 0xcf,
+	0x48, 0xc7, 0x65, 0x54, 0x30, 0x4c, 0x1d, 0x9f, 0x8a, 0xe6, 0x9c, 0x1a, 0x69, 0x45, 0x15, 0x6a,
+	0x47, 0xff, 0x9f, 0x40, 0x77, 0x0c, 0xfa, 0xf5, 0x40, 0x79, 0x17, 0x54, 0x93, 0x23, 0xe8, 0x8f,
+	0x0d, 0xf3, 0x70, 0x1a, 0xac, 0x9d, 0xd6, 0x4f, 0x59, 0x0d, 0x9b, 0x00, 0x6b, 0xa7, 0x87, 0x67,
+	0x46, 0xee, 0x32, 0x46, 0x4d, 0x45, 0x7e, 0x76, 0x66, 0x64, 0xde, 0x99, 0xa7, 0x22, 0x3f, 0x9b,
+	0xd2, 0x1c, 0x4c, 0x6b, 0x6e, 0x28, 0xa1, 0xd8, 0xc2, 0x12, 0x1a, 0xe1, 0x7f, 0xfc, 0x35, 0xf0,
+	0x3f, 0xf1, 0x5a, 0xf8, 0xbf, 0xf2, 0x97, 0xf9, 0x9f, 0x5c, 0x9c, 0xff, 0x3f, 0x04, 0x40, 0xe6,
+	0xdb, 0x43, 0x05, 0x50, 0x00, 0x79, 0xd0, 0xfc, 0xc4, 0x27, 0xef, 0x1c, 0xbd, 0x6f, 0x7f, 0x49,
+	0x95, 0xfc, 0xee, 0x47, 0x43, 0x0c, 0xea, 0x93, 0x50, 0xcb, 0x1c, 0xe5, 0x89, 0x86, 0xf0, 0x0b,
+	0x54, 0x71, 0x19, 0x42, 0xc7, 0x56, 0x43, 0xf9, 0x3e, 0x08, 0x32, 0xff, 0x3e, 0xf2, 0xda, 0xe4,
+	0xef, 0x91, 0xda, 0x58, 0x1b, 0x0b, 0xcd, 0xdd, 0xc6, 0xe6, 0x69, 0x21, 0x19, 0x90, 0x9a, 0x16,
+	0xfd, 0xa0, 0x26, 0x98, 0x29, 0x59, 0x52, 0x07, 0xef, 0x45, 0x09, 0x22, 0x0e, 0xdb, 0x05, 0xa5,
+	0x0e, 0xc9, 0x87, 0x86, 0x4b, 0x68, 0x19, 0xf7, 0xaf, 0x0a, 0xd7, 0x61, 0x05, 0x9f, 0x36, 0xdb,
+	0x9e, 0x8e, 0x79, 0x70, 0x97, 0xed, 0x8e, 0xa4, 0x26, 0x84, 0x95, 0x85, 0x77, 0x47, 0x61, 0xe2,
+	0xd3, 0x35, 0x38, 0x06, 0xe3, 0xdf, 0xae, 0x4a, 0x19, 0x52, 0xc3, 0x09, 0xc4, 0x87, 0xe9, 0x36,
+	0x84, 0x59, 0xb3, 0x09, 0xb0, 0x66, 0x73, 0x75, 0x76, 0xed, 0x63, 0x50, 0xe5, 0x06, 0x24, 0xf6,
+	0x30, 0x19, 0xb9, 0xd0, 0x9c, 0x53, 0x5a, 0x95, 0x02, 0xac, 0xf8, 0x40, 0x31, 0x5b, 0x9e, 0x9d,
+	0xbe, 0x38, 0xe2, 0x0b, 0x26, 0x63, 0x3c, 0x59, 0x05, 0x44, 0x53, 0xe6, 0x2c, 0xf6, 0xb7, 0x45,
+	0x79, 0x02, 0xff, 0x1a, 0xb3, 0x8a, 0xe8, 0x77, 0x21, 0xca, 0xab, 0x80, 0xbf, 0x9c, 0x8b, 0xcb,
+	0x86, 0xef, 0xa0, 0xdc, 0x84, 0x54, 0x09, 0xd3, 0x03, 0x99, 0x63, 0x5d, 0xf7, 0x61, 0x6d, 0x0f,
+	0x93, 0x87, 0x1a, 0xa1, 0x8d, 0x80, 0x45, 0xbc, 0xc0, 0x03, 0xad, 0xc2, 0x32, 0x27, 0x07, 0xbf,
+	0xd7, 0xf1, 0x17, 0xe5, 0x36, 0x5c, 0x9a, 0x8a, 0x23, 0x96, 0x82, 0xf8, 0xd5, 0x91, 0x85, 0x8a,
+	0xab, 0xfc, 0x1a, 0xf9, 0x4d, 0x00, 0x56, 0x77, 0x2d, 0x93, 0x38, 0x56, 0x5b, 0x64, 0x2f, 0x66,
+	0xdd, 0x02, 0x99, 0x2f, 0xa3, 0x3e, 0x98, 0x3c, 0xde, 0xef, 0x65, 0x25, 0x8e, 0xaa, 0x94, 0x54,
+	0x89, 0x0f, 0x57, 0x74, 0x74, 0x17, 0xc2, 0x2e, 0xb1, 0xec, 0x8b, 0x5b, 0x1d, 0xf7, 0xad, 0x12,
+	0xcb, 0xde, 0x5f, 0x52, 0x99, 0x4f, 0x51, 0x86, 0x68, 0x07, 0xbb, 0xae, 0xd6, 0xc2, 0x4a, 0x1c,
+	0x60, 0x08, 0x50, 0x2e, 0xc1, 0xbf, 0x27, 0xf2, 0xe2, 0xab, 0x50, 0x52, 0xb0, 0xf2, 0x09, 0xbf,
+	0xa9, 0xf8, 0x27, 0xd7, 0x81, 0xe4, 0xc0, 0x32, 0x5c, 0xea, 0x02, 0x37, 0x9e, 0x55, 0x58, 0x6e,
+	0x78, 0x46, 0x5b, 0x17, 0x9d, 0x96, 0xbf, 0xd0, 0x9b, 0x4e, 0xd3, 0xea, 0x74, 0x0c, 0x22, 0x2e,
+	0x0c, 0xe2, 0xed, 0xe6, 0x07, 0xac, 0xca, 0xf0, 0xb2, 0x88, 0x00, 0x22, 0x4f, 0x6a, 0xe5, 0x5a,
+	0xb9, 0x94, 0x5a, 0x42, 0x09, 0x90, 0xd5, 0xf2, 0xa3, 0x52, 0x59, 0xad, 0x3c, 0xda, 0x4b, 0x05,
+	0x90, 0x0c, 0xcb, 0x65, 0x55, 0x7d, 0xac, 0xa6, 0x82, 0x28, 0x0e, 0xd2, 0xfd, 0xca, 0xa3, 0x4a,
+	0x75, 0xbf, 0x5c, 0x4a, 0x85, 0x76, 0x7e, 0x8c, 0x40, 0x84, 0x1f, 0x0d, 0x6a, 0x82, 0xe4, 0x5f,
+	0xeb, 0xd0, 0xd6, 0xf9, 0x1b, 0x37, 0xf1, 0x9f, 0x21, 0x73, 0x73, 0x1e, 0x28, 0xdf, 0x8a, 0xcd,
+	0x00, 0xd2, 0x40, 0xf2, 0x25, 0x3a, 0x6b, 0x92, 0x89, 0x3a, 0x31, 0x6b, 0x92, 0x29, 0xc5, 0x7f,
+	0x0e, 0x11, 0xae, 0x4a, 0x74, 0xe3, 0x7c, 0xaf, 0x31, 0x81, 0x67, 0x36, 0x2f, 0x06, 0x8a, 0xe0,
+	0xc7, 0x10, 0x1b, 0x51, 0x26, 0xba, 0x35, 0x3b, 0xaf, 0x71, 0x59, 0x67, 0x6e, 0xcf, 0x89, 0x16,
+	0x73, 0x3d, 0x06, 0x79, 0x20, 0x59, 0x34, 0x63, 0x07, 0x26, 0x75, 0x9d, 0x59, 0x9b, 0x2a, 0xeb,
+	0xe5, 0x8e, 0x4d, 0xba, 0xe8, 0x14, 0x92, 0x13, 0x7a, 0x44, 0x77, 0x66, 0xae, 0xfc, 0x8c, 0x12,
+	0x90, 0xd9, 0x5e, 0xc0, 0x83, 0x2f, 0xe4, 0x4e, 0x00, 0xd9, 0x90, 0x18, 0x53, 0x10, 0xca, 0x9d,
+	0x1f, 0xe5, 0xac, 0x12, 0x90, 0xc9, 0xcf, 0x8d, 0x17, 0x9b, 0xf7, 0x05, 0x44, 0x85, 0x10, 0xd1,
+	0x8c, 0xd3, 0x1d, 0x57, 0x6f, 0x66, 0x6b, 0x0e, 0x24, 0x8f, 0x5f, 0xfc, 0xe8, 0x55, 0x7f, 0x3d,
+	0xf0, 0x53, 0x7f, 0x3d, 0xf0, 0x4b, 0x7f, 0x3d, 0xf0, 0xd9, 0x7b, 0x7f, 0xee, 0x97, 0xe2, 0x3d,
+	0xfe, 0x74, 0x18, 0x6a, 0x44, 0xd8, 0x51, 0xbd, 0xf5, 0x47, 0x00, 0x00, 0x00, 0xff, 0xff, 0x10,
+	0xbb, 0xf0, 0x80, 0x9c, 0x14, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1321,6 +1891,7 @@ type RenderClient interface {
 	DeleteJob(ctx context.Context, in *DeleteJobRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	GetLatestRender(ctx context.Context, in *GetLatestRenderRequest, opts ...grpc.CallOption) (Render_GetLatestRenderClient, error)
 	ControlWorker(ctx context.Context, in *ControlWorkerRequest, opts ...grpc.CallOption) (*ControlWorkerResponse, error)
+	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error)
 }
 
 type renderClient struct {
@@ -1442,6 +2013,15 @@ func (c *renderClient) ControlWorker(ctx context.Context, in *ControlWorkerReque
 	return out, nil
 }
 
+func (c *renderClient) Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error) {
+	out := new(VersionResponse)
+	err := c.cc.Invoke(ctx, "/finca.services.render.v1.Render/Version", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RenderServer is the server API for Render service.
 type RenderServer interface {
 	QueueJob(Render_QueueJobServer) error
@@ -1451,6 +2031,7 @@ type RenderServer interface {
 	DeleteJob(context.Context, *DeleteJobRequest) (*types.Empty, error)
 	GetLatestRender(*GetLatestRenderRequest, Render_GetLatestRenderServer) error
 	ControlWorker(context.Context, *ControlWorkerRequest) (*ControlWorkerResponse, error)
+	Version(context.Context, *VersionRequest) (*VersionResponse, error)
 }
 
 // UnimplementedRenderServer can be embedded to have forward compatible implementations.
@@ -1477,6 +2058,9 @@ func (*UnimplementedRenderServer) GetLatestRender(req *GetLatestRenderRequest, s
 }
 func (*UnimplementedRenderServer) ControlWorker(ctx context.Context, req *ControlWorkerRequest) (*ControlWorkerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ControlWorker not implemented")
+}
+func (*UnimplementedRenderServer) Version(ctx context.Context, req *VersionRequest) (*VersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
 }
 
 func RegisterRenderServer(s *grpc.Server, srv RenderServer) {
@@ -1620,6 +2204,24 @@ func _Render_ControlWorker_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Render_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RenderServer).Version(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/finca.services.render.v1.Render/Version",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RenderServer).Version(ctx, req.(*VersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Render_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "finca.services.render.v1.Render",
 	HandlerType: (*RenderServer)(nil),
@@ -1643,6 +2245,10 @@ var _Render_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ControlWorker",
 			Handler:    _Render_ControlWorker_Handler,
+		},
+		{
+			MethodName: "Version",
+			Handler:    _Render_Version_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -1952,6 +2558,158 @@ func (m *Job) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if m.Duration != nil {
+		{
+			size, err := m.Duration.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x5a
+	}
+	n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.FinishedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt):])
+	if err3 != nil {
+		return 0, err3
+	}
+	i -= n3
+	i = encodeVarintRender(dAtA, i, uint64(n3))
+	i--
+	dAtA[i] = 0x52
+	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.StartedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt):])
+	if err4 != nil {
+		return 0, err4
+	}
+	i -= n4
+	i = encodeVarintRender(dAtA, i, uint64(n4))
+	i--
+	dAtA[i] = 0x4a
+	n5, err5 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.QueuedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt):])
+	if err5 != nil {
+		return 0, err5
+	}
+	i -= n5
+	i = encodeVarintRender(dAtA, i, uint64(n5))
+	i--
+	dAtA[i] = 0x42
+	n6, err6 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
+	if err6 != nil {
+		return 0, err6
+	}
+	i -= n6
+	i = encodeVarintRender(dAtA, i, uint64(n6))
+	i--
+	dAtA[i] = 0x3a
+	if len(m.FrameJobs) > 0 {
+		for iNdEx := len(m.FrameJobs) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.FrameJobs[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRender(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if m.Status != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x28
+	}
+	if len(m.OutputDir) > 0 {
+		i -= len(m.OutputDir)
+		copy(dAtA[i:], m.OutputDir)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.OutputDir)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.JobSource) > 0 {
+		i -= len(m.JobSource)
+		copy(dAtA[i:], m.JobSource)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.JobSource)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Request != nil {
+		{
+			size, err := m.Request.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.ID) > 0 {
+		i -= len(m.ID)
+		copy(dAtA[i:], m.ID)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *FrameJob) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FrameJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FrameJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Status != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x58
+	}
+	n8, err8 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.FinishedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt):])
+	if err8 != nil {
+		return 0, err8
+	}
+	i -= n8
+	i = encodeVarintRender(dAtA, i, uint64(n8))
+	i--
+	dAtA[i] = 0x52
+	n9, err9 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.StartedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt):])
+	if err9 != nil {
+		return 0, err9
+	}
+	i -= n9
+	i = encodeVarintRender(dAtA, i, uint64(n9))
+	i--
+	dAtA[i] = 0x4a
+	n10, err10 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.QueuedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt):])
+	if err10 != nil {
+		return 0, err10
+	}
+	i -= n10
+	i = encodeVarintRender(dAtA, i, uint64(n10))
+	i--
+	dAtA[i] = 0x42
 	if len(m.SliceJobs) > 0 {
 		for iNdEx := len(m.SliceJobs) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -1963,45 +2721,8 @@ func (m *Job) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 				i = encodeVarintRender(dAtA, i, uint64(size))
 			}
 			i--
-			dAtA[i] = 0x1
-			i--
-			dAtA[i] = 0x9a
+			dAtA[i] = 0x3a
 		}
-	}
-	n2, err2 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.FinishedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt):])
-	if err2 != nil {
-		return 0, err2
-	}
-	i -= n2
-	i = encodeVarintRender(dAtA, i, uint64(n2))
-	i--
-	dAtA[i] = 0x1
-	i--
-	dAtA[i] = 0x92
-	n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.StartedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt):])
-	if err3 != nil {
-		return 0, err3
-	}
-	i -= n3
-	i = encodeVarintRender(dAtA, i, uint64(n3))
-	i--
-	dAtA[i] = 0x1
-	i--
-	dAtA[i] = 0x8a
-	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.QueuedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt):])
-	if err4 != nil {
-		return 0, err4
-	}
-	i -= n4
-	i = encodeVarintRender(dAtA, i, uint64(n4))
-	i--
-	dAtA[i] = 0x1
-	i--
-	dAtA[i] = 0x82
-	if m.Status != 0 {
-		i = encodeVarintRender(dAtA, i, uint64(m.Status))
-		i--
-		dAtA[i] = 0x78
 	}
 	if m.Worker != nil {
 		{
@@ -2013,71 +2734,15 @@ func (m *Job) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i = encodeVarintRender(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x72
-	}
-	if m.Duration != nil {
-		{
-			size, err := m.Duration.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintRender(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x6a
+		dAtA[i] = 0x32
 	}
 	if m.SequenceID != 0 {
 		i = encodeVarintRender(dAtA, i, uint64(m.SequenceID))
 		i--
-		dAtA[i] = 0x60
-	}
-	n7, err7 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
-	if err7 != nil {
-		return 0, err7
-	}
-	i -= n7
-	i = encodeVarintRender(dAtA, i, uint64(n7))
-	i--
-	dAtA[i] = 0x5a
-	if len(m.OutputDir) > 0 {
-		i -= len(m.OutputDir)
-		copy(dAtA[i:], m.OutputDir)
-		i = encodeVarintRender(dAtA, i, uint64(len(m.OutputDir)))
-		i--
-		dAtA[i] = 0x52
+		dAtA[i] = 0x28
 	}
 	if m.RenderFrame != 0 {
 		i = encodeVarintRender(dAtA, i, uint64(m.RenderFrame))
-		i--
-		dAtA[i] = 0x48
-	}
-	if m.RenderSliceMaxY != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMaxY))))
-		i--
-		dAtA[i] = 0x45
-	}
-	if m.RenderSliceMinY != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMinY))))
-		i--
-		dAtA[i] = 0x3d
-	}
-	if m.RenderSliceMaxX != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMaxX))))
-		i--
-		dAtA[i] = 0x35
-	}
-	if m.RenderSliceMinX != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMinX))))
-		i--
-		dAtA[i] = 0x2d
-	}
-	if m.RenderSliceIndex != 0 {
-		i = encodeVarintRender(dAtA, i, uint64(m.RenderSliceIndex))
 		i--
 		dAtA[i] = 0x20
 	}
@@ -2110,6 +2775,322 @@ func (m *Job) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *SliceJob) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SliceJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SliceJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Status != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x78
+	}
+	n13, err13 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.FinishedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt):])
+	if err13 != nil {
+		return 0, err13
+	}
+	i -= n13
+	i = encodeVarintRender(dAtA, i, uint64(n13))
+	i--
+	dAtA[i] = 0x72
+	n14, err14 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.StartedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt):])
+	if err14 != nil {
+		return 0, err14
+	}
+	i -= n14
+	i = encodeVarintRender(dAtA, i, uint64(n14))
+	i--
+	dAtA[i] = 0x6a
+	n15, err15 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.QueuedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt):])
+	if err15 != nil {
+		return 0, err15
+	}
+	i -= n15
+	i = encodeVarintRender(dAtA, i, uint64(n15))
+	i--
+	dAtA[i] = 0x62
+	if m.Worker != nil {
+		{
+			size, err := m.Worker.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x5a
+	}
+	if m.RenderFrame != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.RenderFrame))
+		i--
+		dAtA[i] = 0x50
+	}
+	if m.RenderSliceMaxY != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMaxY))))
+		i--
+		dAtA[i] = 0x4d
+	}
+	if m.RenderSliceMinY != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMinY))))
+		i--
+		dAtA[i] = 0x45
+	}
+	if m.RenderSliceMaxX != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMaxX))))
+		i--
+		dAtA[i] = 0x3d
+	}
+	if m.RenderSliceMinX != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.RenderSliceMinX))))
+		i--
+		dAtA[i] = 0x35
+	}
+	if m.RenderSliceIndex != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.RenderSliceIndex))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.SequenceID != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.SequenceID))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.JobSource) > 0 {
+		i -= len(m.JobSource)
+		copy(dAtA[i:], m.JobSource)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.JobSource)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Request != nil {
+		{
+			size, err := m.Request.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.ID) > 0 {
+		i -= len(m.ID)
+		copy(dAtA[i:], m.ID)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *WorkerJob) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *WorkerJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *WorkerJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Job != nil {
+		{
+			size := m.Job.Size()
+			i -= size
+			if _, err := m.Job.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *WorkerJob_FrameJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *WorkerJob_FrameJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FrameJob != nil {
+		{
+			size, err := m.FrameJob.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *WorkerJob_SliceJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *WorkerJob_SliceJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.SliceJob != nil {
+		{
+			size, err := m.SliceJob.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *JobResult) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *JobResult) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *JobResult) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Complete {
+		i--
+		if m.Complete {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.RenderFrame != 0 {
+		i = encodeVarintRender(dAtA, i, uint64(m.RenderFrame))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.Duration != nil {
+		{
+			size, err := m.Duration.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Result != nil {
+		{
+			size := m.Result.Size()
+			i -= size
+			if _, err := m.Result.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *JobResult_FrameJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *JobResult_FrameJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FrameJob != nil {
+		{
+			size, err := m.FrameJob.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *JobResult_SliceJob) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *JobResult_SliceJob) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.SliceJob != nil {
+		{
+			size, err := m.SliceJob.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRender(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
 func (m *ListJobsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2133,6 +3114,26 @@ func (m *ListJobsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ExcludeSlices {
+		i--
+		if m.ExcludeSlices {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.ExcludeFrames {
+		i--
+		if m.ExcludeFrames {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2544,6 +3545,88 @@ func (m *ControlWorkerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *VersionRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VersionRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VersionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VersionResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VersionResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VersionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Commit) > 0 {
+		i -= len(m.Commit)
+		copy(dAtA[i:], m.Commit)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.Commit)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Build) > 0 {
+		i -= len(m.Build)
+		copy(dAtA[i:], m.Build)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.Build)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Version) > 0 {
+		i -= len(m.Version)
+		copy(dAtA[i:], m.Version)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.Version)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintRender(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintRender(dAtA []byte, offset int, v uint64) int {
 	offset -= sovRender(v)
 	base := offset
@@ -2713,6 +3796,107 @@ func (m *Job) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovRender(uint64(l))
 	}
+	l = len(m.OutputDir)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.Status != 0 {
+		n += 1 + sovRender(uint64(m.Status))
+	}
+	if len(m.FrameJobs) > 0 {
+		for _, e := range m.FrameJobs {
+			l = e.Size()
+			n += 1 + l + sovRender(uint64(l))
+		}
+	}
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt)
+	n += 1 + l + sovRender(uint64(l))
+	if m.Duration != nil {
+		l = m.Duration.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *FrameJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ID)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.Request != nil {
+		l = m.Request.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	l = len(m.JobSource)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.RenderFrame != 0 {
+		n += 1 + sovRender(uint64(m.RenderFrame))
+	}
+	if m.SequenceID != 0 {
+		n += 1 + sovRender(uint64(m.SequenceID))
+	}
+	if m.Worker != nil {
+		l = m.Worker.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if len(m.SliceJobs) > 0 {
+		for _, e := range m.SliceJobs {
+			l = e.Size()
+			n += 1 + l + sovRender(uint64(l))
+		}
+	}
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt)
+	n += 1 + l + sovRender(uint64(l))
+	if m.Status != 0 {
+		n += 1 + sovRender(uint64(m.Status))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *SliceJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ID)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.Request != nil {
+		l = m.Request.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	l = len(m.JobSource)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.SequenceID != 0 {
+		n += 1 + sovRender(uint64(m.SequenceID))
+	}
 	if m.RenderSliceIndex != 0 {
 		n += 1 + sovRender(uint64(m.RenderSliceIndex))
 	}
@@ -2731,37 +3915,18 @@ func (m *Job) Size() (n int) {
 	if m.RenderFrame != 0 {
 		n += 1 + sovRender(uint64(m.RenderFrame))
 	}
-	l = len(m.OutputDir)
-	if l > 0 {
-		n += 1 + l + sovRender(uint64(l))
-	}
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt)
-	n += 1 + l + sovRender(uint64(l))
-	if m.SequenceID != 0 {
-		n += 1 + sovRender(uint64(m.SequenceID))
-	}
-	if m.Duration != nil {
-		l = m.Duration.Size()
-		n += 1 + l + sovRender(uint64(l))
-	}
 	if m.Worker != nil {
 		l = m.Worker.Size()
 		n += 1 + l + sovRender(uint64(l))
 	}
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt)
+	n += 1 + l + sovRender(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt)
+	n += 1 + l + sovRender(uint64(l))
 	if m.Status != 0 {
 		n += 1 + sovRender(uint64(m.Status))
-	}
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.QueuedAt)
-	n += 2 + l + sovRender(uint64(l))
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.StartedAt)
-	n += 2 + l + sovRender(uint64(l))
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.FinishedAt)
-	n += 2 + l + sovRender(uint64(l))
-	if len(m.SliceJobs) > 0 {
-		for _, e := range m.SliceJobs {
-			l = e.Size()
-			n += 2 + l + sovRender(uint64(l))
-		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2769,12 +3934,106 @@ func (m *Job) Size() (n int) {
 	return n
 }
 
+func (m *WorkerJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Job != nil {
+		n += m.Job.Size()
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *WorkerJob_FrameJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FrameJob != nil {
+		l = m.FrameJob.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	return n
+}
+func (m *WorkerJob_SliceJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SliceJob != nil {
+		l = m.SliceJob.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	return n
+}
+func (m *JobResult) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Result != nil {
+		n += m.Result.Size()
+	}
+	if m.Duration != nil {
+		l = m.Duration.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	if m.RenderFrame != 0 {
+		n += 1 + sovRender(uint64(m.RenderFrame))
+	}
+	if m.Complete {
+		n += 2
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *JobResult_FrameJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FrameJob != nil {
+		l = m.FrameJob.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	return n
+}
+func (m *JobResult_SliceJob) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SliceJob != nil {
+		l = m.SliceJob.Size()
+		n += 1 + l + sovRender(uint64(l))
+	}
+	return n
+}
 func (m *ListJobsRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
+	if m.ExcludeFrames {
+		n += 2
+	}
+	if m.ExcludeSlices {
+		n += 2
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -2961,6 +4220,46 @@ func (m *ControlWorkerResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *VersionRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *VersionResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	l = len(m.Version)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	l = len(m.Build)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
+	l = len(m.Commit)
+	if l > 0 {
+		n += 1 + l + sovRender(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -3815,88 +5114,6 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 			m.JobSource = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceIndex", wireType)
-			}
-			m.RenderSliceIndex = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRender
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.RenderSliceIndex |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMinX", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.RenderSliceMinX = float32(math.Float32frombits(v))
-		case 6:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMaxX", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.RenderSliceMaxX = float32(math.Float32frombits(v))
-		case 7:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMinY", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.RenderSliceMinY = float32(math.Float32frombits(v))
-		case 8:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMaxY", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.RenderSliceMaxY = float32(math.Float32frombits(v))
-		case 9:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RenderFrame", wireType)
-			}
-			m.RenderFrame = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRender
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.RenderFrame |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OutputDir", wireType)
 			}
@@ -3928,7 +5145,60 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 			}
 			m.OutputDir = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 11:
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= JobStatus(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FrameJobs", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FrameJobs = append(m.FrameJobs, &FrameJob{})
+			if err := m.FrameJobs[len(m.FrameJobs)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CreatedAt", wireType)
 			}
@@ -3961,11 +5231,11 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 12:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SequenceID", wireType)
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field QueuedAt", wireType)
 			}
-			m.SequenceID = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowRender
@@ -3975,12 +5245,92 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.SequenceID |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-		case 13:
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.QueuedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.StartedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FinishedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.FinishedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Duration", wireType)
 			}
@@ -4016,7 +5366,196 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 14:
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FrameJob) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FrameJob: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FrameJob: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Request == nil {
+				m.Request = &JobRequest{}
+			}
+			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field JobSource", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.JobSource = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderFrame", wireType)
+			}
+			m.RenderFrame = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RenderFrame |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SequenceID", wireType)
+			}
+			m.SequenceID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SequenceID |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Worker", wireType)
 			}
@@ -4052,11 +5591,11 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 15:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SliceJobs", wireType)
 			}
-			m.Status = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowRender
@@ -4066,12 +5605,27 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Status |= Job_Status(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-		case 16:
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SliceJobs = append(m.SliceJobs, &SliceJob{})
+			if err := m.SliceJobs[len(m.SliceJobs)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field QueuedAt", wireType)
 			}
@@ -4104,7 +5658,7 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 17:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field StartedAt", wireType)
 			}
@@ -4137,7 +5691,7 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 18:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FinishedAt", wireType)
 			}
@@ -4170,9 +5724,111 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 19:
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= JobStatus(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SliceJob) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SliceJob: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SliceJob: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SliceJobs", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -4199,11 +5855,617 @@ func (m *Job) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.SliceJobs = append(m.SliceJobs, &Job{})
-			if err := m.SliceJobs[len(m.SliceJobs)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if m.Request == nil {
+				m.Request = &JobRequest{}
+			}
+			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field JobSource", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.JobSource = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SequenceID", wireType)
+			}
+			m.SequenceID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SequenceID |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceIndex", wireType)
+			}
+			m.RenderSliceIndex = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RenderSliceIndex |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMinX", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.RenderSliceMinX = float32(math.Float32frombits(v))
+		case 7:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMaxX", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.RenderSliceMaxX = float32(math.Float32frombits(v))
+		case 8:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMinY", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.RenderSliceMinY = float32(math.Float32frombits(v))
+		case 9:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderSliceMaxY", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.RenderSliceMaxY = float32(math.Float32frombits(v))
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderFrame", wireType)
+			}
+			m.RenderFrame = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RenderFrame |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Worker", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Worker == nil {
+				m.Worker = &Worker{}
+			}
+			if err := m.Worker.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field QueuedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.QueuedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.StartedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FinishedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.FinishedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 15:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= JobStatus(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *WorkerJob) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: WorkerJob: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: WorkerJob: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FrameJob", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &FrameJob{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Job = &WorkerJob_FrameJob{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SliceJob", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SliceJob{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Job = &WorkerJob_SliceJob{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *JobResult) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: JobResult: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: JobResult: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FrameJob", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &FrameJob{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Result = &JobResult_FrameJob{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SliceJob", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SliceJob{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Result = &JobResult_SliceJob{v}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Duration", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Duration == nil {
+				m.Duration = &types.Duration{}
+			}
+			if err := m.Duration.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RenderFrame", wireType)
+			}
+			m.RenderFrame = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RenderFrame |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Complete", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Complete = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipRender(dAtA[iNdEx:])
@@ -4255,6 +6517,46 @@ func (m *ListJobsRequest) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: ListJobsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExcludeFrames", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.ExcludeFrames = bool(v != 0)
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExcludeSlices", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.ExcludeSlices = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipRender(dAtA[iNdEx:])
@@ -5136,6 +7438,236 @@ func (m *ControlWorkerResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: ControlWorkerResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VersionRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VersionRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VersionRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRender(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRender
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VersionResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRender
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VersionResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VersionResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Version = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Build", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Build = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Commit", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRender
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRender
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRender
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Commit = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipRender(dAtA[iNdEx:])

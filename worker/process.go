@@ -25,6 +25,9 @@ import (
 )
 
 var (
+	// ErrRenderInProgress is returned when a render job is still running
+	ErrRenderInProgress = errors.New("render still in progress")
+
 	blenderConfigTemplate = `import bpy
 import os
 
@@ -63,25 +66,106 @@ for scene in bpy.data.scenes:
     # TODO: make output format, color mode, etc. configurable
     scene.render.image_settings.file_format = 'PNG'
     scene.render.image_settings.color_mode ='RGBA'
-    {{ if gt .Request.RenderSlices 0 }}
-    scene.render.border_min_x = {{ .RenderSliceMinX }}
-    scene.render.border_max_x = {{ .RenderSliceMaxX }}
-    scene.render.border_min_y = {{ .RenderSliceMinY }}
-    scene.render.border_max_y = {{ .RenderSliceMaxY }}
+    {{ if .SliceJob }}
+    scene.render.border_min_x = {{ .SliceJob.RenderSliceMinX }}
+    scene.render.border_max_x = {{ .SliceJob.RenderSliceMaxX }}
+    scene.render.border_min_y = {{ .SliceJob.RenderSliceMinY }}
+    scene.render.border_max_y = {{ .SliceJob.RenderSliceMaxY }}
     scene.render.use_border = True
     {{ end }}
 `
 )
 
-func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error) {
-	logrus.Infof("processing job %s (%s)", job.ID, job.JobSource)
+type blenderConfig struct {
+	Request   *api.JobRequest
+	SliceJob  *api.SliceJob
+	FrameJob  *api.FrameJob
+	OutputDir string
+}
+
+func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.JobResult, error) {
+	logrus.Infof("processing frame job %s (%s)", job.GetID(), job.GetJobSource())
 	w.jobLock.Lock()
 	defer w.jobLock.Unlock()
 
-	start := time.Now()
+	// check for gpu
+	if job.GetRequest().RenderUseGPU && !w.gpuEnabled {
+		logrus.Debug("skipping GPU job as worker does not have GPU")
+		return nil, ErrGPUNotSupported
+	}
+
+	job.StartedAt = time.Now()
+	job.Status = api.JobStatus_RENDERING
+	job.Worker = w.getWorkerInfo()
+
+	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		return nil, err
+	}
+
+	// process
+	result, err := w.processJob(ctx, job, job.Request.Name)
+	if err != nil {
+		return nil, err
+	}
+	result.Result = &api.JobResult_FrameJob{
+		FrameJob: job,
+	}
+
+	// update result status
+	job.FinishedAt = time.Now()
+	job.Status = api.JobStatus_FINISHED
+
+	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.JobResult, error) {
+	logrus.Infof("processing slice job %s (%s)", job.GetID(), job.GetJobSource())
+	w.jobLock.Lock()
+	defer w.jobLock.Unlock()
+
+	// check for gpu
+	if job.GetRequest().RenderUseGPU && !w.gpuEnabled {
+		logrus.Debug("skipping GPU job as worker does not have GPU")
+		return nil, ErrGPUNotSupported
+	}
+
+	job.StartedAt = time.Now()
+	job.Status = api.JobStatus_RENDERING
+	job.Worker = w.getWorkerInfo()
+
+	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		return nil, err
+	}
+
+	// process
+	result, err := w.processJob(ctx, job, fmt.Sprintf("%s_slice_%d", job.Request.Name, job.RenderSliceIndex))
+	if err != nil {
+		return nil, err
+	}
+	result.Result = &api.JobResult_SliceJob{
+		SliceJob: job,
+	}
+
+	// update result status
+	job.FinishedAt = time.Now()
+	job.Status = api.JobStatus_FINISHED
+
+	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix string) (*api.JobResult, error) {
+	started := time.Now()
 
 	// render with blender
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.ID))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.GetID()))
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +178,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, err
 	}
-	outputPrefix := fmt.Sprintf("%s", job.Request.Name)
-	if job.Request.RenderSlices > 0 {
-		outputPrefix += fmt.Sprintf("_slice-%d", job.RenderSliceIndex)
-	}
-	job.OutputDir = getPythonOutputDir(filepath.Join(outputDir, outputPrefix))
+	blenderOutputDir := getPythonOutputDir(filepath.Join(outputDir, outputPrefix))
 
 	// fetch project source file
 	mc, err := w.getMinioClient()
@@ -106,16 +186,18 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 		return nil, err
 	}
 
-	object, err := mc.GetObject(ctx, w.config.S3Bucket, job.JobSource, minio.GetObjectOptions{})
+	logrus.Debugf("getting job source %s", job.GetJobSource())
+
+	object, err := mc.GetObject(ctx, w.config.S3Bucket, job.GetJobSource(), minio.GetObjectOptions{})
 	if err != nil {
+		return nil, errors.Wrapf(err, "error getting job source %s", job.GetJobSource())
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(tmpDir, job.GetJobSource())), 0755); err != nil {
 		return nil, err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(filepath.Join(tmpDir, job.JobSource)), 0755); err != nil {
-		return nil, err
-	}
-
-	projectFile, err := os.Create(filepath.Join(tmpDir, job.JobSource))
+	projectFile, err := os.Create(filepath.Join(tmpDir, job.GetJobSource()))
 	if err != nil {
 		return nil, err
 	}
@@ -192,10 +274,19 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 	default:
 	}
 
-	blenderCfg, err := generateBlenderRenderConfig(job)
+	bCfg := &blenderConfig{
+		Request:   job.GetRequest(),
+		OutputDir: blenderOutputDir,
+	}
+	if v, ok := job.(*api.SliceJob); ok {
+		bCfg.SliceJob = v
+	}
+	blenderCfg, err := generateBlenderRenderConfig(bCfg)
 	if err != nil {
 		return nil, err
 	}
+
+	logrus.Debugf("blender config: %+v", blenderCfg)
 
 	blenderConfigPath := filepath.Join(tmpDir, "render.py")
 
@@ -232,7 +323,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 		blenderConfigPath,
 		"--debug-python",
 		"-f",
-		fmt.Sprintf("%d", job.RenderFrame),
+		fmt.Sprintf("%d", job.GetRenderFrame()),
 	}
 	args = append(args, blenderCommandPlatformArgs...)
 
@@ -246,6 +337,7 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 
 	logrus.Debug(string(out))
 
+	logrus.Debugf("uploading output files from %s", outputDir)
 	// upload results to minio
 	files, err := filepath.Glob(filepath.Join(outputDir, "*"))
 	if err != nil {
@@ -267,13 +359,13 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 			continue
 		}
 
-		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.ID, filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
+		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
 			return nil, err
 		}
 	}
 
 	// upload blender log for render
-	logFilename := fmt.Sprintf("%s_%04d.log", outputPrefix, job.RenderFrame)
+	logFilename := fmt.Sprintf("%s_%04d.log", outputPrefix, job.GetRenderFrame())
 	logFile, err := os.Create(filepath.Join(tmpDir, logFilename))
 	if err != nil {
 		return nil, err
@@ -293,31 +385,35 @@ func (w *Worker) processJob(ctx context.Context, job *api.Job) (*api.Job, error)
 		return nil, err
 	}
 
-	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.ID, logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
+	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
 		return nil, err
 	}
 
 	// check for render slice job; if so, check s3 for number of renders. if matches render slices
 	// assume project is complete and composite images into single result
-	if job.Request.RenderSlices > 0 {
-		if err := w.compositeRender(ctx, job, outputDir); err != nil {
-			return nil, err
+	renderComplete := true
+	if job.GetRequest().RenderSlices > 0 {
+		if err := w.compositeRender(ctx, job, job.GetRenderFrame(), outputDir); err != nil {
+			if err != ErrRenderInProgress {
+				return nil, err
+			}
+			renderComplete = false
 		}
 	}
 
-	job.Duration = ptypes.DurationProto(time.Now().Sub(start))
-	job.Status = api.Job_FINISHED
-	job.FinishedAt = time.Now()
-
-	return job, nil
+	return &api.JobResult{
+		Duration:    ptypes.DurationProto(time.Now().Sub(started)),
+		RenderFrame: job.GetRenderFrame(),
+		Complete:    renderComplete,
+	}, nil
 }
 
-func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir string) error {
+func (w *Worker) compositeRender(ctx context.Context, job api.RenderJob, frame int64, outputDir string) error {
 	mc, err := w.getMinioClient()
 	if err != nil {
 		return err
 	}
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-composite-%s", job.ID))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-composite-%s", job.GetID()))
 	if err != nil {
 		return err
 	}
@@ -325,7 +421,7 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 
 	logrus.Debugf("temp composite dir: %s", tmpDir)
 	objCh := mc.ListObjects(ctx, w.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    fmt.Sprintf("%s/%s", finca.S3RenderPath, job.ID),
+		Prefix:    fmt.Sprintf("%s/%s", finca.S3RenderPath, job.GetID()),
 		Recursive: true,
 	})
 	slices := []string{}
@@ -341,43 +437,42 @@ func (w *Worker) compositeRender(ctx context.Context, job *api.Job, outputDir st
 		slices = append(slices, o.Key)
 	}
 
-	if int64(len(slices)) < job.Request.RenderSlices {
-		logrus.Infof("render for project %s is still in progress; skipping compositing", job.ID)
-		return nil
+	if int64(len(slices)) < job.GetRequest().RenderSlices {
+		logrus.Infof("render for project %s is still in progress; skipping compositing", job.GetID())
+		return ErrRenderInProgress
 	}
 
-	logrus.Infof("detected complete render; compositing %s", job.ID)
+	logrus.Infof("detected complete render; compositing frame %d for job %s", frame, job.GetID())
 
-	renderStartFrame := job.Request.RenderStartFrame
-	renderEndFrame := job.Request.RenderEndFrame
+	renderStartFrame := job.GetRequest().RenderStartFrame
+	renderEndFrame := job.GetRequest().RenderEndFrame
 	if renderEndFrame == 0 {
 		renderEndFrame = renderStartFrame
 	}
-	for i := renderStartFrame; i <= renderEndFrame; i++ {
-		data, err := w.ds.GetCompositeRender(ctx, job.ID, i)
-		if err != nil {
-			return err
-		}
-		buf := bytes.NewBuffer(data)
+	data, err := w.ds.GetCompositeRender(ctx, job.GetID(), frame)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(data)
 
-		// sync final composite back to s3
-		objectName := path.Join(finca.S3RenderPath, job.ID, fmt.Sprintf("%s_%04d.png", job.Request.Name, i))
-		logrus.Infof("uploading composited frame %d (%s) to bucket %s (%d bytes)", i, objectName, w.config.S3Bucket, buf.Len())
-		if _, err := mc.PutObject(ctx, w.config.S3Bucket, objectName, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {
-			return errors.Wrapf(err, "error uploading final composite %s", objectName)
-		}
+	// sync final composite back to s3
+	objectName := path.Join(finca.S3RenderPath, job.GetID(), fmt.Sprintf("%s_%04d.png", job.GetRequest().Name, frame))
+	logrus.Infof("uploading composited frame %d (%s) to bucket %s (%d bytes)", frame, objectName, w.config.S3Bucket, buf.Len())
+	// TODO: support other image types
+	if _, err := mc.PutObject(ctx, w.config.S3Bucket, objectName, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {
+		return errors.Wrapf(err, "error uploading final composite %s", objectName)
 	}
 
 	return nil
 }
 
-func generateBlenderRenderConfig(job *api.Job) (string, error) {
+func generateBlenderRenderConfig(cfg *blenderConfig) (string, error) {
 	t, err := template.New("blender").Parse(blenderConfigTemplate)
 	if err != nil {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := t.Execute(&buf, job); err != nil {
+	if err := t.Execute(&buf, cfg); err != nil {
 		return "", err
 	}
 

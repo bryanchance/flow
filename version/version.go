@@ -10,7 +10,7 @@ var (
 	Version = "0.1.0"
 
 	// Description is the application description
-	Description = "antimatter infrastructure management"
+	Description = "finca render management"
 
 	// Build will be overwritten automatically by the build system
 	Build = "-dev"

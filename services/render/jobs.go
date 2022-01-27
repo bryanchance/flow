@@ -5,13 +5,22 @@ import (
 	"strings"
 
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/finca/datastore"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 func (s *service) ListJobs(ctx context.Context, r *api.ListJobsRequest) (*api.ListJobsResponse, error) {
-	jobs, err := s.ds.GetJobs(ctx)
+	jobOpts := []datastore.JobOpt{}
+	if r.ExcludeFrames {
+		jobOpts = append(jobOpts, datastore.WithExcludeJobFrames)
+	}
+	if r.ExcludeSlices {
+		jobOpts = append(jobOpts, datastore.WithExcludeJobSlices)
+	}
+
+	jobs, err := s.ds.GetJobs(ctx, jobOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,20 +53,23 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 	}
 
 	// check nats for the job and delete
-	if job.SequenceID != 0 {
-		if err := js.DeleteMsg(s.config.NATSJobSubject, job.SequenceID); err != nil {
-			// ignore missing
-			if !strings.Contains(err.Error(), "no message found") {
-				return empty, err
+	for _, frameJob := range job.FrameJobs {
+		if frameJob.SequenceID != 0 {
+			if err := js.DeleteMsg(s.config.NATSJobSubject, frameJob.SequenceID); err != nil {
+				// ignore missing
+				if !strings.Contains(err.Error(), "no message found") {
+					return empty, err
+				}
 			}
 		}
-	}
-	// delete slice jobs
-	for _, j := range job.SliceJobs {
-		if err := js.DeleteMsg(s.config.NATSJobSubject, j.SequenceID); err != nil {
-			// ignore missing
-			if !strings.Contains(err.Error(), "no message found") {
-				return empty, err
+		for _, sliceJob := range frameJob.SliceJobs {
+			if sliceJob.SequenceID != 0 {
+				if err := js.DeleteMsg(s.config.NATSJobSubject, sliceJob.SequenceID); err != nil {
+					// ignore missing
+					if !strings.Contains(err.Error(), "no message found") {
+						return empty, err
+					}
+				}
 			}
 		}
 	}
