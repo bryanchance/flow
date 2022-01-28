@@ -22,6 +22,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	// ERRGPUNotSupported is returned when the worker does not support GPU workloads
+	ErrGPUNotSupported = errors.New("worker does not support GPU workloads")
+)
+
 type GPU struct {
 	Vendor  string
 	Product string
@@ -166,16 +171,9 @@ func (w *Worker) Run() error {
 				m := msgs[0]
 
 				buf := bytes.NewBuffer(m.Data)
-				job := &api.Job{}
-				if err := jsonpb.Unmarshal(buf, job); err != nil {
-					logrus.WithError(err).Error("error unmarshaling api.Job from message")
-					continue
-				}
-
-				// check for gpu
-				if job.Request.RenderUseGPU && !w.gpuEnabled {
-					logrus.Debug("skipping GPU job as worker does not have GPU")
-					m.Nak()
+				workerJob := &api.WorkerJob{}
+				if err := jsonpb.Unmarshal(buf, workerJob); err != nil {
+					logrus.WithError(err).Error("error unmarshaling api.WorkerJob from message")
 					continue
 				}
 
@@ -186,42 +184,55 @@ func (w *Worker) Run() error {
 
 				workerInfo := w.getWorkerInfo()
 				logrus.Debugf("worker info: %+v", workerInfo)
-				ctx, _ := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
 
-				job.Worker = workerInfo
-				job.Status = api.Job_RENDERING
-				job.StartedAt = time.Now()
+				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
 
-				if err := w.ds.UpdateJob(ctx, job); err != nil {
-					logrus.WithError(err).Error("error updating job")
-					// requeue
-					m.Nak()
+				result := &api.JobResult{}
+				jobID := ""
+
+				var pErr error
+				switch v := workerJob.GetJob().(type) {
+				case *api.WorkerJob_FrameJob:
+					jobID = v.ID
+					result, pErr = w.processFrameJob(ctx, v.FrameJob)
+				case *api.WorkerJob_SliceJob:
+					jobID = v.ID
+					result, pErr = w.processSliceJob(ctx, v.SliceJob)
+				default:
+					logrus.Errorf("unknown job type %+T", v)
+					cancel()
 					continue
 				}
 
-				j, err := w.processJob(ctx, job)
-				if err != nil {
-					logrus.WithError(err).Errorf("error processing job %s", job.ID)
+				if pErr != nil {
+					if pErr == ErrGPUNotSupported {
+						m.Nak()
+						cancel()
+						continue
+					}
+
+					// publish error
+					logrus.WithError(pErr).Errorf("error processing job")
 					if cErr := ctx.Err(); cErr != nil {
-						logrus.Warnf("job timeout occurred during processing for %s", job.ID)
+						logrus.Warn("job timeout occurred during processing")
 					} else {
 						// no timeout; requeue job
-						logrus.Warnf("requeueing job %s", job.ID)
-						m.Nak()
+						logrus.WithError(pErr).Error("error occurred while processing job")
+						if result == nil {
+							result = &api.JobResult{}
+						}
+						result.Status = api.JobStatus_ERROR
+						result.Error = pErr.Error()
+						cancel()
 					}
-					continue
-				}
-				if err := w.ds.UpdateJob(ctx, j); err != nil {
-					logrus.WithError(err).Error("error updating job status")
-					continue
 				}
 
-				logrus.Infof("completed job %s (%s) (frame: %d slice: %d) in %s", j.ID, j.Request.Name, j.RenderFrame, j.RenderSliceIndex, j.Duration)
+				logrus.Infof("completed job %s: status=%s", jobID, result.Status)
 
 				// publish status event for server
 				b := &bytes.Buffer{}
-				if err := w.ds.Marshaler().Marshal(b, j); err != nil {
-					logrus.WithError(err).Error("error publishing job status")
+				if err := w.ds.Marshaler().Marshal(b, result); err != nil {
+					logrus.WithError(err).Error("error publishing job result")
 					continue
 				}
 				js.Publish(w.config.NATSJobStatusSubject, b.Bytes())

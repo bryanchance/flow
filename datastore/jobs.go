@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"path"
 	"sort"
 	"strings"
@@ -25,139 +24,255 @@ func (s ByCreatedAt) Len() int           { return len(s) }
 func (s ByCreatedAt) Less(i, j int) bool { return s[i].CreatedAt.After(s[j].CreatedAt) }
 func (s ByCreatedAt) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
+type JobOptConfig struct {
+	excludeFrames bool
+	excludeSlices bool
+}
+
+type JobOpt func(c *JobOptConfig)
+
 // GetJobs returns a list of jobs
-func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
-	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    finca.S3ProjectPath,
-		Recursive: true,
-	})
+func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job, error) {
+	cfg := &JobOptConfig{}
+	for _, o := range jobOpts {
+		o(cfg)
+	}
 
-	found := map[string]struct{}{}
+	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	if err != nil {
+		return nil, err
+	}
+
 	jobs := []*api.Job{}
-	for o := range objCh {
-		if o.Err != nil {
-			return nil, errors.Wrap(o.Err, "error reading jobs from datastore")
-		}
-
-		k := strings.SplitN(o.Key, "/", 2)
-		jobID := path.Dir(k[1])
-
-		if _, ok := found[jobID]; ok {
+	for _, k := range keys {
+		parts := strings.Split(k, "/")
+		if len(parts) != 3 {
+			logrus.Errorf("invalid key format: %s", k)
 			continue
 		}
-
-		found[jobID] = struct{}{}
-
+		jobID := parts[1]
 		job, err := d.GetJob(ctx, jobID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error getting job from datastore: %s", jobID)
+			return nil, err
 		}
-
 		jobs = append(jobs, job)
 	}
+
 	sort.Sort(ByCreatedAt(jobs))
 
 	return jobs, nil
 }
 
 // GetJob returns a job by id from the datastore
-func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
-	jobPath := path.Join(finca.S3ProjectPath, jobID, finca.S3JobPath)
-	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt) (*api.Job, error) {
+	cfg := &JobOptConfig{}
+	for _, o := range jobOpts {
+		o(cfg)
+	}
+
+	jobKey := getJobKey(jobID)
+	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
-		logrus.Errorf("key not found: %s", jobPath)
-		return nil, err
+		return nil, errors.Wrapf(err, "error getting job %s from database", jobID)
 	}
 
-	buf := &bytes.Buffer{}
-	if _, err := io.Copy(buf, obj); err != nil {
-		return nil, err
-	}
-
+	buf := bytes.NewBuffer(data)
 	job := &api.Job{}
 	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return nil, err
 	}
 
-	// check for render slices
-	if job.Request.RenderSlices > 0 {
-		for i := int64(0); i < job.Request.RenderSlices; i++ {
-			jobPath := path.Join(finca.S3ProjectPath, jobID, fmt.Sprintf("%s.%d", finca.S3JobPath, i))
-			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+	job.FrameJobs = []*api.FrameJob{}
+
+	// filter
+	if !cfg.excludeFrames {
+		for frame := job.Request.RenderStartFrame; frame <= job.Request.RenderEndFrame; frame++ {
+			frameKey := getFrameKey(jobID, frame)
+			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "error getting frame %d for job %s from database", frame, jobID)
 			}
 
-			j := &api.Job{}
-			buf := &bytes.Buffer{}
-			if _, err := io.Copy(buf, obj); err != nil {
-				// if job output doesn't exist it is most likely queued and hasn't started yet
-				if strings.Contains(err.Error(), "key does not exist") {
-					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
-					job.SliceJobs = append(job.SliceJobs, j)
-					continue
+			buf := bytes.NewBuffer(data)
+			frameJob := &api.FrameJob{}
+			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
+				return nil, err
+			}
+			if !cfg.excludeSlices {
+				if job.Request.RenderSlices > 0 {
+					frameJob.SliceJobs = []*api.SliceJob{}
+					for i := int64(0); i < job.Request.RenderSlices; i++ {
+						sliceKey := getSliceKey(jobID, frame, i)
+						data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
+						if err != nil {
+							return nil, errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", i, frame, jobID)
+						}
+
+						buf := bytes.NewBuffer(data)
+						sliceJob := &api.SliceJob{}
+						if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
+							return nil, err
+						}
+						frameJob.SliceJobs = append(frameJob.SliceJobs, sliceJob)
+					}
 				}
-				return nil, err
 			}
-
-			if err := jsonpb.Unmarshal(buf, j); err != nil {
-				return nil, err
-			}
-
-			job.SliceJobs = append(job.SliceJobs, j)
-		}
-
-		// "merge" slice jobs
-		if err := mergeSliceJobs(job); err != nil {
-			return nil, err
+			job.FrameJobs = append(job.FrameJobs, frameJob)
 		}
 	}
 
+	if err := resolveJob(job); err != nil {
+		return nil, err
+	}
 	return job, nil
 }
 
-// UpdateJob updates the status of a job
-func (d *Datastore) UpdateJob(ctx context.Context, job *api.Job) error {
-	jobPath := getJobPath(job.ID, int(job.RenderSliceIndex))
-
-	j, err := d.GetJob(ctx, job.ID)
+// ResolveJob resolves a job from all frame and slice jobs and stores the result in the database
+func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
+	jobKey := getJobKey(jobID)
+	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
-		if !strings.Contains(err.Error(), "key does not exist") {
-			return err
-		}
+		return errors.Wrapf(err, "error getting job %s from database to resolve", jobID)
 	}
 
-	// update from existing if zero
-	if j != nil {
-		if job.QueuedAt.IsZero() {
-			job.QueuedAt = j.QueuedAt
-		}
-		if job.StartedAt.IsZero() {
-			job.StartedAt = j.StartedAt
-		}
-		if job.FinishedAt.IsZero() {
-			job.FinishedAt = j.FinishedAt
-		}
-
-	}
-
-	buf := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(buf, job); err != nil {
+	buf := bytes.NewBuffer(data)
+	job := &api.Job{}
+	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return err
 	}
 
-	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, jobPath, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: finca.S3JobContentType}); err != nil {
-		return errors.Wrap(err, "error updating job status")
+	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	if err != nil {
+		return err
+	}
+
+	jobs := []*api.Job{}
+	for _, k := range keys {
+		parts := strings.Split(k, "/")
+		if len(parts) != 3 {
+			logrus.Errorf("invalid key format: %s", k)
+			continue
+		}
+		jobID := parts[1]
+		job, err := d.GetJob(ctx, jobID)
+		if err != nil {
+			return err
+		}
+		jobs = append(jobs, job)
+	}
+	frameJobs := []*api.FrameJob{}
+
+	// load frames
+	for _, f := range job.FrameJobs {
+		// check if non-slice job
+		if job.Request.RenderSlices == 0 {
+			frameKey := getFrameKey(jobID, f.RenderFrame)
+			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
+			if err != nil {
+				return errors.Wrapf(err, "error getting frame %d for job %s from database", f.RenderFrame, jobID)
+			}
+
+			buf := bytes.NewBuffer(data)
+			frameJob := &api.FrameJob{}
+			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
+				return err
+			}
+			frameJobs = append(frameJobs, frameJob)
+			continue
+		}
+		// load slices
+		sliceJobs := []*api.SliceJob{}
+		for _, slice := range f.SliceJobs {
+			sliceKey := getSliceKey(jobID, slice.RenderFrame, slice.RenderSliceIndex)
+			data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
+			if err != nil {
+				return errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", slice.RenderSliceIndex, f.RenderFrame, jobID)
+			}
+
+			buf := bytes.NewBuffer(data)
+			sliceJob := &api.SliceJob{}
+			if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
+				return err
+			}
+
+			sliceJobs = append(sliceJobs, sliceJob)
+		}
+		f.SliceJobs = sliceJobs
+		frameJobs = append(frameJobs, f)
+	}
+
+	job.FrameJobs = frameJobs
+
+	if err := resolveJob(job); err != nil {
+		return err
+	}
+
+	if err := d.UpdateJob(ctx, jobID, job); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateJob updates the status of a job
+func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) error {
+	dbKey := ""
+	buf := &bytes.Buffer{}
+
+	switch v := o.(type) {
+	case *api.Job:
+		dbKey = getJobKey(jobID)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+	case *api.FrameJob:
+		dbKey = getFrameKey(jobID, v.RenderFrame)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+	case *api.SliceJob:
+		dbKey = getSliceKey(jobID, v.RenderFrame, v.RenderSliceIndex)
+		if err := d.Marshaler().Marshal(buf, v); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("job type %+T is unknown", v)
+	}
+
+	if err := d.redisClient.Set(ctx, dbKey, buf.Bytes(), 0).Err(); err != nil {
+		return errors.Wrapf(err, "error saving job %s in database", jobID)
 	}
 
 	return nil
 }
 
 // DeleteJob deletes a job and all related files from the datastore
-func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
+func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
+	// delete from db
+	keys := []string{
+		getJobKey(jobID),
+	}
+
+	frameKeys, err := d.redisClient.Keys(ctx, getFrameKey(jobID, "*")).Result()
+	if err != nil {
+		return err
+	}
+
+	keys = append(keys, frameKeys...)
+
+	sliceKeys, err := d.redisClient.Keys(ctx, getSliceKey(jobID, "*", "*")).Result()
+	if err != nil {
+		return err
+	}
+	keys = append(keys, sliceKeys...)
+
+	if err := d.redisClient.Del(ctx, keys...).Err(); err != nil {
+		return err
+	}
+
 	// delete project
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3ProjectPath, id),
+		Prefix:    path.Join(finca.S3ProjectPath, jobID),
 		Recursive: true,
 	})
 
@@ -173,7 +288,7 @@ func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
 
 	// delete renders
 	rObjCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3RenderPath, id),
+		Prefix:    path.Join(finca.S3RenderPath, jobID),
 		Recursive: true,
 	})
 
@@ -194,77 +309,182 @@ func getStoragePath(jobID string) string {
 	return path.Join(finca.S3ProjectPath, jobID)
 }
 
-func getJobPath(jobID string, renderSliceIndex int) string {
+func getJobPath(jobID string) string {
 	jobPath := path.Join(getStoragePath(jobID), finca.S3JobPath)
-	// check for render slice
-	if idx := renderSliceIndex; idx > -1 {
-		jobPath = path.Join(jobPath) + fmt.Sprintf(".%d", idx)
-	}
 	return jobPath
 }
 
-// mergeSliceJobs "merges" and "resolves" all slice jobs in the passed job
-// it will set the status at the least progressed and set the
-// render time at the longest time of the individual slices
-func mergeSliceJobs(job *api.Job) error {
+func getFrameJobPath(jobID string, frame int64) string {
+	return path.Join(getStoragePath(jobID), fmt.Sprintf("frame_%04d_%s", frame, finca.S3JobPath))
+}
+
+func getSliceJobPath(jobID string, frame int64, renderSliceIndex int64) string {
+	return fmt.Sprintf("%s.%d", getFrameJobPath(jobID, frame), renderSliceIndex)
+}
+
+func getJobKey(jobID string) string {
+	return path.Join(dbPrefix, jobID, "job")
+}
+
+func getFrameKey(jobID string, frame interface{}) string {
+	return path.Join(dbPrefix, "frames", jobID, fmt.Sprintf("%v", frame))
+}
+
+func getSliceKey(jobID string, frame interface{}, sliceIndex interface{}) string {
+	return path.Join(dbPrefix, "slices", jobID, fmt.Sprintf("%v", frame), fmt.Sprintf("%v", sliceIndex))
+}
+
+// WARNING: dragons ahead....
+//
+// resolveJob "merges" and "resolves" all frame and slice jobs
+// in the passed job and will set the status at the least progressed and set the
+// render time at the longest time of the individual frames and slices
+func resolveJob(job *api.Job) error {
 	renderTimeSeconds := float64(0.0)
-	job.Status = api.Job_QUEUED
-	finishedJobs := 0
-	for i := 0; i < len(job.SliceJobs); i++ {
-		sliceJob := job.SliceJobs[i]
-		// check status based upon slice
-		sliceStatusV := api.Job_Status_value[sliceJob.Status.String()]
-		jobStatusV := api.Job_Status_value[job.Status.String()]
-		if sliceJob.Status == api.Job_FINISHED {
-			finishedJobs += 1
-		}
-		if sliceStatusV > jobStatusV {
-			switch job.Status {
-			case api.Job_RENDERING, api.Job_ERROR:
-				// leave current status
-			case api.Job_QUEUED, api.Job_FINISHED:
-				// only update if not finished
+	job.Status = api.JobStatus_QUEUED
+	finishedFrames := 0
+	for _, frameJob := range job.FrameJobs {
+		finishedSlices := 0
+		frameRenderSeconds := float64(0.0)
+		for _, sliceJob := range frameJob.SliceJobs {
+			// check status based upon slice
+			sliceStatusV := api.JobStatus_value[sliceJob.Status.String()]
+			jobStatusV := api.JobStatus_value[job.Status.String()]
+			if sliceJob.Status == api.JobStatus_FINISHED {
+				finishedSlices += 1
+			}
+			if sliceStatusV > jobStatusV {
+				switch job.Status {
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+					// leave current status
+				case api.JobStatus_QUEUED, api.JobStatus_FINISHED:
+					// only update if not finished
+					switch sliceJob.Status {
+					case api.JobStatus_FINISHED:
+						job.Status = api.JobStatus_RENDERING
+						frameJob.Status = api.JobStatus_RENDERING
+					default:
+						job.Status = sliceJob.Status
+						frameJob.Status = sliceJob.Status
+					}
+				}
+			}
+			if sliceStatusV < jobStatusV {
 				switch sliceJob.Status {
-				case api.Job_FINISHED:
-					job.Status = api.Job_RENDERING
-				default:
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
 					job.Status = sliceJob.Status
+				case api.JobStatus_QUEUED:
+					switch job.Status {
+					case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+						// leave
+					default:
+						job.Status = sliceJob.Status
+						frameJob.Status = sliceJob.Status
+					}
+				}
+			}
+
+			// update frame times
+			// set time to default if zero
+			if frameJob.StartedAt.IsZero() {
+				frameJob.StartedAt = sliceJob.StartedAt
+			}
+			// update times
+			if sliceJob.StartedAt.Before(frameJob.StartedAt) {
+				frameJob.StartedAt = sliceJob.StartedAt
+			}
+
+			if sliceJob.FinishedAt.After(frameJob.FinishedAt) {
+				frameJob.FinishedAt = sliceJob.FinishedAt
+			}
+
+			// update job times
+			// set time to default if zero
+			if job.StartedAt.IsZero() {
+				job.StartedAt = sliceJob.StartedAt
+			}
+			// update times
+			if sliceJob.StartedAt.Before(job.StartedAt) {
+				job.StartedAt = sliceJob.StartedAt
+			}
+
+			if sliceJob.FinishedAt.After(job.FinishedAt) {
+				job.FinishedAt = sliceJob.FinishedAt
+			}
+			// calculate slice duration
+			if !sliceJob.StartedAt.IsZero() {
+				if !sliceJob.FinishedAt.IsZero() {
+					frameRenderSeconds += float64(sliceJob.FinishedAt.Sub(sliceJob.StartedAt).Seconds())
 				}
 			}
 		}
-		if sliceStatusV < jobStatusV {
-			switch sliceJob.Status {
-			case api.Job_RENDERING, api.Job_ERROR:
-				job.Status = sliceJob.Status
-			case api.Job_QUEUED:
+
+		// slices
+		if job.Request.RenderSlices > 0 && finishedSlices == len(frameJob.SliceJobs) {
+			//finishedFrames += 1
+			frameJob.Status = api.JobStatus_FINISHED
+			renderTimeSeconds += frameRenderSeconds
+		}
+
+		// frame status
+		frameStatusV := api.JobStatus_value[frameJob.Status.String()]
+		jobStatusV := api.JobStatus_value[job.Status.String()]
+		if frameJob.Status == api.JobStatus_FINISHED {
+			finishedFrames += 1
+		}
+		if frameStatusV > jobStatusV {
+			switch job.Status {
+			case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+				// leave current status
+			case api.JobStatus_QUEUED, api.JobStatus_FINISHED:
+				// only update if not finished
+				switch frameJob.Status {
+				case api.JobStatus_FINISHED:
+					job.Status = api.JobStatus_RENDERING
+					//frameJob.Status = api.JobStatus_RENDERING
+				default:
+					job.Status = frameJob.Status
+				}
+			}
+		}
+		if frameStatusV < jobStatusV {
+			switch frameJob.Status {
+			case api.JobStatus_RENDERING, api.JobStatus_ERROR:
+				job.Status = frameJob.Status
+			case api.JobStatus_QUEUED:
 				switch job.Status {
-				case api.Job_RENDERING, api.Job_ERROR:
+				case api.JobStatus_RENDERING, api.JobStatus_ERROR:
 					// leave
 				default:
-					job.Status = sliceJob.Status
+					job.Status = frameJob.Status
 				}
 			}
 		}
-
+		// update job times
 		// set time to default if zero
 		if job.StartedAt.IsZero() {
-			job.StartedAt = sliceJob.StartedAt
+			job.StartedAt = frameJob.StartedAt
 		}
 		// update times
-		if sliceJob.StartedAt.Before(job.StartedAt) {
-			job.StartedAt = sliceJob.StartedAt
+		if frameJob.StartedAt.Before(job.StartedAt) {
+			job.StartedAt = frameJob.StartedAt
 		}
 
-		if sliceJob.FinishedAt.After(job.FinishedAt) {
-			job.FinishedAt = sliceJob.FinishedAt
+		if frameJob.FinishedAt.After(job.FinishedAt) {
+			job.FinishedAt = frameJob.FinishedAt
 		}
-		if sliceJob.Duration != nil {
-			renderTimeSeconds += float64(sliceJob.Duration.Seconds)
+
+		// calculate frame duration if not using slices
+		if job.Request.RenderSlices == 0 && !frameJob.StartedAt.IsZero() {
+			if !frameJob.FinishedAt.IsZero() {
+				renderTimeSeconds += float64(frameJob.FinishedAt.Sub(frameJob.StartedAt).Seconds())
+			}
 		}
 	}
+
 	// check for finished jobs to mark as finished
-	if finishedJobs == len(job.SliceJobs) {
-		job.Status = api.Job_FINISHED
+	if finishedFrames == len(job.FrameJobs) {
+		job.Status = api.JobStatus_FINISHED
 	}
 
 	renderTime, err := time.ParseDuration(fmt.Sprintf("%0.2fs", renderTimeSeconds))

@@ -21,6 +21,7 @@ service Render {
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
         rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
         rpc ControlWorker(ControlWorkerRequest) returns (ControlWorkerResponse);
+        rpc Version(VersionRequest) returns (VersionResponse);
 }
 
 message QueueJobRequest {
@@ -58,36 +59,81 @@ message Worker {
         repeated string gpus = 5 [(gogoproto.customname) = "GPUs"];
 }
 
+enum JobStatus {
+        QUEUED = 0;
+        RENDERING = 1;
+        ERROR = 2;
+        FINISHED = 3;
+}
+
 message Job {
         string id = 1 [(gogoproto.customname) = "ID"];
         JobRequest request = 2;
         string job_source = 3;
-        int64 render_slice_index = 4;
-        float render_slice_min_x = 5;
-        float render_slice_max_x = 6;
-        float render_slice_min_y = 7;
-        float render_slice_max_y = 8;
-        int64 render_frame = 9;
-        string output_dir = 10;
-        google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        uint64 sequence_id = 12 [(gogoproto.customname) = "SequenceID"];
-        google.protobuf.Duration duration = 13;
-        Worker worker = 14;
-        enum Status {
-                QUEUED = 0;
-                RENDERING = 1;
-                ERROR = 2;
-                FINISHED = 3;
-        }
-        Status status = 15;
-        google.protobuf.Timestamp queued_at = 16 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp started_at = 17 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Timestamp finished_at = 18 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        // SliceJobs are used by the datastore to relate slice jobs to the job ID
-        repeated Job slice_jobs = 19;
+        string output_dir = 4;
+        JobStatus status = 5;
+        repeated FrameJob frame_jobs = 6;
+        google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp queued_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Duration duration = 11;
 }
 
-message ListJobsRequest {}
+message FrameJob {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        JobRequest request = 2;
+        string job_source = 3;
+        int64 render_frame = 4;
+        uint64 sequence_id = 5 [(gogoproto.customname) = "SequenceID"];
+        Worker worker = 6;
+        repeated SliceJob slice_jobs = 7;
+        google.protobuf.Timestamp queued_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        JobStatus status = 11;
+}
+
+message SliceJob {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        JobRequest request = 2;
+        string job_source = 3;
+        uint64 sequence_id = 4 [(gogoproto.customname) = "SequenceID"];
+        int64 render_slice_index = 5;
+        float render_slice_min_x = 6;
+        float render_slice_max_x = 7;
+        float render_slice_min_y = 8;
+        float render_slice_max_y = 9;
+        int64 render_frame = 10;
+        Worker worker = 11;
+        google.protobuf.Timestamp queued_at = 12 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp started_at = 13 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 14 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        JobStatus status = 15;
+}
+
+message WorkerJob {
+        oneof job {
+                FrameJob frame_job = 1;
+                SliceJob slice_job = 2;
+        }
+}
+
+message JobResult {
+        oneof result {
+                FrameJob frame_job = 1;
+                SliceJob slice_job = 2;
+        }
+        google.protobuf.Duration duration = 3;
+        int64 render_frame = 4;
+        JobStatus status = 5;
+        string error = 6;
+}
+
+message ListJobsRequest {
+        bool exclude_frames = 1;
+        bool exclude_slices = 2;
+}
 
 message ListJobsResponse {
         repeated Job jobs = 1;
@@ -130,3 +176,12 @@ message ControlWorkerRequest {
 message WorkerStop {}
 
 message ControlWorkerResponse {}
+
+message VersionRequest {}
+
+message VersionResponse {
+        string name = 1;
+        string version = 2;
+        string build = 3;
+        string commit = 4;
+}

@@ -3,7 +3,6 @@ package render
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	minio "github.com/minio/minio-go/v7"
-	cs "github.com/mitchellh/copystructure"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -141,14 +139,18 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 		req.RenderEndFrame = req.RenderStartFrame
 	}
 
-	for i := req.RenderStartFrame; i <= req.RenderEndFrame; i++ {
-		job := &api.Job{
-			CreatedAt:        time.Now(),
-			ID:               jobID,
-			Request:          req,
-			JobSource:        jobSourceFileName,
-			RenderFrame:      i,
-			RenderSliceIndex: -1,
+	job := &api.Job{
+		CreatedAt: time.Now(),
+		ID:        jobID,
+		Request:   req,
+		JobSource: jobSourceFileName,
+	}
+	for frame := req.RenderStartFrame; frame <= req.RenderEndFrame; frame++ {
+		frameJob := &api.FrameJob{
+			ID:          jobID,
+			Request:     req,
+			JobSource:   jobSourceFileName,
+			RenderFrame: int64(frame),
 		}
 
 		// queue slices
@@ -162,39 +164,43 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 			for i := 0; i < len(slices); i++ {
 				slice := slices[i]
 				// copy and override env to set slice region
-				te, err := cs.Copy(job)
-				if err != nil {
-					return err
+				sliceJob := &api.SliceJob{
+					ID:               jobID,
+					Request:          req,
+					JobSource:        jobSourceFileName,
+					RenderSliceIndex: int64(i),
+					RenderSliceMinX:  float32(slice.MinX),
+					RenderSliceMaxX:  float32(slice.MaxX),
+					RenderSliceMinY:  float32(slice.MinY),
+					RenderSliceMaxY:  float32(slice.MaxY),
+					RenderFrame:      int64(frame),
 				}
-				sliceJob := te.(*api.Job)
-				sliceJob.RenderSliceIndex = int64(i)
-				sliceJob.RenderSliceMinX = float32(slice.MinX)
-				sliceJob.RenderSliceMaxX = float32(slice.MaxX)
-				sliceJob.RenderSliceMinY = float32(slice.MinY)
-				sliceJob.RenderSliceMaxY = float32(slice.MaxY)
 				// queue slice job
 				buf := &bytes.Buffer{}
-				if err := s.ds.Marshaler().Marshal(buf, sliceJob); err != nil {
+				if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+					Job: &api.WorkerJob_SliceJob{
+						SliceJob: sliceJob,
+					},
+				}); err != nil {
 					return err
 				}
-				logrus.Debugf("publishing job slice %s (%d)", job.ID, i)
+				logrus.Debugf("publishing slice job %s (frame:%d slice:%d)", jobID, frame, i)
 				ack, err := js.Publish(subjectName, buf.Bytes())
 				if err != nil {
 					return err
 				}
 				sliceJob.SequenceID = ack.Sequence
-
-				sliceJob.Status = api.Job_QUEUED
+				sliceJob.Status = api.JobStatus_QUEUED
 				sliceJob.QueuedAt = time.Now()
 
-				if err := s.ds.UpdateJob(ctx, sliceJob); err != nil {
+				if err := s.ds.UpdateJob(ctx, jobID, sliceJob); err != nil {
 					return err
 				}
+				frameJob.SliceJobs = append(frameJob.SliceJobs, sliceJob)
 			}
-			// update parent job
-			job.Status = api.Job_QUEUED
-			job.QueuedAt = time.Now()
-			if err := s.ds.UpdateJob(ctx, job); err != nil {
+
+			job.FrameJobs = append(job.FrameJobs, frameJob)
+			if err := s.ds.UpdateJob(ctx, jobID, frameJob); err != nil {
 				return err
 			}
 
@@ -203,23 +209,34 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 		}
 
 		// not using slices; publish job for full frame render
-		logrus.Debugf("publishing job to %s", subjectName)
+		logrus.Debugf("publishing frame job %s (%d) to %s", jobID, frame, subjectName)
 
-		jobData, err := json.Marshal(job)
+		buf := &bytes.Buffer{}
+		if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+			Job: &api.WorkerJob_FrameJob{
+				FrameJob: frameJob,
+			},
+		}); err != nil {
+			return err
+		}
+
+		ack, err := js.Publish(subjectName, buf.Bytes())
 		if err != nil {
 			return err
 		}
-
-		ack, err := js.Publish(subjectName, jobData)
-		if err != nil {
+		frameJob.SequenceID = ack.Sequence
+		frameJob.Status = api.JobStatus_QUEUED
+		frameJob.QueuedAt = time.Now()
+		if err := s.ds.UpdateJob(ctx, jobID, frameJob); err != nil {
 			return err
 		}
-		job.SequenceID = ack.Sequence
-		job.Status = api.Job_QUEUED
-		job.QueuedAt = time.Now()
-		if err := s.ds.UpdateJob(ctx, job); err != nil {
-			return err
-		}
+		job.FrameJobs = append(job.FrameJobs, frameJob)
+	}
+	// update parent job
+	job.Status = api.JobStatus_QUEUED
+	job.QueuedAt = time.Now()
+	if err := s.ds.UpdateJob(ctx, jobID, job); err != nil {
+		return err
 	}
 
 	return nil

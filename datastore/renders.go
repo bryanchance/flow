@@ -28,9 +28,15 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int
 		return nil, err
 	}
 
+	// TODO
 	// check for rendering and if slices return composite
-	if job.Status == api.Job_RENDERING && len(job.SliceJobs) > 0 {
-		return d.GetCompositeRender(ctx, jobID, frame)
+	if job.Status == api.JobStatus_RENDERING {
+		// check slices
+		for _, frameJob := range job.FrameJobs {
+			if frameJob.RenderFrame == frame && len(frameJob.SliceJobs) > 0 {
+				return d.GetCompositeRender(ctx, jobID, frame)
+			}
+		}
 	}
 
 	renderPath := path.Join(finca.S3RenderPath, jobID)
@@ -107,7 +113,7 @@ func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
 func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame int64) ([]byte, error) {
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error getting job %s for compositing", jobID)
 	}
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-composite-%s", job.ID))
 	if err != nil {

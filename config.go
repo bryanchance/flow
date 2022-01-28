@@ -33,8 +33,10 @@ const (
 	queueJobStatusSubject = "STATUS"
 	// kvBucketNameWorkers is the name of the kv store in the queue for the worker info
 	kvBucketNameWorkers = "finca-workers"
-	// kvBucketWorkerControl is the name of the kv store in the queue for issueing worker control messages
+	// kvBucketWorkerControl is the name of the kv store in the queue for issuing worker control messages
 	kvBucketWorkerControl = "finca-worker-control"
+	// objectStoreName is the name of the object store for the system
+	objectStoreName = "finca"
 )
 
 type duration struct {
@@ -87,6 +89,8 @@ type Config struct {
 	NATSKVBucketNameWorkers string
 	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
 	NATSKVBucketWorkerControl string
+	// DatabaseAddress is the address of the database
+	DatabaseAddress string
 	// JobTimeout is the maximum amount of time a job can take
 	JobTimeout duration
 	// Workers are worker specific configuration
@@ -134,6 +138,7 @@ func DefaultConfig() *Config {
 		NATSJobStatusSubject:      queueJobStatusSubject,
 		NATSKVBucketNameWorkers:   kvBucketNameWorkers,
 		NATSKVBucketWorkerControl: kvBucketWorkerControl,
+		DatabaseAddress:           "redis://127.0.0.1:6379/0",
 		JobTimeout:                duration{time.Second * 28800},
 		JobPriority:               50,
 		JobCPU:                    1000,

@@ -2,6 +2,8 @@ package render
 
 import (
 	"bytes"
+	"context"
+	"time"
 
 	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
@@ -50,21 +52,36 @@ func (s *service) jobStatusListener() {
 		case <-s.stopCh:
 			return
 		case m := <-msgCh:
-			job := &api.Job{}
+			jobResult := &api.JobResult{}
 			buf := bytes.NewBuffer(m.Data)
-			if err := jsonpb.Unmarshal(buf, job); err != nil {
-				logrus.WithError(err).Error("error unmarshaling api.Job from message")
+			if err := jsonpb.Unmarshal(buf, jobResult); err != nil {
+				logrus.WithError(err).Error("error unmarshaling api.JobResult from message")
 				continue
 			}
-			logrus.Infof("job %s (frame: %d slice: %d) completed in %s on worker %s: success: %v",
-				job.ID,
-				job.RenderFrame,
-				job.RenderSliceIndex,
-				job.Duration,
-				job.Worker.Name,
-				job.Status,
-			)
-			// TODO: store to datastore for UI?
+			jobID := ""
+			switch v := jobResult.Result.(type) {
+			case *api.JobResult_FrameJob:
+				j := v.FrameJob
+				jobID = j.ID
+				logrus.Infof("frame %d for job %s complete", j.RenderFrame, j.ID)
+			case *api.JobResult_SliceJob:
+				j := v.SliceJob
+				jobID = j.ID
+				logrus.Infof("slice %d (frame %d) for job %s complete", j.RenderSliceIndex, j.RenderFrame, j.ID)
+			default:
+				logrus.Errorf("unknown job result type %+T", v)
+				continue
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			logrus.Debugf("job complete for frame %d; resolving final job", jobResult.RenderFrame)
+			if err := s.ds.ResolveJob(ctx, jobID); err != nil {
+				cancel()
+				logrus.WithError(err).Errorf("error updating final job for %s", jobID)
+				continue
+			}
+			cancel()
+			// ack message to finish
 			m.Ack()
 		}
 	}
