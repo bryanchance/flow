@@ -21,6 +21,8 @@ const (
 	S3RenderPath = "render"
 	// S3JobPath is the path to the render job config
 	S3JobPath = "job.json"
+	// S3JobLogPath is the path to the job log
+	S3JobLogPath = "job.log"
 	// S3JobStatusContentType is the content type for job status objects
 	S3JobContentType = "application/json"
 

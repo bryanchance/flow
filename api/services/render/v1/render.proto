@@ -22,6 +22,8 @@ service Render {
         rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
         rpc ControlWorker(ControlWorkerRequest) returns (ControlWorkerResponse);
         rpc Version(VersionRequest) returns (VersionResponse);
+        rpc JobLog(JobLogRequest) returns (JobLogResponse);
+        rpc RenderLog(RenderLogRequest) returns (RenderLogResponse);
 }
 
 message QueueJobRequest {
@@ -184,4 +186,31 @@ message VersionResponse {
         string version = 2;
         string build = 3;
         string commit = 4;
+}
+
+message RenderLogRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        int64 frame = 2;
+        int64 slice = 3;
+}
+
+message RenderLog {
+        string log = 1;
+}
+
+message RenderLogResponse {
+        RenderLog render_log = 1;
+}
+
+message JobLogRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message JobLog {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string log = 2;
+}
+
+message JobLogResponse {
+        JobLog job_log = 1;
 }

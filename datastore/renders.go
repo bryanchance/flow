@@ -28,7 +28,6 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int
 		return nil, err
 	}
 
-	// TODO
 	// check for rendering and if slices return composite
 	if job.Status == api.JobStatus_RENDERING {
 		// check slices

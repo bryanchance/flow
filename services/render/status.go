@@ -3,6 +3,7 @@ package render
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"git.underland.io/ehazlett/finca"
@@ -59,21 +60,40 @@ func (s *service) jobStatusListener() {
 				continue
 			}
 			jobID := ""
+			frame := int64(0)
+			slice := int64(-1)
 			switch v := jobResult.Result.(type) {
 			case *api.JobResult_FrameJob:
 				j := v.FrameJob
 				jobID = j.ID
+				frame = j.RenderFrame
 				logrus.Infof("frame %d for job %s complete", j.RenderFrame, j.ID)
 			case *api.JobResult_SliceJob:
 				j := v.SliceJob
 				jobID = j.ID
+				frame = j.RenderFrame
+				slice = j.RenderSliceIndex
 				logrus.Infof("slice %d (frame %d) for job %s complete", j.RenderSliceIndex, j.RenderFrame, j.ID)
 			default:
 				logrus.Errorf("unknown job result type %+T", v)
 				continue
 			}
 
+			logMessage := fmt.Sprintf("Job %s completed successfully", jobID)
+			if jobResult.Status == api.JobStatus_ERROR {
+				logMessage = jobResult.Error
+			}
+
+			// upload result to minio
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			if err := s.ds.UpdateJobLog(ctx, &api.JobLog{
+				ID:  jobID,
+				Log: logMessage,
+			}); err != nil {
+				cancel()
+				logrus.WithError(err).Errorf("error updating job log for job %s frame %d (slice %d)", jobID, frame, slice)
+			}
+
 			logrus.Debugf("job complete for frame %d; resolving final job", jobResult.RenderFrame)
 			if err := s.ds.ResolveJob(ctx, jobID); err != nil {
 				cancel()
@@ -81,6 +101,8 @@ func (s *service) jobStatusListener() {
 				continue
 			}
 			cancel()
+
+			logrus.Info(logMessage)
 			// ack message to finish
 			m.Ack()
 		}

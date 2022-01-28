@@ -118,6 +118,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	// update result status
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
+	jobResult.Status = api.JobStatus_FINISHED
 	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
 	if pErr != nil {
 		jobResult.Error = pErr.Error()
@@ -166,6 +167,7 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 	// update result status
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
+	jobResult.Status = api.JobStatus_FINISHED
 	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
 	if pErr != nil {
 		jobResult.Error = pErr.Error()
