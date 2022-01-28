@@ -102,24 +102,34 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 		return nil, err
 	}
 
-	// process
-	result, err := w.processJob(ctx, job, job.Request.Name)
-	if err != nil {
-		return nil, err
-	}
-	result.Result = &api.JobResult_FrameJob{
-		FrameJob: job,
+	jobResult := &api.JobResult{
+		Result: &api.JobResult_FrameJob{
+			FrameJob: job,
+		},
+		RenderFrame: job.GetRenderFrame(),
 	}
 
+	// process
+	var pErr error
+	started := time.Now()
+	if err := w.processJob(ctx, job, job.Request.Name); err != nil {
+		pErr = err
+	}
 	// update result status
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
+	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
+	if pErr != nil {
+		jobResult.Error = pErr.Error()
+		jobResult.Status = api.JobStatus_ERROR
+		job.Status = api.JobStatus_ERROR
+	}
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return jobResult, pErr
 }
 
 func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.JobResult, error) {
@@ -141,33 +151,40 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 		return nil, err
 	}
 
+	jobResult := &api.JobResult{
+		Result: &api.JobResult_SliceJob{
+			SliceJob: job,
+		},
+		RenderFrame: job.GetRenderFrame(),
+	}
 	// process
-	result, err := w.processJob(ctx, job, fmt.Sprintf("%s_slice_%d", job.Request.Name, job.RenderSliceIndex))
-	if err != nil {
-		return nil, err
+	var pErr error
+	started := time.Now()
+	if err := w.processJob(ctx, job, fmt.Sprintf("%s_slice_%d", job.Request.Name, job.RenderSliceIndex)); err != nil {
+		pErr = err
 	}
-	result.Result = &api.JobResult_SliceJob{
-		SliceJob: job,
-	}
-
 	// update result status
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
+	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
+	if pErr != nil {
+		jobResult.Error = pErr.Error()
+		jobResult.Status = api.JobStatus_ERROR
+		job.Status = api.JobStatus_ERROR
+	}
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return jobResult, pErr
 }
 
-func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix string) (*api.JobResult, error) {
-	started := time.Now()
-
+func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix string) error {
 	// render with blender
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.GetID()))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -176,34 +193,34 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	// setup render dir
 	outputDir := filepath.Join(tmpDir, "render")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, err
+		return err
 	}
 	blenderOutputDir := getPythonOutputDir(filepath.Join(outputDir, outputPrefix))
 
 	// fetch project source file
 	mc, err := w.getMinioClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	logrus.Debugf("getting job source %s", job.GetJobSource())
 
 	object, err := mc.GetObject(ctx, w.config.S3Bucket, job.GetJobSource(), minio.GetObjectOptions{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting job source %s", job.GetJobSource())
+		return errors.Wrapf(err, "error getting job source %s", job.GetJobSource())
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filepath.Join(tmpDir, job.GetJobSource())), 0755); err != nil {
-		return nil, err
+		return err
 	}
 
 	projectFile, err := os.Create(filepath.Join(tmpDir, job.GetJobSource()))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, err := io.Copy(projectFile, object); err != nil {
-		return nil, err
+		return err
 	}
 
 	projectFilePath := projectFile.Name()
@@ -211,7 +228,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	logrus.Debugf("checking content type for %s", projectFile.Name())
 	contentType, err := getContentType(projectFile)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting content type for %s", projectFile.Name())
+		return errors.Wrapf(err, "error getting content type for %s", projectFile.Name())
 	}
 
 	switch contentType {
@@ -219,7 +236,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		logrus.Debug("zip archive detected; extracting")
 		a, err := zip.OpenReader(projectFilePath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error reading zip archive %s", projectFilePath)
+			return errors.Wrapf(err, "error reading zip archive %s", projectFilePath)
 		}
 		defer a.Close()
 
@@ -231,27 +248,27 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 			}
 			if f.FileInfo().IsDir() {
 				if err := os.MkdirAll(fp, 0750); err != nil {
-					return nil, errors.Wrapf(err, "error creating dir from archive for %s", f.Name)
+					return errors.Wrapf(err, "error creating dir from archive for %s", f.Name)
 				}
 				continue
 			}
 
 			if err := os.MkdirAll(filepath.Dir(fp), 0750); err != nil {
-				return nil, errors.Wrapf(err, "error creating parent dir from archive for %s", f.Name)
+				return errors.Wrapf(err, "error creating parent dir from archive for %s", f.Name)
 			}
 
 			pf, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			if err != nil {
-				return nil, errors.Wrapf(err, "error creating file from archive for %s", f.Name)
+				return errors.Wrapf(err, "error creating file from archive for %s", f.Name)
 			}
 
 			fa, err := f.Open()
 			if err != nil {
-				return nil, errors.Wrapf(err, "error opening file in archive: %s", f.Name)
+				return errors.Wrapf(err, "error opening file in archive: %s", f.Name)
 			}
 
 			if _, err := io.Copy(pf, fa); err != nil {
-				return nil, errors.Wrapf(err, "error extracting file from archive: %s", f.Name)
+				return errors.Wrapf(err, "error extracting file from archive: %s", f.Name)
 			}
 			pf.Close()
 			fa.Close()
@@ -260,11 +277,11 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		// find blender project
 		projectFiles, err := filepath.Glob(filepath.Join(tmpDir, "*.blend"))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if len(projectFiles) == 0 {
-			return nil, errors.New("Blender project file (.blend) not found in zip archive")
+			return errors.New("Blender project file (.blend) not found in zip archive")
 		}
 
 		projectFilePath = projectFiles[0]
@@ -283,7 +300,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	}
 	blenderCfg, err := generateBlenderRenderConfig(bCfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	logrus.Debugf("blender config: %+v", blenderCfg)
@@ -291,7 +308,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	blenderConfigPath := filepath.Join(tmpDir, "render.py")
 
 	if err := ioutil.WriteFile(blenderConfigPath, []byte(blenderCfg), 0644); err != nil {
-		return nil, err
+		return err
 	}
 
 	// lookup binary path
@@ -310,7 +327,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	if blenderBinaryPath == "" {
 		bp, err := exec.LookPath(blenderExecutableName)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		blenderBinaryPath = bp
 	}
@@ -332,7 +349,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 
 	out, err := c.CombinedOutput()
 	if err != nil {
-		return nil, errors.Wrap(err, string(out))
+		return errors.Wrap(err, string(out))
 	}
 
 	logrus.Debug(string(out))
@@ -341,26 +358,26 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	// upload results to minio
 	files, err := filepath.Glob(filepath.Join(outputDir, "*"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, f := range files {
 		logrus.Debugf("uploading output file %s", f)
 		rf, err := os.Open(f)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer rf.Close()
 
 		fs, err := rf.Stat()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if fs.IsDir() {
 			continue
 		}
 
 		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -368,44 +385,38 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	logFilename := fmt.Sprintf("%s_%04d.log", outputPrefix, job.GetRenderFrame())
 	logFile, err := os.Create(filepath.Join(tmpDir, logFilename))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer logFile.Close()
 
 	if _, err := logFile.Write(out); err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, err := logFile.Seek(0, 0); err != nil {
-		return nil, err
+		return err
 	}
 
 	fi, err := logFile.Stat()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
-		return nil, err
+		return err
 	}
 
 	// check for render slice job; if so, check s3 for number of renders. if matches render slices
 	// assume project is complete and composite images into single result
-	renderComplete := true
 	if job.GetRequest().RenderSlices > 0 {
 		if err := w.compositeRender(ctx, job, job.GetRenderFrame(), outputDir); err != nil {
 			if err != ErrRenderInProgress {
-				return nil, err
+				return err
 			}
-			renderComplete = false
 		}
 	}
 
-	return &api.JobResult{
-		Duration:    ptypes.DurationProto(time.Now().Sub(started)),
-		RenderFrame: job.GetRenderFrame(),
-		Complete:    renderComplete,
-	}, nil
+	return nil
 }
 
 func (w *Worker) compositeRender(ctx context.Context, job api.RenderJob, frame int64, outputDir string) error {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"path"
 	"sort"
 	"strings"
@@ -39,34 +38,26 @@ func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job,
 		o(cfg)
 	}
 
-	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    finca.S3ProjectPath,
-		Recursive: true,
-	})
+	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	if err != nil {
+		return nil, err
+	}
 
-	found := map[string]struct{}{}
 	jobs := []*api.Job{}
-	for o := range objCh {
-		if o.Err != nil {
-			return nil, errors.Wrap(o.Err, "error reading jobs from datastore")
-		}
-
-		k := strings.SplitN(o.Key, "/", 2)
-		jobID := path.Dir(k[1])
-
-		if _, ok := found[jobID]; ok {
+	for _, k := range keys {
+		parts := strings.Split(k, "/")
+		if len(parts) != 3 {
+			logrus.Errorf("invalid key format: %s", k)
 			continue
 		}
-
-		found[jobID] = struct{}{}
-
-		job, err := d.GetJob(ctx, jobID, jobOpts...)
+		jobID := parts[1]
+		job, err := d.GetJob(ctx, jobID)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error getting job from datastore: %s", jobID)
+			return nil, err
 		}
-
 		jobs = append(jobs, job)
 	}
+
 	sort.Sort(ByCreatedAt(jobs))
 
 	return jobs, nil
@@ -79,73 +70,109 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt)
 		o(cfg)
 	}
 
-	jobPath := getJobPath(jobID)
-	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+	jobKey := getJobKey(jobID)
+	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting job %s", jobPath)
+		return nil, errors.Wrapf(err, "error getting job %s from database", jobID)
 	}
 
-	buf := &bytes.Buffer{}
-	if _, err := io.Copy(buf, obj); err != nil {
-		return nil, err
-	}
-
+	buf := bytes.NewBuffer(data)
 	job := &api.Job{}
 	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return nil, err
 	}
+
+	job.FrameJobs = []*api.FrameJob{}
+
 	// filter
-	if cfg.excludeSlices {
-		for _, j := range job.FrameJobs {
-			j.SliceJobs = []*api.SliceJob{}
+	if !cfg.excludeFrames {
+		for frame := job.Request.RenderStartFrame; frame <= job.Request.RenderEndFrame; frame++ {
+			frameKey := getFrameKey(jobID, frame)
+			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
+			if err != nil {
+				return nil, errors.Wrapf(err, "error getting frame %d for job %s from database", frame, jobID)
+			}
+
+			buf := bytes.NewBuffer(data)
+			frameJob := &api.FrameJob{}
+			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
+				return nil, err
+			}
+			if !cfg.excludeSlices {
+				if job.Request.RenderSlices > 0 {
+					frameJob.SliceJobs = []*api.SliceJob{}
+					for i := int64(0); i < job.Request.RenderSlices; i++ {
+						sliceKey := getSliceKey(jobID, frame, i)
+						data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
+						if err != nil {
+							return nil, errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", i, frame, jobID)
+						}
+
+						buf := bytes.NewBuffer(data)
+						sliceJob := &api.SliceJob{}
+						if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
+							return nil, err
+						}
+						frameJob.SliceJobs = append(frameJob.SliceJobs, sliceJob)
+					}
+				}
+			}
+			job.FrameJobs = append(job.FrameJobs, frameJob)
 		}
 	}
-	if cfg.excludeFrames {
-		job.FrameJobs = []*api.FrameJob{}
-	}
 
+	if err := resolveJob(job); err != nil {
+		return nil, err
+	}
 	return job, nil
 }
 
-// ResolveJob resolves a job from all frame and slice jobs
+// ResolveJob resolves a job from all frame and slice jobs and stores the result in the database
 func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
-	jobPath := getJobPath(jobID)
-	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, jobPath, minio.GetObjectOptions{})
+	jobKey := getJobKey(jobID)
+	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
-		return errors.Wrapf(err, "error getting job %s", jobPath)
+		return errors.Wrapf(err, "error getting job %s from database to resolve", jobID)
 	}
 
-	buf := &bytes.Buffer{}
-	if _, err := io.Copy(buf, obj); err != nil {
-		return err
-	}
-
+	buf := bytes.NewBuffer(data)
 	job := &api.Job{}
 	if err := jsonpb.Unmarshal(buf, job); err != nil {
 		return err
 	}
 
+	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	if err != nil {
+		return err
+	}
+
+	jobs := []*api.Job{}
+	for _, k := range keys {
+		parts := strings.Split(k, "/")
+		if len(parts) != 3 {
+			logrus.Errorf("invalid key format: %s", k)
+			continue
+		}
+		jobID := parts[1]
+		job, err := d.GetJob(ctx, jobID)
+		if err != nil {
+			return err
+		}
+		jobs = append(jobs, job)
+	}
 	frameJobs := []*api.FrameJob{}
 
 	// load frames
 	for _, f := range job.FrameJobs {
 		// check if non-slice job
 		if job.Request.RenderSlices == 0 {
-			framePath := getFrameJobPath(jobID, f.RenderFrame)
-			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, framePath, minio.GetObjectOptions{})
+			frameKey := getFrameKey(jobID, f.RenderFrame)
+			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
 			if err != nil {
-				if strings.Contains(err.Error(), "key does not exist") {
-					logrus.Debugf("key not found for %s; assuming frame job is queued", jobPath)
-					continue
-				}
-				return errors.Wrapf(err, "error getting frame job object %s", framePath)
+				return errors.Wrapf(err, "error getting frame %d for job %s from database", f.RenderFrame, jobID)
 			}
 
-			buf := &bytes.Buffer{}
-			if _, err := io.Copy(buf, obj); err != nil {
-				return err
-			}
-
+			buf := bytes.NewBuffer(data)
 			frameJob := &api.FrameJob{}
 			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
 				return err
@@ -156,21 +183,14 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 		// load slices
 		sliceJobs := []*api.SliceJob{}
 		for _, slice := range f.SliceJobs {
-			slicePath := getSliceJobPath(jobID, slice.RenderFrame, slice.RenderSliceIndex)
-			obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, slicePath, minio.GetObjectOptions{})
+			sliceKey := getSliceKey(jobID, slice.RenderFrame, slice.RenderSliceIndex)
+			data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
 			if err != nil {
-				if strings.Contains(err.Error(), "key does not exist") {
-					logrus.Debugf("key not found for %s; assuming slice job is queued", jobPath)
-					continue
-				}
-				return err
-			}
-			sliceJob := &api.SliceJob{}
-			buf := &bytes.Buffer{}
-			if _, err := io.Copy(buf, obj); err != nil {
-				return err
+				return errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", slice.RenderSliceIndex, f.RenderFrame, jobID)
 			}
 
+			buf := bytes.NewBuffer(data)
+			sliceJob := &api.SliceJob{}
 			if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
 				return err
 			}
@@ -196,54 +216,63 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 
 // UpdateJob updates the status of a job
 func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) error {
-	dbPath := ""
+	dbKey := ""
 	buf := &bytes.Buffer{}
-
-	resolveJob := false
 
 	switch v := o.(type) {
 	case *api.Job:
-		dbPath = getJobPath(jobID)
+		dbKey = getJobKey(jobID)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
 	case *api.FrameJob:
-		dbPath = getFrameJobPath(jobID, v.RenderFrame)
+		dbKey = getFrameKey(jobID, v.RenderFrame)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
-		resolveJob = true
 	case *api.SliceJob:
-		dbPath = getSliceJobPath(jobID, v.RenderFrame, v.RenderSliceIndex)
+		dbKey = getSliceKey(jobID, v.RenderFrame, v.RenderSliceIndex)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
-		resolveJob = true
 	default:
 		return fmt.Errorf("job type %+T is unknown", v)
 	}
 
-	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, dbPath, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: finca.S3JobContentType}); err != nil {
-		return errors.Wrap(err, "error updating job status")
-	}
-
-	if resolveJob {
-		logrus.Debugf("resolving job %s", jobID)
-		if err := d.ResolveJob(ctx, jobID); err != nil {
-			return errors.Wrapf(err, "error resolving job %s", jobID)
-		}
+	if err := d.redisClient.Set(ctx, dbKey, buf.Bytes(), 0).Err(); err != nil {
+		return errors.Wrapf(err, "error saving job %s in database", jobID)
 	}
 
 	return nil
 }
 
 // DeleteJob deletes a job and all related files from the datastore
-func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
-	// TODO: can just the top level keys be deleted and recurse instead of iterating objects?
+func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
+	// delete from db
+	keys := []string{
+		getJobKey(jobID),
+	}
+
+	frameKeys, err := d.redisClient.Keys(ctx, getFrameKey(jobID, "*")).Result()
+	if err != nil {
+		return err
+	}
+
+	keys = append(keys, frameKeys...)
+
+	sliceKeys, err := d.redisClient.Keys(ctx, getSliceKey(jobID, "*", "*")).Result()
+	if err != nil {
+		return err
+	}
+	keys = append(keys, sliceKeys...)
+
+	if err := d.redisClient.Del(ctx, keys...).Err(); err != nil {
+		return err
+	}
 
 	// delete project
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3ProjectPath, id),
+		Prefix:    path.Join(finca.S3ProjectPath, jobID),
 		Recursive: true,
 	})
 
@@ -259,7 +288,7 @@ func (d *Datastore) DeleteJob(ctx context.Context, id string) error {
 
 	// delete renders
 	rObjCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3RenderPath, id),
+		Prefix:    path.Join(finca.S3RenderPath, jobID),
 		Recursive: true,
 	})
 
@@ -291,6 +320,18 @@ func getFrameJobPath(jobID string, frame int64) string {
 
 func getSliceJobPath(jobID string, frame int64, renderSliceIndex int64) string {
 	return fmt.Sprintf("%s.%d", getFrameJobPath(jobID, frame), renderSliceIndex)
+}
+
+func getJobKey(jobID string) string {
+	return path.Join(dbPrefix, jobID, "job")
+}
+
+func getFrameKey(jobID string, frame interface{}) string {
+	return path.Join(dbPrefix, "frames", jobID, fmt.Sprintf("%v", frame))
+}
+
+func getSliceKey(jobID string, frame interface{}, sliceIndex interface{}) string {
+	return path.Join(dbPrefix, "slices", jobID, fmt.Sprintf("%v", frame), fmt.Sprintf("%v", sliceIndex))
 }
 
 // WARNING: dragons ahead....

@@ -126,7 +126,8 @@ message JobResult {
         }
         google.protobuf.Duration duration = 3;
         int64 render_frame = 4;
-        bool complete = 5;
+        JobStatus status = 5;
+        string error = 6;
 }
 
 message ListJobsRequest {

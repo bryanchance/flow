@@ -73,16 +73,14 @@ func (s *service) jobStatusListener() {
 				continue
 			}
 
-			if jobResult.Complete {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-				logrus.Debugf("job complete for frame %d; resolving final job", jobResult.RenderFrame)
-				if err := s.ds.ResolveJob(ctx, jobID); err != nil {
-					cancel()
-					logrus.WithError(err).Errorf("error updating final job for %s", jobID)
-					continue
-				}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			logrus.Debugf("job complete for frame %d; resolving final job", jobResult.RenderFrame)
+			if err := s.ds.ResolveJob(ctx, jobID); err != nil {
 				cancel()
+				logrus.WithError(err).Errorf("error updating final job for %s", jobID)
+				continue
 			}
+			cancel()
 			// ack message to finish
 			m.Ack()
 		}

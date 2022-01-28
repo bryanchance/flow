@@ -145,10 +145,6 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 		Request:   req,
 		JobSource: jobSourceFileName,
 	}
-	// initial job definition
-	if err := s.ds.UpdateJob(ctx, jobID, job); err != nil {
-		return err
-	}
 	for frame := req.RenderStartFrame; frame <= req.RenderEndFrame; frame++ {
 		frameJob := &api.FrameJob{
 			ID:          jobID,
@@ -204,6 +200,9 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 			}
 
 			job.FrameJobs = append(job.FrameJobs, frameJob)
+			if err := s.ds.UpdateJob(ctx, jobID, frameJob); err != nil {
+				return err
+			}
 
 			// slices queued; continue to next frame
 			continue

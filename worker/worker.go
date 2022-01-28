@@ -186,15 +186,17 @@ func (w *Worker) Run() error {
 				logrus.Debugf("worker info: %+v", workerInfo)
 
 				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
-				var (
-					result *api.JobResult
-					pErr   error
-				)
 
+				result := &api.JobResult{}
+				jobID := ""
+
+				var pErr error
 				switch v := workerJob.GetJob().(type) {
 				case *api.WorkerJob_FrameJob:
+					jobID = v.ID
 					result, pErr = w.processFrameJob(ctx, v.FrameJob)
 				case *api.WorkerJob_SliceJob:
+					jobID = v.ID
 					result, pErr = w.processSliceJob(ctx, v.SliceJob)
 				default:
 					logrus.Errorf("unknown job type %+T", v)
@@ -209,22 +211,23 @@ func (w *Worker) Run() error {
 						continue
 					}
 
-					// TODO: publish error
+					// publish error
 					logrus.WithError(pErr).Errorf("error processing job")
 					if cErr := ctx.Err(); cErr != nil {
 						logrus.Warn("job timeout occurred during processing")
 					} else {
-						// TODO: max number of retries
 						// no timeout; requeue job
-						logrus.Warn("requeueing job")
-						m.Nak()
+						logrus.WithError(pErr).Error("error occurred while processing job")
+						if result == nil {
+							result = &api.JobResult{}
+						}
+						result.Status = api.JobStatus_ERROR
+						result.Error = pErr.Error()
 						cancel()
 					}
-					continue
 				}
 
-				//logrus.Infof("completed job %s (%s) (frame: %d slice: %d) in %s", j.ID, j.Request.Name, j.RenderFrame, j.RenderSliceIndex, j.Duration)
-				logrus.Infof("completed job %v", result)
+				logrus.Infof("completed job %s: status=%s", jobID, result.Status)
 
 				// publish status event for server
 				b := &bytes.Buffer{}
