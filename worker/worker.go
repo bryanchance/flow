@@ -193,10 +193,10 @@ func (w *Worker) Run() error {
 				var pErr error
 				switch v := workerJob.GetJob().(type) {
 				case *api.WorkerJob_FrameJob:
-					jobID = v.ID
+					jobID = v.FrameJob.ID
 					result, pErr = w.processFrameJob(ctx, v.FrameJob)
 				case *api.WorkerJob_SliceJob:
-					jobID = v.ID
+					jobID = v.SliceJob.ID
 					result, pErr = w.processSliceJob(ctx, v.SliceJob)
 				default:
 					logrus.Errorf("unknown job type %+T", v)
