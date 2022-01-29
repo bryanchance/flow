@@ -28,6 +28,7 @@ type service struct {
 	storageClient           *minio.Client
 	ds                      *datastore.Datastore
 	serverQueueSubscription *nats.Subscription
+	jobArchiveCh            chan string
 	stopCh                  chan bool
 }
 
@@ -57,6 +58,7 @@ func New(cfg *finca.Config) (services.Service, error) {
 		natsClient:    nc,
 		storageClient: mc,
 		ds:            ds,
+		jobArchiveCh:  make(chan string),
 	}, nil
 }
 
@@ -105,6 +107,9 @@ func (s *service) Start() error {
 	// start background listener for job updates from workers
 	go s.jobStatusListener()
 
+	// start background listener for job archive requests
+	go s.jobArchiveListener()
+
 	return nil
 }
 
@@ -113,5 +118,6 @@ func (s *service) Stop() error {
 		sub.Unsubscribe()
 		sub.Drain()
 	}
+	s.stopCh <- true
 	return nil
 }

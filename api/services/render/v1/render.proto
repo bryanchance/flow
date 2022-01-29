@@ -24,6 +24,7 @@ service Render {
         rpc Version(VersionRequest) returns (VersionResponse);
         rpc JobLog(JobLogRequest) returns (JobLogResponse);
         rpc RenderLog(RenderLogRequest) returns (RenderLogResponse);
+        rpc GetJobArchive(GetJobArchiveRequest) returns (GetJobArchiveResponse);
 }
 
 message QueueJobRequest {
@@ -213,4 +214,17 @@ message JobLog {
 
 message JobLogResponse {
         JobLog job_log = 1;
+}
+
+message GetJobArchiveRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message JobArchive {
+        string archive_url = 1;
+}
+
+message GetJobArchiveResponse {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        JobArchive job_archive = 2;
 }
