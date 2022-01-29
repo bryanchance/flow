@@ -118,6 +118,5 @@ func (s *service) Stop() error {
 		sub.Unsubscribe()
 		sub.Drain()
 	}
-	s.stopCh <- true
 	return nil
 }
