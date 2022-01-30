@@ -327,7 +327,6 @@ func (w *Worker) workerHeartbeat() {
 		}
 
 		ctx := context.Background()
-		logrus.Debugf("updating worker info: %+v", workerInfo)
 		if err := w.ds.UpdateWorkerInfo(ctx, workerInfo); err != nil {
 			logrus.WithError(err).Error("error updating worker info")
 			continue
