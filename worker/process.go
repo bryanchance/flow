@@ -96,7 +96,11 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 
 	job.StartedAt = time.Now()
 	job.Status = api.JobStatus_RENDERING
-	job.Worker = w.getWorkerInfo()
+	wInfo, err := w.getWorkerInfo()
+	if err != nil {
+		return nil, err
+	}
+	job.Worker = wInfo
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
 		return nil, err
@@ -146,7 +150,11 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 
 	job.StartedAt = time.Now()
 	job.Status = api.JobStatus_RENDERING
-	job.Worker = w.getWorkerInfo()
+	wInfo, err := w.getWorkerInfo()
+	if err != nil {
+		return nil, err
+	}
+	job.Worker = wInfo
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
 		return nil, err

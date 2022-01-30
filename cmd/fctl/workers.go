@@ -45,7 +45,7 @@ var workersListCommand = &cli.Command{
 				wrk.Name,
 				wrk.Version,
 				wrk.CPUs,
-				humanize.Bytes(uint64(wrk.Memory)),
+				humanize.Bytes(uint64(wrk.MemoryTotal)),
 				strings.Join(wrk.GPUs, ", "),
 			)
 		}

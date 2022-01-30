@@ -26,15 +26,13 @@ const (
 	// S3JobStatusContentType is the content type for job status objects
 	S3JobContentType = "application/json"
 
-	// KVBucketTTLWorkers is the TTL for the worker bucket
-	KVBucketTTLWorkers = time.Second * 10
+	// WorkerTTL is the TTL for the worker heartbeat
+	WorkerTTL = time.Second * 10
 
 	// queueJobSubject is the subject for queued messages
 	queueJobSubject = "JOBS"
 	// queueJobStatusSubject is the subject for job status updates
 	queueJobStatusSubject = "STATUS"
-	// kvBucketNameWorkers is the name of the kv store in the queue for the worker info
-	kvBucketNameWorkers = "finca-workers"
 	// kvBucketWorkerControl is the name of the kv store in the queue for issuing worker control messages
 	kvBucketWorkerControl = "finca-worker-control"
 	// objectStoreName is the name of the object store for the system
@@ -87,8 +85,6 @@ type Config struct {
 	NATSJobSubject string
 	// NATSServerSubject is the queue subject for the servers
 	NATSJobStatusSubject string
-	// NATSKVBucketNameWorkers is the name of the kv store in the queue
-	NATSKVBucketNameWorkers string
 	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
 	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
@@ -138,7 +134,6 @@ func DefaultConfig() *Config {
 		NATSURL:                   nats.DefaultURL,
 		NATSJobSubject:            queueJobSubject,
 		NATSJobStatusSubject:      queueJobStatusSubject,
-		NATSKVBucketNameWorkers:   kvBucketNameWorkers,
 		NATSKVBucketWorkerControl: kvBucketWorkerControl,
 		DatabaseAddress:           "redis://127.0.0.1:6379/0",
 		JobTimeout:                duration{time.Second * 28800},

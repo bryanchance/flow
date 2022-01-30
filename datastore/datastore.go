@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"time"
+
 	"git.underland.io/ehazlett/finca"
 	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
@@ -10,7 +12,8 @@ import (
 )
 
 var (
-	dbPrefix = "finca"
+	dbPrefix  = "finca"
+	workerTTL = time.Second * 10
 )
 
 type Datastore struct {

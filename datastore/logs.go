@@ -3,9 +3,16 @@ package datastore
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"path"
+	"path/filepath"
+	"regexp"
 
+	"git.underland.io/ehazlett/finca"
 	api "git.underland.io/ehazlett/finca/api/services/render/v1"
 	minio "github.com/minio/minio-go/v7"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,4 +27,73 @@ func (d *Datastore) UpdateJobLog(ctx context.Context, log *api.JobLog) error {
 	}
 
 	return nil
+}
+
+// GetRenderLog gets the specified render log for the job
+func (d *Datastore) GetRenderLog(ctx context.Context, jobID string, frame int64, slice int64) (*api.RenderLog, error) {
+	job, err := d.GetJob(ctx, jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch job.Status {
+	case api.JobStatus_QUEUED, api.JobStatus_RENDERING:
+		return nil, nil
+	}
+
+	renderPath := path.Join(finca.S3RenderPath, jobID)
+	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
+		Prefix:    renderPath,
+		Recursive: true,
+	})
+
+	logPath := ""
+	for o := range objCh {
+		if o.Err != nil {
+			return nil, o.Err
+		}
+
+		// filter logs
+		if filepath.Ext(o.Key) != ".log" {
+			continue
+		}
+		// ignore slice renders
+		if slice > -1 {
+			sliceMatch, err := regexp.MatchString(fmt.Sprintf(".*_slice_%d_%04d.log", slice, frame), o.Key)
+			if err != nil {
+				return nil, err
+			}
+			if sliceMatch {
+				logPath = o.Key
+				break
+			}
+		}
+		frameMatch, err := regexp.MatchString(fmt.Sprintf(".*_%04d.log", frame), o.Key)
+		if err != nil {
+			return nil, err
+		}
+		if frameMatch {
+			logPath = o.Key
+			break
+		}
+	}
+
+	if logPath == "" {
+		return nil, nil
+	}
+
+	// get key data
+	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, logPath, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error getting log from storage %s", logPath)
+	}
+
+	buf := &bytes.Buffer{}
+	if _, err := io.Copy(buf, obj); err != nil {
+		return nil, err
+	}
+
+	return &api.RenderLog{
+		Log: string(buf.Bytes()),
+	}, nil
 }

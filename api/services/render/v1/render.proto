@@ -58,8 +58,12 @@ message Worker {
         string name = 1;
         string version = 2;
         uint32 cpus = 3 [(gogoproto.customname) = "CPUs"];
-        int64 memory = 4;
-        repeated string gpus = 5 [(gogoproto.customname) = "GPUs"];
+        int64 memory_total = 4;
+        int64 memory_available = 5;
+        repeated string gpus = 6 [(gogoproto.customname) = "GPUs"];
+        double load1 = 7;
+        double load5 = 8;
+        double load15 = 9;
 }
 
 enum JobStatus {

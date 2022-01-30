@@ -81,13 +81,7 @@ func (s *service) Start() error {
 		return errors.Wrap(err, "error getting nats jetstream context")
 	}
 
-	// kv for workers
-	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
-		Bucket: s.config.NATSKVBucketNameWorkers,
-		TTL:    finca.KVBucketTTLWorkers,
-	}); err != nil {
-		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketNameWorkers)
-	}
+	// kv for worker control
 	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
 		Bucket: s.config.NATSKVBucketWorkerControl,
 		TTL:    workerControlMessageTTL,

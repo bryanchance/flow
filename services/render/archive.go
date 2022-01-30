@@ -26,7 +26,7 @@ func (s *service) GetJobArchive(ctx context.Context, r *api.GetJobArchiveRequest
 
 	jobArchive = &api.JobArchive{}
 
-	// TODO: return archive request either new or from existing db.  if in db and done there will be an archive url
+	// return archive request either new or from existing db.  if in db and done there will be an archive url
 	return &api.GetJobArchiveResponse{
 		JobArchive: jobArchive,
 	}, nil

@@ -3,7 +3,6 @@ package worker
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -19,6 +18,9 @@ import (
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/load"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,10 +37,9 @@ type GPU struct {
 type Worker struct {
 	id         string
 	config     *finca.Config
+	natsClient *nats.Conn
 	ds         *datastore.Datastore
 	stopCh     chan bool
-	cpus       uint32
-	memory     int64
 	gpus       []*GPU
 	gpuEnabled bool
 	maxJobs    int
@@ -54,14 +55,9 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 			}
 		}()
 	}
-	cpuThreads, err := getCPUs()
+	nc, err := nats.Connect(cfg.NATSURL)
 	if err != nil {
-		return nil, err
-	}
-
-	memory, err := getMemory()
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error connecting to nats")
 	}
 
 	gpuEnabled, err := gpuEnabled()
@@ -84,10 +80,9 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 	w := &Worker{
 		id:         id,
 		config:     cfg,
+		natsClient: nc,
 		ds:         ds,
 		stopCh:     make(chan bool, 1),
-		cpus:       cpuThreads,
-		memory:     memory,
 		gpus:       gpus,
 		gpuEnabled: gpuEnabled,
 		maxJobs:    workerConfig.MaxJobs,
@@ -98,18 +93,14 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 }
 
 func (w *Worker) Run() error {
-	if err := w.showHardwareInfo(); err != nil {
+	if err := w.showWorkerInfo(); err != nil {
 		return err
 	}
 	logrus.Infof("GPU enabled: %v", w.gpuEnabled)
 
 	logrus.Debugf("connecting to nats: %s", w.config.NATSURL)
 
-	nc, err := nats.Connect(w.config.NATSURL)
-	if err != nil {
-		return errors.Wrap(err, "error connecting to nats")
-	}
-	js, err := nc.JetStream()
+	js, err := w.natsClient.JetStream()
 	if err != nil {
 		return errors.Wrap(err, "error getting jetstream context")
 	}
@@ -126,8 +117,6 @@ func (w *Worker) Run() error {
 	// connect to nats stream and listen for messages
 	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSJobSubject)
 	sub, err := js.PullSubscribe(w.config.NATSJobSubject, finca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
-	//sub, err := js.SubscribeSync(w.config.NATSJobSubject, nats.AckWait(w.config.GetJobTimeout()))
-	//sub, err := js.ChanQueueSubscribe(w.config.NATSJobSubject, finca.WorkerQueueGroupName, msgCh, nats.AckWait(w.config.GetJobTimeout()))
 	if err != nil {
 		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSJobSubject)
 	}
@@ -182,7 +171,11 @@ func (w *Worker) Run() error {
 
 				logrus.Debugf("processing job with timeout %s", w.config.GetJobTimeout())
 
-				workerInfo := w.getWorkerInfo()
+				workerInfo, err := w.getWorkerInfo()
+				if err != nil {
+					logrus.WithError(err).Error("error getting worker info")
+					continue
+				}
 				logrus.Debugf("worker info: %+v", workerInfo)
 
 				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
@@ -274,22 +267,48 @@ func (w *Worker) getMinioClient() (*minio.Client, error) {
 	})
 }
 
-func (w *Worker) getWorkerInfo() *api.Worker {
+func (w *Worker) getWorkerInfo() (*api.Worker, error) {
 	gpuInfo := []string{}
 	for _, gpu := range w.gpus {
 		gpuInfo = append(gpuInfo, fmt.Sprintf("%s: %s", gpu.Vendor, gpu.Product))
 	}
-	return &api.Worker{
-		Name:    w.id,
-		Version: version.BuildVersion(),
-		CPUs:    w.cpus,
-		Memory:  w.memory,
-		GPUs:    gpuInfo,
+
+	cpus, err := cpu.Counts(true)
+	if err != nil {
+		return nil, err
 	}
+
+	loadStats, err := load.Avg()
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := mem.VirtualMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.Worker{
+		Name:            w.id,
+		Version:         version.BuildVersion(),
+		CPUs:            uint32(cpus),
+		MemoryTotal:     int64(m.Total),
+		MemoryAvailable: int64(m.Available),
+		GPUs:            gpuInfo,
+		Load1:           loadStats.Load1,
+		Load5:           loadStats.Load5,
+		Load15:          loadStats.Load15,
+	}, nil
 }
-func (w *Worker) showHardwareInfo() error {
-	logrus.Infof("CPU: %d", w.cpus)
-	logrus.Infof("Memory: %s", humanize.Bytes(uint64(w.memory)))
+
+func (w *Worker) showWorkerInfo() error {
+	info, err := w.getWorkerInfo()
+	if err != nil {
+		return err
+	}
+
+	logrus.Infof("CPU: %d", info.CPUs)
+	logrus.Infof("Memory: %s", humanize.Bytes(uint64(info.MemoryTotal)))
 
 	for _, gpu := range w.gpus {
 		logrus.Infof("Graphics Card: %s", gpu)
@@ -299,31 +318,18 @@ func (w *Worker) showHardwareInfo() error {
 }
 
 func (w *Worker) workerHeartbeat() {
-	nc, err := nats.Connect(w.config.NATSURL)
-	if err != nil {
-		logrus.Fatalf("error connecting to nats on %s", w.config.NATSURL)
-	}
-
-	js, err := nc.JetStream()
-	if err != nil {
-		logrus.Fatal("error getting stream context")
-	}
-
-	kv, err := js.KeyValue(w.config.NATSKVBucketNameWorkers)
-	if err != nil {
-		logrus.Fatalf("error getting kv %s from nats", w.config.NATSKVBucketNameWorkers)
-	}
-
-	t := time.NewTicker(finca.KVBucketTTLWorkers)
+	t := time.NewTicker(finca.WorkerTTL)
 	for range t.C {
-		workerInfo := w.getWorkerInfo()
-		workerData, err := json.Marshal(workerInfo)
+		workerInfo, err := w.getWorkerInfo()
 		if err != nil {
 			logrus.WithError(err).Error("error getting worker info")
 			continue
 		}
-		if _, err := kv.Put(w.id, workerData); err != nil {
-			logrus.WithError(err).Error("error updating worker heartbeat info")
+
+		ctx := context.Background()
+		logrus.Debugf("updating worker info: %+v", workerInfo)
+		if err := w.ds.UpdateWorkerInfo(ctx, workerInfo); err != nil {
+			logrus.WithError(err).Error("error updating worker info")
 			continue
 		}
 	}
