@@ -201,6 +201,8 @@ message RenderLogRequest {
 
 message RenderLog {
         string log = 1;
+        int64 frame = 2;
+        int64 slice = 3;
 }
 
 message RenderLogResponse {

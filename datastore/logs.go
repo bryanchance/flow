@@ -67,6 +67,7 @@ func (d *Datastore) GetRenderLog(ctx context.Context, jobID string, frame int64,
 				logPath = o.Key
 				break
 			}
+			continue
 		}
 		frameMatch, err := regexp.MatchString(fmt.Sprintf(".*_%04d.log", frame), o.Key)
 		if err != nil {
@@ -94,6 +95,8 @@ func (d *Datastore) GetRenderLog(ctx context.Context, jobID string, frame int64,
 	}
 
 	return &api.RenderLog{
-		Log: string(buf.Bytes()),
+		Log:   string(buf.Bytes()),
+		Frame: frame,
+		Slice: slice,
 	}, nil
 }
