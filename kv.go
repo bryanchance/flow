@@ -1,1 +1,1 @@
-package finca
+package fynca

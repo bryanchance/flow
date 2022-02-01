@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	minio "github.com/minio/minio-go/v7"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -42,13 +42,19 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 		return status.Errorf(codes.Unknown, "error receiving job: %s", err)
 	}
 
+	ctx := stream.Context()
+
 	var (
-		jobReq  = req.GetRequest()
-		buf     = bytes.Buffer{}
-		jobName = jobReq.GetName()
-		jobSize = 0
-		jobID   = uuid.NewV4().String()
+		jobReq    = req.GetRequest()
+		buf       = bytes.Buffer{}
+		jobName   = jobReq.GetName()
+		jobSize   = 0
+		jobID     = uuid.NewV4().String()
+		namespace = ctx.Value(fynca.CtxNamespaceKey).(string)
 	)
+
+	// override job request namespace with context passed
+	jobReq.Namespace = namespace
 
 	logrus.Debugf("queueing job %+v", jobReq)
 	for {
@@ -77,7 +83,7 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	}
 
 	// save to tmpfile to upload to s3
-	tmpJobFile, err := os.CreateTemp("", "finca-job-")
+	tmpJobFile, err := os.CreateTemp("", "fynca-job-")
 	if err != nil {
 		return err
 	}
@@ -95,7 +101,6 @@ func (s *service) QueueJob(stream api.Render_QueueJobServer) error {
 	}
 
 	logrus.Debugf("saving %s to storage", jobFileName)
-	ctx := context.Background()
 	jobStorageInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, jobFileName, tmpJobFile.Name(), minio.PutObjectOptions{ContentType: jobReq.ContentType})
 	if err != nil {
 		return status.Errorf(codes.Internal, "error saving job to storage: %s", err)
@@ -178,6 +183,7 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 				// queue slice job
 				buf := &bytes.Buffer{}
 				if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+					ID: jobID,
 					Job: &api.WorkerJob_SliceJob{
 						SliceJob: sliceJob,
 					},
@@ -213,6 +219,7 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 
 		buf := &bytes.Buffer{}
 		if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+			ID: jobID,
 			Job: &api.WorkerJob_FrameJob{
 				FrameJob: frameJob,
 			},
@@ -263,12 +270,12 @@ func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown content type: %s", req.ContentType)
 	}
-	objName := fmt.Sprintf("%s-%s.%s", jobID, req.GetName(), ext)
-	return path.Join(getStoragePath(jobID), objName), nil
+	objName := fmt.Sprintf("%s-%s.%s", jobID, req.Name, ext)
+	return path.Join(getStoragePath(req.Namespace, jobID), objName), nil
 }
 
-func getStoragePath(jobID string) string {
-	return path.Join(finca.S3ProjectPath, jobID)
+func getStoragePath(namespace, jobID string) string {
+	return path.Join(namespace, fynca.S3ProjectPath, jobID)
 }
 
 func calculateRenderSlices(workers int) ([]renderSlice, error) {

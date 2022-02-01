@@ -10,13 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/jsonpb"
-	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ByCreatedAt []*api.Job
@@ -30,8 +32,6 @@ type JobOptConfig struct {
 	excludeSlices bool
 }
 
-type JobOpt func(c *JobOptConfig)
-
 // GetJobs returns a list of jobs
 func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job, error) {
 	cfg := &JobOptConfig{}
@@ -39,7 +39,9 @@ func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job,
 		o(cfg)
 	}
 
-	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	keys, err := d.redisClient.Keys(ctx, getJobKey(namespace, "*")).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +49,11 @@ func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job,
 	jobs := []*api.Job{}
 	for _, k := range keys {
 		parts := strings.Split(k, "/")
-		if len(parts) != 3 {
+		if len(parts) != 5 {
 			logrus.Errorf("invalid key format: %s", k)
 			continue
 		}
-		jobID := parts[1]
+		jobID := parts[3]
 		job, err := d.GetJob(ctx, jobID)
 		if err != nil {
 			return nil, err
@@ -66,14 +68,18 @@ func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job,
 
 // GetJob returns a job by id from the datastore
 func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt) (*api.Job, error) {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 	cfg := &JobOptConfig{}
 	for _, o := range jobOpts {
 		o(cfg)
 	}
 
-	jobKey := getJobKey(jobID)
+	jobKey := getJobKey(namespace, jobID)
 	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
+		if err == redis.Nil {
+			return nil, status.Errorf(codes.NotFound, "job %s not found", jobID)
+		}
 		return nil, errors.Wrapf(err, "error getting job %s from database", jobID)
 	}
 
@@ -88,7 +94,7 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt)
 	// filter
 	if !cfg.excludeFrames {
 		for frame := job.Request.RenderStartFrame; frame <= job.Request.RenderEndFrame; frame++ {
-			frameKey := getFrameKey(jobID, frame)
+			frameKey := getFrameKey(namespace, jobID, frame)
 			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
 			if err != nil {
 				return nil, errors.Wrapf(err, "error getting frame %d for job %s from database", frame, jobID)
@@ -99,11 +105,12 @@ func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt)
 			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
 				return nil, err
 			}
+
 			if !cfg.excludeSlices {
 				if job.Request.RenderSlices > 0 {
 					frameJob.SliceJobs = []*api.SliceJob{}
 					for i := int64(0); i < job.Request.RenderSlices; i++ {
-						sliceKey := getSliceKey(jobID, frame, i)
+						sliceKey := getSliceKey(namespace, jobID, frame, i)
 						data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
 						if err != nil {
 							return nil, errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", i, frame, jobID)
@@ -139,7 +146,9 @@ func (d *Datastore) GetJobLog(ctx context.Context, jobID string) (*api.JobLog, e
 		return nil, nil
 	}
 
-	logPath := getJobLogPath(jobID)
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	logPath := getJobLogPath(namespace, jobID)
 	// get key data
 	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, logPath, minio.GetObjectOptions{})
 	if err != nil {
@@ -158,7 +167,8 @@ func (d *Datastore) GetJobLog(ctx context.Context, jobID string) (*api.JobLog, e
 
 // ResolveJob resolves a job from all frame and slice jobs and stores the result in the database
 func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
-	jobKey := getJobKey(jobID)
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+	jobKey := getJobKey(namespace, jobID)
 	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "error getting job %s from database to resolve", jobID)
@@ -170,7 +180,7 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 		return err
 	}
 
-	keys, err := d.redisClient.Keys(ctx, getJobKey("*")).Result()
+	keys, err := d.redisClient.Keys(ctx, getJobKey(namespace, "*")).Result()
 	if err != nil {
 		return err
 	}
@@ -178,11 +188,11 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 	jobs := []*api.Job{}
 	for _, k := range keys {
 		parts := strings.Split(k, "/")
-		if len(parts) != 3 {
+		if len(parts) != 5 {
 			logrus.Errorf("invalid key format: %s", k)
 			continue
 		}
-		jobID := parts[1]
+		jobID := parts[3]
 		job, err := d.GetJob(ctx, jobID)
 		if err != nil {
 			return err
@@ -195,7 +205,7 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 	for _, f := range job.FrameJobs {
 		// check if non-slice job
 		if job.Request.RenderSlices == 0 {
-			frameKey := getFrameKey(jobID, f.RenderFrame)
+			frameKey := getFrameKey(namespace, jobID, f.RenderFrame)
 			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
 			if err != nil {
 				return errors.Wrapf(err, "error getting frame %d for job %s from database", f.RenderFrame, jobID)
@@ -212,7 +222,7 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 		// load slices
 		sliceJobs := []*api.SliceJob{}
 		for _, slice := range f.SliceJobs {
-			sliceKey := getSliceKey(jobID, slice.RenderFrame, slice.RenderSliceIndex)
+			sliceKey := getSliceKey(namespace, jobID, slice.RenderFrame, slice.RenderSliceIndex)
 			data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
 			if err != nil {
 				return errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", slice.RenderSliceIndex, f.RenderFrame, jobID)
@@ -245,22 +255,23 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 
 // UpdateJob updates the status of a job
 func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) error {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 	dbKey := ""
 	buf := &bytes.Buffer{}
 
 	switch v := o.(type) {
 	case *api.Job:
-		dbKey = getJobKey(jobID)
+		dbKey = getJobKey(namespace, jobID)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
 	case *api.FrameJob:
-		dbKey = getFrameKey(jobID, v.RenderFrame)
+		dbKey = getFrameKey(namespace, jobID, v.RenderFrame)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
 	case *api.SliceJob:
-		dbKey = getSliceKey(jobID, v.RenderFrame, v.RenderSliceIndex)
+		dbKey = getSliceKey(namespace, jobID, v.RenderFrame, v.RenderSliceIndex)
 		if err := d.Marshaler().Marshal(buf, v); err != nil {
 			return err
 		}
@@ -277,19 +288,20 @@ func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) 
 
 // DeleteJob deletes a job and all related files from the datastore
 func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 	// delete from db
 	keys := []string{
-		getJobKey(jobID),
+		getJobKey(namespace, jobID),
 	}
 
-	frameKeys, err := d.redisClient.Keys(ctx, getFrameKey(jobID, "*")).Result()
+	frameKeys, err := d.redisClient.Keys(ctx, getFrameKey(namespace, jobID, "*")).Result()
 	if err != nil {
 		return err
 	}
 
 	keys = append(keys, frameKeys...)
 
-	sliceKeys, err := d.redisClient.Keys(ctx, getSliceKey(jobID, "*", "*")).Result()
+	sliceKeys, err := d.redisClient.Keys(ctx, getSliceKey(namespace, jobID, "*", "*")).Result()
 	if err != nil {
 		return err
 	}
@@ -301,7 +313,7 @@ func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
 
 	// delete project
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3ProjectPath, jobID),
+		Prefix:    path.Join(fynca.S3ProjectPath, jobID),
 		Recursive: true,
 	})
 
@@ -317,7 +329,7 @@ func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
 
 	// delete renders
 	rObjCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3RenderPath, jobID),
+		Prefix:    path.Join(fynca.S3RenderPath, jobID),
 		Recursive: true,
 	})
 
@@ -334,37 +346,37 @@ func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
 	return nil
 }
 
-func getStoragePath(jobID string) string {
-	return path.Join(finca.S3ProjectPath, jobID)
+func getStoragePath(namespace, jobID string) string {
+	return path.Join(namespace, fynca.S3ProjectPath, jobID)
 }
 
-func getJobPath(jobID string) string {
-	jobPath := path.Join(getStoragePath(jobID), finca.S3JobPath)
+func getJobPath(namespace, jobID string) string {
+	jobPath := path.Join(getStoragePath(namespace, jobID), fynca.S3JobPath)
 	return jobPath
 }
 
-func getJobLogPath(jobID string) string {
-	return path.Join(getStoragePath(jobID), finca.S3JobLogPath)
+func getJobLogPath(namespace, jobID string) string {
+	return path.Join(getStoragePath(namespace, jobID), fynca.S3JobLogPath)
 }
 
-func getFrameJobPath(jobID string, frame int64) string {
-	return path.Join(getStoragePath(jobID), fmt.Sprintf("frame_%04d_%s", frame, finca.S3JobPath))
+func getFrameJobPath(namespace, jobID string, frame int64) string {
+	return path.Join(getStoragePath(namespace, jobID), fmt.Sprintf("frame_%04d_%s", frame, fynca.S3JobPath))
 }
 
-func getSliceJobPath(jobID string, frame int64, renderSliceIndex int64) string {
-	return fmt.Sprintf("%s.%d", getFrameJobPath(jobID, frame), renderSliceIndex)
+func getSliceJobPath(namespace, jobID string, frame int64, renderSliceIndex int64) string {
+	return fmt.Sprintf("%s.%d", getFrameJobPath(namespace, jobID, frame), renderSliceIndex)
 }
 
-func getJobKey(jobID string) string {
-	return path.Join(dbPrefix, jobID, "job")
+func getJobKey(namespace, jobID string) string {
+	return path.Join(dbPrefix, namespace, "jobs", jobID, "job")
 }
 
-func getFrameKey(jobID string, frame interface{}) string {
-	return path.Join(dbPrefix, "frames", jobID, fmt.Sprintf("%v", frame))
+func getFrameKey(namespace, jobID string, frame interface{}) string {
+	return path.Join(dbPrefix, namespace, "frames", jobID, fmt.Sprintf("%v", frame))
 }
 
-func getSliceKey(jobID string, frame interface{}, sliceIndex interface{}) string {
-	return path.Join(dbPrefix, "slices", jobID, fmt.Sprintf("%v", frame), fmt.Sprintf("%v", sliceIndex))
+func getSliceKey(namespace, jobID string, frame interface{}, sliceIndex interface{}) string {
+	return path.Join(dbPrefix, namespace, "slices", jobID, fmt.Sprintf("%v", frame), fmt.Sprintf("%v", sliceIndex))
 }
 
 // WARNING: dragons ahead....
@@ -524,7 +536,7 @@ func resolveJob(job *api.Job) error {
 	if err != nil {
 		return err
 	}
-	job.Duration = ptypes.DurationProto(renderTime)
+	job.Duration = renderTime
 
 	return nil
 }

@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/gogo/protobuf/jsonpb"
 	nats "github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	ackWaitJobStatus = time.Second * 30
 )
 
 func (s *service) jobStatusListener() {
@@ -19,7 +23,7 @@ func (s *service) jobStatusListener() {
 		logrus.Fatal(err)
 	}
 
-	sub, err := js.PullSubscribe(s.config.NATSJobStatusSubject, finca.ServerQueueGroupName)
+	sub, err := js.PullSubscribe(s.config.NATSJobStatusSubject, fynca.ServerQueueGroupName, nats.AckWait(ackWaitJobStatus))
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -67,12 +71,19 @@ func (s *service) jobStatusListener() {
 				j := v.FrameJob
 				jobID = j.ID
 				frame = j.RenderFrame
+				if err := s.ds.ClearLatestRenderCache(context.Background(), j.ID, j.RenderFrame); err != nil {
+					logrus.WithError(err).Warnf("error clearing render cache for job %s (frame %d)", j.ID, j.RenderFrame)
+				}
 				logrus.Infof("frame %d for job %s complete", j.RenderFrame, j.ID)
 			case *api.JobResult_SliceJob:
 				j := v.SliceJob
 				jobID = j.ID
 				frame = j.RenderFrame
 				slice = j.RenderSliceIndex
+				// clear render cache
+				if err := s.ds.ClearLatestRenderCache(context.Background(), j.ID, j.RenderFrame); err != nil {
+					logrus.WithError(err).Warnf("error clearing render cache for job %s (frame %d)", j.ID, j.RenderFrame)
+				}
 				logrus.Infof("slice %d (frame %d) for job %s complete", j.RenderSliceIndex, j.RenderFrame, j.ID)
 			default:
 				logrus.Errorf("unknown job result type %+T", v)
@@ -84,11 +95,13 @@ func (s *service) jobStatusListener() {
 				logMessage = jobResult.Error
 			}
 
+			uCtx := context.WithValue(context.Background(), fynca.CtxNamespaceKey, jobResult.Namespace)
+			ctx, cancel := context.WithTimeout(uCtx, time.Second*10)
 			// upload result to minio
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			if err := s.ds.UpdateJobLog(ctx, &api.JobLog{
-				ID:  jobID,
-				Log: logMessage,
+				ID:        jobID,
+				Namespace: jobResult.Namespace,
+				Log:       logMessage,
 			}); err != nil {
 				cancel()
 				logrus.WithError(err).Errorf("error updating job log for job %s frame %d (slice %d)", jobID, frame, slice)

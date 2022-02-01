@@ -1,13 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 	"text/tabwriter"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/dustin/go-humanize"
 	cli "github.com/urfave/cli/v2"
 )
@@ -26,7 +25,11 @@ var workersListCommand = &cli.Command{
 	Usage:   "list available workers",
 	Aliases: []string{"ls"},
 	Action: func(clix *cli.Context) error {
-		ctx := context.Background()
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
 		client, err := getClient(clix)
 		if err != nil {
 			return err
@@ -63,8 +66,11 @@ var workerStopCommand = &cli.Command{
 		if name == "" {
 			return fmt.Errorf("worker name must be specified")
 		}
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
 
-		ctx := context.Background()
 		client, err := getClient(clix)
 		if err != nil {
 			return err

@@ -2,19 +2,29 @@ package server
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"sync"
 
-	"git.underland.io/ehazlett/finca"
-	"git.underland.io/ehazlett/finca/services"
+	"git.underland.io/ehazlett/fynca"
+	"git.underland.io/ehazlett/fynca/datastore"
+	"git.underland.io/ehazlett/fynca/pkg/auth"
+	authnone "git.underland.io/ehazlett/fynca/pkg/auth/providers/none"
+	authtoken "git.underland.io/ehazlett/fynca/pkg/auth/providers/token"
+	"git.underland.io/ehazlett/fynca/pkg/middleware"
+	"git.underland.io/ehazlett/fynca/pkg/middleware/admin"
+	"git.underland.io/ehazlett/fynca/services"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 )
 
 var (
@@ -23,21 +33,33 @@ var (
 
 	empty = &ptypes.Empty{}
 
-	// local server state db
-	localDBFilename = "finca.db"
+	// admin required routes
+	adminRoutes = []string{
+		"Render/ListWorkers",
+		"Render/ControlWorker",
+		// TODO: add RegisterAccount gRPC method to allow user signup
+		"Accounts/CreateAccount",
+		"Accounts/DeleteAccount",
+	}
+
+	publicRoutes = []string{
+		"Render/Version",
+		"Accounts/Authenticate",
+	}
 )
 
 type Server struct {
-	config           *finca.Config
+	config           *fynca.Config
 	mu               *sync.Mutex
 	grpcServer       *grpc.Server
 	services         []services.Service
+	authenticator    auth.Authenticator
 	serverCloseCh    chan bool
 	serverShutdownCh chan bool
 }
 
-func NewServer(cfg *finca.Config) (*Server, error) {
-	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting finca server")
+func NewServer(cfg *fynca.Config) (*Server, error) {
+	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting fynca server")
 
 	grpcOpts := []grpc.ServerOption{}
 	if cfg.TLSServerCertificate != "" && cfg.TLSServerKey != "" {
@@ -56,11 +78,57 @@ func NewServer(cfg *finca.Config) (*Server, error) {
 		})
 		grpcOpts = append(grpcOpts, grpc.Creds(creds))
 	}
+
+	defaultNoneAuthenticator := &authnone.NoneAuthenticator{}
+
+	// setup default authenticator
+	if cfg.Authenticator == nil {
+		cfg.Authenticator = &fynca.AuthenticatorConfig{Name: "none"}
+	}
+
+	// unary interceptors
+	unaryServerInterceptors := []grpc.UnaryServerInterceptor{}
+	streamServerInterceptors := []grpc.StreamServerInterceptor{}
+
+	ds, err := datastore.NewDatastore(cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error setting up datastore")
+	}
+
+	var authenticator auth.Authenticator
+	// middleware
+	grpcMiddleware := []middleware.Middleware{}
+
+	switch strings.ToLower(cfg.Authenticator.Name) {
+	case "none":
+		authenticator = defaultNoneAuthenticator
+	case "token":
+		authenticator = authtoken.NewTokenAuthenticator(ds, publicRoutes)
+		// admin required for token auth
+		grpcMiddleware = append(grpcMiddleware, admin.NewAdminRequired(authenticator, adminRoutes, publicRoutes))
+	default:
+		return nil, fmt.Errorf("unknown authenticator %s", cfg.Authenticator.Name)
+	}
+	unaryServerInterceptors = append(unaryServerInterceptors, authenticator.UnaryServerInterceptor)
+	streamServerInterceptors = append(streamServerInterceptors, authenticator.StreamServerInterceptor)
+
+	logrus.Debugf("loaded authenticator %s", authenticator.Name())
+
+	for _, m := range grpcMiddleware {
+		unaryServerInterceptors = append(unaryServerInterceptors, m.UnaryServerInterceptor)
+		streamServerInterceptors = append(streamServerInterceptors, m.StreamServerInterceptor)
+	}
+
+	grpcOpts = append(grpcOpts,
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryServerInterceptors...)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamServerInterceptors...)),
+	)
 	grpcServer := grpc.NewServer(grpcOpts...)
 
 	srv := &Server{
 		grpcServer:       grpcServer,
 		config:           cfg,
+		authenticator:    authenticator,
 		mu:               &sync.Mutex{},
 		serverCloseCh:    make(chan bool),
 		serverShutdownCh: make(chan bool),
@@ -69,7 +137,7 @@ func NewServer(cfg *finca.Config) (*Server, error) {
 	return srv, nil
 }
 
-func (s *Server) Register(svcs []func(*finca.Config) (services.Service, error)) error {
+func (s *Server) Register(svcs []func(*fynca.Config) (services.Service, error)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -83,6 +151,12 @@ func (s *Server) Register(svcs []func(*finca.Config) (services.Service, error)) 
 		if err := i.Register(s.grpcServer); err != nil {
 			return err
 		}
+
+		// configure
+		if err := i.Configure(s.authenticator); err != nil {
+			return err
+		}
+
 		// check for existing service
 		if _, exists := registered[i.Type()]; exists {
 			return errors.Wrap(ErrServiceRegistered, string(i.Type()))
@@ -108,14 +182,14 @@ func (s *Server) Run() error {
 	wg := &sync.WaitGroup{}
 	for _, svc := range s.services {
 		wg.Add(1)
-		go func() {
+		go func(sv services.Service) {
 			defer wg.Done()
-			logrus.Debugf("starting service %s", svc.Type())
-			if err := svc.Start(); err != nil {
+			logrus.Debugf("starting service %s", sv.Type())
+			if err := sv.Start(); err != nil {
 				serviceErrCh <- err
 				return
 			}
-		}()
+		}(svc)
 	}
 
 	go func() {
@@ -145,7 +219,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) GenerateProfile() (string, error) {
-	tmpfile, err := ioutil.TempFile("", "finca-profile-")
+	tmpfile, err := ioutil.TempFile("", "fynca-profile-")
 	if err != nil {
 		return "", err
 	}
@@ -164,13 +238,13 @@ func (s *Server) Stop() error {
 	wg := &sync.WaitGroup{}
 	for _, svc := range s.services {
 		wg.Add(1)
-		go func() {
+		go func(sv services.Service) {
 			defer wg.Done()
-			logrus.Debugf("stopping service %s", svc.Type())
-			if err := svc.Stop(); err != nil {
+			logrus.Debugf("stopping service %s", sv.Type())
+			if err := sv.Stop(); err != nil {
 				logrus.WithError(err).Errorf("error stopping service %s", svc.Type())
 			}
-		}()
+		}(svc)
 	}
 
 	logrus.Debug("waiting for services to shutdown")

@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package finca.services.render.v1;
+package fynca.services.render.v1;
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import weak "google/protobuf/empty.proto";
 
-option go_package = "git.underland.io/ehazlett/finca/api/services/render/v1;render";
+option go_package = "git.underland.io/ehazlett/fynca/api/services/render/v1;render";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
@@ -19,7 +19,7 @@ service Render {
         rpc GetJob(GetJobRequest) returns (GetJobResponse);
         rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
-        rpc GetLatestRender(GetLatestRenderRequest) returns (stream GetLatestRenderResponse);
+        rpc GetLatestRender(GetLatestRenderRequest) returns (GetLatestRenderResponse);
         rpc ControlWorker(ControlWorkerRequest) returns (ControlWorkerResponse);
         rpc Version(VersionRequest) returns (VersionResponse);
         rpc JobLog(JobLogRequest) returns (JobLogResponse);
@@ -48,6 +48,7 @@ message JobRequest {
         int64 memory = 11;
         int64 render_slices = 12;
         string content_type = 13;
+        string namespace = 14;
 }
 
 message QueueJobResponse {
@@ -84,7 +85,7 @@ message Job {
         google.protobuf.Timestamp queued_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp started_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp finished_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-        google.protobuf.Duration duration = 11;
+        google.protobuf.Duration duration = 11 [(gogoproto.stdduration) = true, (gogoproto.nullable) = false];
 }
 
 message FrameJob {
@@ -124,17 +125,19 @@ message WorkerJob {
                 FrameJob frame_job = 1;
                 SliceJob slice_job = 2;
         }
+        string id = 3 [(gogoproto.customname) = "ID"];
 }
 
 message JobResult {
+        string namespace = 1;
         oneof result {
-                FrameJob frame_job = 1;
-                SliceJob slice_job = 2;
+                FrameJob frame_job = 2;
+                SliceJob slice_job = 3;
         }
-        google.protobuf.Duration duration = 3;
-        int64 render_frame = 4;
-        JobStatus status = 5;
-        string error = 6;
+        google.protobuf.Duration duration = 4 [(gogoproto.stdduration) = true, (gogoproto.nullable) = false];
+        int64 render_frame = 5;
+        JobStatus status = 6;
+        string error = 7;
 }
 
 message ListJobsRequest {
@@ -167,10 +170,12 @@ message DeleteJobRequest {
 message GetLatestRenderRequest {
         string id = 1 [(gogoproto.customname) = "ID"];
         int64 frame = 2;
+        google.protobuf.Duration ttl = 3 [(gogoproto.customname) = "TTL", (gogoproto.stdduration) = true, (gogoproto.nullable) = false];
 }
 
 message GetLatestRenderResponse {
-        bytes data = 1;
+        string url = 1;
+        int64 frame = 2;
 }
 
 message ControlWorkerRequest {
@@ -191,6 +196,7 @@ message VersionResponse {
         string version = 2;
         string build = 3;
         string commit = 4;
+        string authenticator = 5;
 }
 
 message RenderLogRequest {
@@ -215,7 +221,8 @@ message JobLogRequest {
 
 message JobLog {
         string id = 1 [(gogoproto.customname) = "ID"];
-        string log = 2;
+        string namespace = 2;
+        string log = 3;
 }
 
 message JobLogResponse {

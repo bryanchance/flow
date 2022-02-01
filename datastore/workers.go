@@ -6,8 +6,8 @@ import (
 	"path"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/pkg/errors"
 )
@@ -19,7 +19,7 @@ func (d *Datastore) UpdateWorkerInfo(ctx context.Context, w *api.Worker) error {
 	if err := d.Marshaler().Marshal(buf, w); err != nil {
 		return err
 	}
-	keyTTL := finca.WorkerTTL + time.Second*1
+	keyTTL := fynca.WorkerTTL + time.Second*1
 	if err := d.redisClient.Set(ctx, workerKey, buf.Bytes(), keyTTL).Err(); err != nil {
 		return errors.Wrapf(err, "error updating worker info for %s in database", w.Name)
 	}

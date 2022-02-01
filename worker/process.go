@@ -16,9 +16,8 @@ import (
 	"text/template"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
-	ptypes "github.com/gogo/protobuf/types"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -107,6 +106,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	}
 
 	jobResult := &api.JobResult{
+		Namespace: job.Request.Namespace,
 		Result: &api.JobResult_FrameJob{
 			FrameJob: job,
 		},
@@ -123,7 +123,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
 	jobResult.Status = api.JobStatus_FINISHED
-	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
+	jobResult.Duration = time.Now().Sub(started)
 	if pErr != nil {
 		jobResult.Error = pErr.Error()
 		jobResult.Status = api.JobStatus_ERROR
@@ -161,6 +161,7 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 	}
 
 	jobResult := &api.JobResult{
+		Namespace: job.Request.Namespace,
 		Result: &api.JobResult_SliceJob{
 			SliceJob: job,
 		},
@@ -176,7 +177,7 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 	job.FinishedAt = time.Now()
 	job.Status = api.JobStatus_FINISHED
 	jobResult.Status = api.JobStatus_FINISHED
-	jobResult.Duration = ptypes.DurationProto(time.Now().Sub(started))
+	jobResult.Duration = time.Now().Sub(started)
 	if pErr != nil {
 		jobResult.Error = pErr.Error()
 		jobResult.Status = api.JobStatus_ERROR
@@ -192,7 +193,7 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 
 func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix string) error {
 	// render with blender
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-%s", job.GetID()))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-%s", job.GetID()))
 	if err != nil {
 		return err
 	}
@@ -214,8 +215,9 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	}
 
 	logrus.Debugf("getting job source %s", job.GetJobSource())
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 
-	object, err := mc.GetObject(ctx, w.config.S3Bucket, job.GetJobSource(), minio.GetObjectOptions{})
+	object, err := mc.GetObject(ctx, w.config.S3Bucket, path.Join(job.GetJobSource()), minio.GetObjectOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "error getting job source %s", job.GetJobSource())
 	}
@@ -359,6 +361,13 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 
 	out, err := c.CombinedOutput()
 	if err != nil {
+		// copy log to tmp
+		errLogName := fmt.Sprintf("%s-error.log", job.GetID())
+		tmpLogPath := filepath.Join(os.TempDir(), errLogName)
+		if err := os.WriteFile(tmpLogPath, out, 0644); err != nil {
+			logrus.WithError(err).Errorf("unable to save error log file for job %s", job.GetID())
+		}
+		logrus.WithError(err).Errorf("error log available at %s", tmpLogPath)
 		return errors.Wrap(err, string(out))
 	}
 
@@ -386,7 +395,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 			continue
 		}
 
-		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
+		if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(namespace, fynca.S3RenderPath, job.GetID(), filepath.Base(f)), rf, fs.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"}); err != nil {
 			return err
 		}
 	}
@@ -412,14 +421,14 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		return err
 	}
 
-	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(finca.S3RenderPath, job.GetID(), logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
+	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(namespace, fynca.S3RenderPath, job.GetID(), logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
 		return err
 	}
 
 	// check for render slice job; if so, check s3 for number of renders. if matches render slices
 	// assume project is complete and composite images into single result
 	if job.GetRequest().RenderSlices > 0 {
-		if err := w.compositeRender(ctx, job, job.GetRenderFrame(), outputDir); err != nil {
+		if err := w.compositeRender(ctx, namespace, job, job.GetRenderFrame(), outputDir); err != nil {
 			if err != ErrRenderInProgress {
 				return err
 			}
@@ -429,12 +438,12 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	return nil
 }
 
-func (w *Worker) compositeRender(ctx context.Context, job api.RenderJob, frame int64, outputDir string) error {
+func (w *Worker) compositeRender(ctx context.Context, namespace string, job api.RenderJob, frame int64, outputDir string) error {
 	mc, err := w.getMinioClient()
 	if err != nil {
 		return err
 	}
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-composite-%s", job.GetID()))
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-composite-%s", job.GetID()))
 	if err != nil {
 		return err
 	}
@@ -442,7 +451,7 @@ func (w *Worker) compositeRender(ctx context.Context, job api.RenderJob, frame i
 
 	logrus.Debugf("temp composite dir: %s", tmpDir)
 	objCh := mc.ListObjects(ctx, w.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    fmt.Sprintf("%s/%s", finca.S3RenderPath, job.GetID()),
+		Prefix:    fmt.Sprintf("%s/%s/%s", namespace, fynca.S3RenderPath, job.GetID()),
 		Recursive: true,
 	})
 	slices := []string{}
@@ -470,14 +479,15 @@ func (w *Worker) compositeRender(ctx context.Context, job api.RenderJob, frame i
 	if renderEndFrame == 0 {
 		renderEndFrame = renderStartFrame
 	}
-	data, err := w.ds.GetCompositeRender(ctx, job.GetID(), frame)
+	//cctx := context.WithValue(ctx, fynca.CtxNamespaceKey, namespace)
+	data, err := w.ds.CompositeFrameRender(ctx, job.GetID(), job.GetRequest().Name, frame)
 	if err != nil {
 		return err
 	}
 	buf := bytes.NewBuffer(data)
 
 	// sync final composite back to s3
-	objectName := path.Join(finca.S3RenderPath, job.GetID(), fmt.Sprintf("%s_%04d.png", job.GetRequest().Name, frame))
+	objectName := path.Join(namespace, fynca.S3RenderPath, job.GetID(), fmt.Sprintf("%s_%04d.png", job.GetRequest().Name, frame))
 	logrus.Infof("uploading composited frame %d (%s) to bucket %s (%d bytes)", frame, objectName, w.config.S3Bucket, buf.Len())
 	// TODO: support other image types
 	if _, err := mc.PutObject(ctx, w.config.S3Bucket, objectName, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {

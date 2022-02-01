@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -18,8 +18,10 @@ import (
 
 // UpdateJobLog updates the specified job log
 func (d *Datastore) UpdateJobLog(ctx context.Context, log *api.JobLog) error {
-	logPath := getJobLogPath(log.ID)
+	logPath := getJobLogPath(log.Namespace, log.ID)
+
 	logrus.Debugf("updating job log %s", logPath)
+
 	data := []byte(log.Log)
 	buf := bytes.NewBuffer(data)
 	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, logPath, buf, int64(len(data)), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
@@ -31,6 +33,7 @@ func (d *Datastore) UpdateJobLog(ctx context.Context, log *api.JobLog) error {
 
 // GetRenderLog gets the specified render log for the job
 func (d *Datastore) GetRenderLog(ctx context.Context, jobID string, frame int64, slice int64) (*api.RenderLog, error) {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, err
@@ -41,7 +44,7 @@ func (d *Datastore) GetRenderLog(ctx context.Context, jobID string, frame int64,
 		return nil, nil
 	}
 
-	renderPath := path.Join(finca.S3RenderPath, jobID)
+	renderPath := path.Join(namespace, fynca.S3RenderPath, jobID)
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    renderPath,
 		Recursive: true,

@@ -2,13 +2,12 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -93,6 +92,11 @@ func queueAction(clix *cli.Context) error {
 		return fmt.Errorf("job name must be specified")
 	}
 
+	ctx, err := getContext()
+	if err != nil {
+		return err
+	}
+
 	priority := clix.Int("render-priority")
 	if priority < 0 || priority > 100 {
 		return fmt.Errorf("priority must be greater than 0 and less than 100")
@@ -117,11 +121,11 @@ func queueAction(clix *cli.Context) error {
 	}
 	logrus.Debugf("detected content type: %s", contentType)
 
-	ctx := context.Background()
 	client, err := getClient(clix)
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 
 	stream, err := client.QueueJob(ctx)
 	if err != nil {

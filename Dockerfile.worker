@@ -19,8 +19,8 @@ RUN distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
 RUN apt-get update && apt-get install -y nvidia-container-runtime nvidia-container-toolkit libx11-6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libglu1-mesa ffmpeg imagemagick
 RUN apt-get install -y unzip jq
 COPY --from=build /opt/blender /opt/blender
-COPY --from=worker /app/bin/finca-worker /usr/local/bin/finca-worker
+COPY --from=worker /app/bin/fynca-worker /usr/local/bin/fynca-worker
 RUN ln -sf /opt/blender/blender /usr/local/bin/blender
 RUN echo "PATH=/opt/blender:$PATH" >> /etc/profile
-ENTRYPOINT ["/usr/local/bin/finca-worker"]
+ENTRYPOINT ["/usr/local/bin/fynca-worker"]
 CMD ["-h"]

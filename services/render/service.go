@@ -3,10 +3,11 @@ package render
 import (
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
-	"git.underland.io/ehazlett/finca/datastore"
-	"git.underland.io/ehazlett/finca/services"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/datastore"
+	"git.underland.io/ehazlett/fynca/pkg/auth"
+	"git.underland.io/ehazlett/fynca/services"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
@@ -22,17 +23,23 @@ var (
 	empty                   = &ptypes.Empty{}
 )
 
+type jobArchiveRequest struct {
+	Namespace string
+	ID        string
+}
+
 type service struct {
-	config                  *finca.Config
+	config                  *fynca.Config
 	natsClient              *nats.Conn
 	storageClient           *minio.Client
 	ds                      *datastore.Datastore
 	serverQueueSubscription *nats.Subscription
-	jobArchiveCh            chan string
+	authenticator           auth.Authenticator
+	jobArchiveCh            chan *jobArchiveRequest
 	stopCh                  chan bool
 }
 
-func New(cfg *finca.Config) (services.Service, error) {
+func New(cfg *fynca.Config) (services.Service, error) {
 	// storage service
 	mc, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
@@ -58,8 +65,13 @@ func New(cfg *finca.Config) (services.Service, error) {
 		natsClient:    nc,
 		storageClient: mc,
 		ds:            ds,
-		jobArchiveCh:  make(chan string),
+		jobArchiveCh:  make(chan *jobArchiveRequest),
 	}, nil
+}
+
+func (s *service) Configure(a auth.Authenticator) error {
+	s.authenticator = a
+	return nil
 }
 
 func (s *service) Register(server *grpc.Server) error {

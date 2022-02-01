@@ -3,7 +3,7 @@ package worker
 import (
 	"bytes"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"

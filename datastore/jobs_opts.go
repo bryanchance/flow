@@ -1,5 +1,7 @@
 package datastore
 
+type JobOpt func(c *JobOptConfig)
+
 // WithExcludeJobFrames
 func WithExcludeJobFrames(c *JobOptConfig) {
 	c.excludeFrames = true

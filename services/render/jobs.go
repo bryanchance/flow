@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
-	"git.underland.io/ehazlett/finca/datastore"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/datastore"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

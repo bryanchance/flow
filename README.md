@@ -1,16 +1,16 @@
-# Finca Render System
-Finca is a lightweight distributed render system using [Nomad](https://nomad.io).
+# Fynca Render System
+Fynca is a lightweight distributed render system for Blender.
 
 ```
-                   ┌─────────────┐
-                   │  Finca CLI  │
-                   └─────────────┘
+                   ┌─────────────────┐
+                   │  Fynca CLI / UI │
+                   └─────────────────┘
                           │
                           │
                           ▼
            ┌────────────────────────────┐
            │                            │
-           │        Finca Server        │─ ─ ─ ┐
+           │        Fynca Server        │─ ─ ─ ┐
            │                            │      ▼
            └────────────────────────────┘  ┌───────┐
                           │                │       │
@@ -19,7 +19,7 @@ Finca is a lightweight distributed render system using [Nomad](https://nomad.io)
                           ▼                └───────┘  │
 ┌──────────────────────────────────────────────────┐
 │                                                  │  │
-│                 Nomad Cluster                    │
+│                 Fynca Workers                    │
 │                                                  │  │
 │                                                  │
 │ ┌────────┐  ┌────────┐   ┌────────┐  ┌────────┐  │  │
@@ -37,13 +37,13 @@ Finca is a lightweight distributed render system using [Nomad](https://nomad.io)
 └──────────────────────────────────────────────────┘
 ```
 
-# Finca Server
-The Finca server manages job submissions.  It provides a GRPC API that is used by clients
+# Fynca Server
+The Fynca server manages job submissions.  It provides a GRPC API that is used by clients
 to submit and manage render jobs.
 
-# Finca CLI
-The Finca CLI manages render jobs from the command line.  It is intended as an administrative
-interface to the Finca server as it provides all configuration options.
+# Fynca CLI
+The Fynca CLI manages render jobs from the command line.  It is intended as an administrative
+interface to the Fynca server as it provides all configuration options.
 
 ```
 NAME:
@@ -69,22 +69,24 @@ OPTIONS:
    --help, -h                            show help (default: false)
 ```
 
-# Nomad
-Finca uses the [Nomad](https://www.nomadproject.io/) workload orchestrator for processing render jobs.  Each
-workload is optimized based upon the job configuration.
+# NATS
+Fynca uses the [NATS](https://www.nats.io/) queue for processing render jobs.
 
 ## GPU
-If a Nomad node has a `gpu` class, the Finca worker will utilize GPU based rendering.
+If a node has `GPU`, the Fynca worker will utilize GPU based rendering.
 
-**Note:** currently only nvidia based GPUs are supported (Optix)
+**Note:** currently only Nvidia based GPUs are supported (Optix)
+
+# Redis
+[Redis](https://redis.io) is used for database storage for job metadata and user accounts.
 
 # Minio
 [Minio](https://min.io/) is recommended for both project storage and render task results.  Minio is lightweight
-and works very well with Finca but any compatible S3 system should work.
+and works very well with Fynca but any compatible S3 system should work.
 
-# Finca Worker
-The Finca worker is a container image that is designed to run in a Nomad cluster.  It contains everything
-that is needed to execute render tasks and upload the results to an S3 compatible system (Minio).
+# Fynca Worker
+The Fynca worker is a small application that manages Blender to process jobs.  It accesses the NATS queue for
+jobs and stores the results in MinIO.
 
 # Render Slices
 For optimized rendering with very large resolutions or high cycle counts, render slicing can be enabled that will

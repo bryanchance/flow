@@ -9,36 +9,58 @@ import (
 	"image/png"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	minio "github.com/minio/minio-go/v7"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int64) ([]byte, error) {
+var (
+	// default 5 minutes for latest render storage cache
+	latestRenderCacheTTL = time.Second * 60 * 5
+	// force 10 second cache on slices
+	latestRenderSliceCacheTTL = time.Second * 10
+)
+
+func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, jobName string, frame int64, hasSlices bool, ttl time.Duration) (string, error) {
+	cacheKey := getLatestRenderCacheKey(jobID, frame)
+	// cache url and retrieve if less than the ttl
+	cacheData, err := d.GetCacheObject(ctx, cacheKey)
+	if err != nil {
+		return "", err
+	}
+
+	// override ttl; cannot be indefinite
+	if ttl == (time.Second * 0) {
+		ttl = latestRenderCacheTTL
+	}
+
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	// check for rendering and if slices return composite
-	if job.Status == api.JobStatus_RENDERING {
-		// check slices
-		for _, frameJob := range job.FrameJobs {
-			if frameJob.RenderFrame == frame && len(frameJob.SliceJobs) > 0 {
-				return d.GetCompositeRender(ctx, jobID, frame)
-			}
+	// if cached, return if not a sliced render
+	// improve sliced render cache
+	if cacheData != nil {
+		// get composite if sliced
+		if hasSlices && job.Status == api.JobStatus_RENDERING {
+			return d.GetCompositeRender(ctx, jobID, jobName, frame, latestRenderSliceCacheTTL)
 		}
+		return string(cacheData), nil
 	}
 
-	renderPath := path.Join(finca.S3RenderPath, jobID)
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	renderPath := path.Join(namespace, fynca.S3RenderPath, jobID)
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    renderPath,
 		Recursive: true,
@@ -47,7 +69,7 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int
 	latestRenderPath := ""
 	for o := range objCh {
 		if o.Err != nil {
-			return nil, o.Err
+			return "", o.Err
 		}
 
 		// TODO: support other file types
@@ -57,14 +79,14 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int
 		// ignore slice renders
 		sliceMatch, err := regexp.MatchString(".*_slice-\\d+_\\d+\\.[png]", o.Key)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		if sliceMatch {
 			continue
 		}
 		frameMatch, err := regexp.MatchString(fmt.Sprintf(".*_%04d.[png]", frame), o.Key)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		if frameMatch {
 			latestRenderPath = o.Key
@@ -73,26 +95,29 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int
 	}
 
 	if latestRenderPath == "" {
-		return nil, nil
+		return "", nil
 	}
 
-	// get key data
-	obj, err := d.storageClient.GetObject(ctx, d.config.S3Bucket, latestRenderPath, minio.GetObjectOptions{})
+	// get presigned url for archive
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-disposition", "inline")
+
+	// valid for 24 hours
+	presignedURL, err := d.storageClient.PresignedGetObject(ctx, d.config.S3Bucket, latestRenderPath, ttl, reqParams)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting latest render from storage %s", latestRenderPath)
+		return "", err
 	}
 
-	buf := &bytes.Buffer{}
-	if _, err := io.Copy(buf, obj); err != nil {
-		return nil, err
+	if err := d.SetCacheObject(ctx, cacheKey, []byte(presignedURL.String()), ttl); err != nil {
+		logrus.WithError(err).Warnf("error caching object for %s", latestRenderPath)
 	}
 
-	return buf.Bytes(), nil
+	return presignedURL.String(), nil
 }
 
 func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    path.Join(finca.S3RenderPath, id),
+		Prefix:    path.Join(fynca.S3RenderPath, id),
 		Recursive: true,
 	})
 
@@ -109,19 +134,61 @@ func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame int64) ([]byte, error) {
-	job, err := d.GetJob(ctx, jobID)
+func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, jobName string, frame int64, ttl time.Duration) (string, error) {
+	cacheKey := getLatestRenderCompositeCacheKey(jobID, frame)
+	// cache url and retrieve if less than the ttl
+	cacheData, err := d.GetCacheObject(ctx, cacheKey)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting job %s for compositing", jobID)
+		return "", err
 	}
-	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("finca-composite-%s", job.ID))
+	if cacheData != nil {
+		return string(cacheData), nil
+	}
+
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	data, err := d.CompositeFrameRender(ctx, jobID, jobName, frame)
+	if err != nil {
+		return "", err
+	}
+	buf := bytes.NewBuffer(data)
+
+	compositePath := getFrameCompositePath(namespace, jobID, frame)
+	logrus.Debugf("storing composite for %s (frame %d) at %s", jobID, frame, compositePath)
+
+	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, compositePath, buf, int64(buf.Len()), minio.PutObjectOptions{ContentType: "image/png"}); err != nil {
+		return "", err
+	}
+
+	// get presigned url for archive
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-disposition", "inline")
+
+	// valid for 24 hours
+	presignedURL, err := d.storageClient.PresignedGetObject(ctx, d.config.S3Bucket, compositePath, ttl, reqParams)
+	if err != nil {
+		return "", err
+	}
+
+	if err := d.SetCacheObject(ctx, cacheKey, []byte(presignedURL.String()), ttl); err != nil {
+		logrus.WithError(err).Warnf("error caching object for %s", compositePath)
+	}
+
+	return presignedURL.String(), nil
+}
+
+func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, jobName string, frame int64) ([]byte, error) {
+	logrus.Debugf("compositing frame render for %s frame %d", jobID, frame)
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-composite-%s", jobID))
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
 
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
-		Prefix:    fmt.Sprintf("%s/%s", finca.S3RenderPath, job.ID),
+		Prefix:    fmt.Sprintf("%s/%s/%s", namespace, fynca.S3RenderPath, jobID),
 		Recursive: true,
 	})
 	slices := []string{}
@@ -185,7 +252,8 @@ func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame 
 		imgFile.Close()
 	}
 	if len(frameSlices) == 0 {
-		return nil, fmt.Errorf("unable to find any render slices for frame %d", frame)
+		// not rendered yet
+		return nil, nil
 	}
 
 	bounds := frameSlices[0].Bounds()
@@ -194,7 +262,7 @@ func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame 
 		draw.Draw(finalImage, bounds, img, image.ZP, draw.Over)
 	}
 
-	finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", job.Request.Name, frame))
+	finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", jobName, frame))
 	final, err := os.Create(finalFilePath)
 	if err != nil {
 		return nil, err
@@ -212,5 +280,35 @@ func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame 
 		return nil, err
 	}
 
-	return bytes.NewBuffer(data).Bytes(), nil
+	return data, nil
+}
+
+func (d *Datastore) ClearLatestRenderCache(ctx context.Context, jobID string, frame int64) error {
+	logrus.Debugf("clearing render cache for job %s (frame %d)", jobID, frame)
+	latestRenderKey := getLatestRenderCacheKey(jobID, frame)
+	latestCompositeKey := getLatestRenderCompositeCacheKey(jobID, frame)
+
+	keys := []string{
+		latestRenderKey,
+		latestCompositeKey,
+	}
+	logrus.Debugf("cache keys: %+v", keys)
+	for _, k := range keys {
+		if err := d.ClearCacheObject(ctx, k); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getLatestRenderCacheKey(jobID string, frame int64) string {
+	return fmt.Sprintf("%s-%d", jobID, frame)
+}
+func getLatestRenderCompositeCacheKey(jobID string, frame int64) string {
+	return fmt.Sprintf("composite-%s-%d", jobID, frame)
+}
+
+func getFrameCompositePath(namespace, jobID string, frame interface{}) string {
+	return path.Join(getStoragePath(namespace, jobID), fmt.Sprintf("composite_%04d.png", frame))
 }
