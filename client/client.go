@@ -5,8 +5,9 @@ import (
 	"crypto/tls"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	renderapi "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	accountsapi "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	renderapi "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -14,13 +15,24 @@ import (
 
 type Client struct {
 	renderapi.RenderClient
-	config *finca.Config
+	accountsapi.AccountsClient
+	config *fynca.Config
 	conn   *grpc.ClientConn
 }
 
-func NewClient(cfg *finca.Config) (*Client, error) {
+type ClientConfig struct {
+	Username string
+	Token    string
+}
+
+func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
+
+	clientConfig := &ClientConfig{}
+	for _, opt := range clientOpts {
+		opt(clientConfig)
+	}
 
 	opts, err := DialOptionsFromConfig(cfg)
 	if err != nil {
@@ -33,6 +45,13 @@ func NewClient(cfg *finca.Config) (*Client, error) {
 		}
 	}
 
+	// client interceptors
+	authenticator := newClientAuthenticator(clientConfig)
+	opts = append(opts,
+		grpc.WithUnaryInterceptor(authenticator.authUnaryInterceptor),
+		grpc.WithStreamInterceptor(authenticator.authStreamInterceptor),
+	)
+
 	c, err := grpc.DialContext(ctx,
 		cfg.GRPCAddress,
 		opts...,
@@ -43,6 +62,7 @@ func NewClient(cfg *finca.Config) (*Client, error) {
 
 	client := &Client{
 		renderapi.NewRenderClient(c),
+		accountsapi.NewAccountsClient(c),
 		cfg,
 		c,
 	}
@@ -55,7 +75,7 @@ func (c *Client) Close() error {
 }
 
 // DialOptionsFromConfig returns dial options configured from a Carbon config
-func DialOptionsFromConfig(cfg *finca.Config) ([]grpc.DialOption, error) {
+func DialOptionsFromConfig(cfg *fynca.Config) ([]grpc.DialOption, error) {
 	opts := []grpc.DialOption{}
 	if cfg.TLSClientCertificate != "" {
 		logrus.WithField("cert", cfg.TLSClientCertificate)

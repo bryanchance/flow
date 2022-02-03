@@ -13,8 +13,8 @@ import (
 	"regexp"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
@@ -24,6 +24,8 @@ import (
 
 // CreateJobArchive creates a zip archive of the job and stores a signed url from the storage service
 func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
 		return err
@@ -34,7 +36,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	}
 
 	// create initial job archive to signal in progress
-	jobArchiveKey := getJobArchiveKey(job.ID)
+	jobArchiveKey := getJobArchiveKey(namespace, job.ID)
 	jobArchive := &api.JobArchive{}
 
 	buf := &bytes.Buffer{}
@@ -46,7 +48,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	}
 
 	// get files and create archive
-	renderPath := path.Join(finca.S3RenderPath, job.ID)
+	renderPath := path.Join(namespace, fynca.S3RenderPath, job.ID)
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    renderPath,
 		Recursive: true,
@@ -83,7 +85,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 		return fmt.Errorf("unable to find render images for job %s", job.ID)
 	}
 
-	tmpArchive, err := os.CreateTemp("", "-finca-job-archive-")
+	tmpArchive, err := os.CreateTemp("", "-fynca-job-archive-")
 	if err != nil {
 		return err
 	}
@@ -140,7 +142,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	}
 
 	// copy archive to storage
-	objectPath := path.Join(finca.S3ProjectPath, job.ID, fmt.Sprintf("%s.zip", job.ID))
+	objectPath := path.Join(namespace, fynca.S3ProjectPath, job.ID, fmt.Sprintf("%s.zip", job.ID))
 	if _, err := d.storageClient.PutObject(ctx, d.config.S3Bucket, objectPath, archive, fi.Size(), minio.PutObjectOptions{ContentType: "application/zip"}); err != nil {
 		return err
 	}
@@ -169,12 +171,13 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 }
 
 func (d *Datastore) GetJobArchiveStatus(ctx context.Context, jobID string) (*api.JobArchive, error) {
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, err
 	}
 
-	key := getJobArchiveKey(job.ID)
+	key := getJobArchiveKey(namespace, job.ID)
 	data, err := d.redisClient.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
@@ -192,6 +195,6 @@ func (d *Datastore) GetJobArchiveStatus(ctx context.Context, jobID string) (*api
 	return jobArchive, nil
 }
 
-func getJobArchiveKey(jobID string) string {
-	return path.Join(dbPrefix, jobID, "archive")
+func getJobArchiveKey(namespace, jobID string) string {
+	return path.Join(dbPrefix, namespace, jobID, "archive")
 }

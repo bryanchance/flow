@@ -4,13 +4,13 @@ import "runtime"
 
 var (
 	// Name is the name of the application
-	Name = "finca"
+	Name = "fynca"
 
 	// Version defines the application version
 	Version = "0.1.0"
 
 	// Description is the application description
-	Description = "finca render management"
+	Description = "fynca render management"
 
 	// Build will be overwritten automatically by the build system
 	Build = "-dev"

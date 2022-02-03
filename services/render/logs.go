@@ -3,7 +3,7 @@ package render
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 )
 
 func (s *service) JobLog(ctx context.Context, r *api.JobLogRequest) (*api.JobLogResponse, error) {

@@ -7,12 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"git.underland.io/ehazlett/finca"
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
-	"git.underland.io/ehazlett/finca/datastore"
-	"git.underland.io/ehazlett/finca/pkg/profiler"
-	"git.underland.io/ehazlett/finca/version"
+	"git.underland.io/ehazlett/fynca"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/datastore"
+	"git.underland.io/ehazlett/fynca/pkg/profiler"
+	"git.underland.io/ehazlett/fynca/version"
 	"github.com/dustin/go-humanize"
+	"github.com/ehazlett/ttlcache"
 	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
@@ -27,6 +28,9 @@ import (
 var (
 	// ERRGPUNotSupported is returned when the worker does not support GPU workloads
 	ErrGPUNotSupported = errors.New("worker does not support GPU workloads")
+
+	// time to wait after a failed job to retry the job again
+	jobFailedCacheDelay = time.Second * 60
 )
 
 type GPU struct {
@@ -35,18 +39,19 @@ type GPU struct {
 }
 
 type Worker struct {
-	id         string
-	config     *finca.Config
-	natsClient *nats.Conn
-	ds         *datastore.Datastore
-	stopCh     chan bool
-	gpus       []*GPU
-	gpuEnabled bool
-	maxJobs    int
-	jobLock    *sync.Mutex
+	id             string
+	config         *fynca.Config
+	natsClient     *nats.Conn
+	ds             *datastore.Datastore
+	stopCh         chan bool
+	gpus           []*GPU
+	gpuEnabled     bool
+	maxJobs        int
+	jobLock        *sync.Mutex
+	failedJobCache *ttlcache.TTLCache
 }
 
-func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
+func NewWorker(id string, cfg *fynca.Config) (*Worker, error) {
 	if v := cfg.ProfilerAddress; v != "" {
 		p := profiler.NewProfiler(v)
 		go func() {
@@ -77,16 +82,22 @@ func NewWorker(id string, cfg *finca.Config) (*Worker, error) {
 
 	workerConfig := cfg.GetWorkerConfig(id)
 
+	failedJobCache, err := ttlcache.NewTTLCache(jobFailedCacheDelay)
+	if err != nil {
+		return nil, err
+	}
+
 	w := &Worker{
-		id:         id,
-		config:     cfg,
-		natsClient: nc,
-		ds:         ds,
-		stopCh:     make(chan bool, 1),
-		gpus:       gpus,
-		gpuEnabled: gpuEnabled,
-		maxJobs:    workerConfig.MaxJobs,
-		jobLock:    &sync.Mutex{},
+		id:             id,
+		config:         cfg,
+		natsClient:     nc,
+		ds:             ds,
+		stopCh:         make(chan bool, 1),
+		gpus:           gpus,
+		gpuEnabled:     gpuEnabled,
+		maxJobs:        workerConfig.MaxJobs,
+		jobLock:        &sync.Mutex{},
+		failedJobCache: failedJobCache,
 	}
 
 	return w, nil
@@ -116,7 +127,7 @@ func (w *Worker) Run() error {
 
 	// connect to nats stream and listen for messages
 	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSJobSubject)
-	sub, err := js.PullSubscribe(w.config.NATSJobSubject, finca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
+	sub, err := js.PullSubscribe(w.config.NATSJobSubject, fynca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
 	if err != nil {
 		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSJobSubject)
 	}
@@ -165,6 +176,15 @@ func (w *Worker) Run() error {
 					logrus.WithError(err).Error("error unmarshaling api.WorkerJob from message")
 					continue
 				}
+				logrus.Debugf("received worker job %s", workerJob.ID)
+				jobID := workerJob.ID
+
+				// check if job is in job failed cache
+				if kv := w.failedJobCache.Get(jobID); kv != nil {
+					logrus.Warnf("job %s is in failed job cache; requeueing for another worker", jobID)
+					m.Nak()
+					continue
+				}
 
 				// report message is in progress
 				m.InProgress(nats.AckWait(w.config.GetJobTimeout()))
@@ -181,16 +201,15 @@ func (w *Worker) Run() error {
 				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
 
 				result := &api.JobResult{}
-				jobID := ""
 
 				var pErr error
 				switch v := workerJob.GetJob().(type) {
 				case *api.WorkerJob_FrameJob:
-					jobID = v.FrameJob.ID
-					result, pErr = w.processFrameJob(ctx, v.FrameJob)
+					pCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, v.FrameJob.Request.Namespace)
+					result, pErr = w.processFrameJob(pCtx, v.FrameJob)
 				case *api.WorkerJob_SliceJob:
-					jobID = v.SliceJob.ID
-					result, pErr = w.processSliceJob(ctx, v.SliceJob)
+					pCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, v.SliceJob.Request.Namespace)
+					result, pErr = w.processSliceJob(pCtx, v.SliceJob)
 				default:
 					logrus.Errorf("unknown job type %+T", v)
 					cancel()
@@ -231,7 +250,18 @@ func (w *Worker) Run() error {
 				js.Publish(w.config.NATSJobStatusSubject, b.Bytes())
 
 				// ack message for completion
-				m.Ack()
+				if result.Status == api.JobStatus_ERROR {
+					logrus.WithError(pErr).Infof("error processing job; requeueing %s", jobID)
+					// add to failed job cache to prevent reprocessing immediately
+					if err := w.failedJobCache.Set(jobID, true); err != nil {
+						logrus.WithError(err).Errorf("error setting job failed cache for %s", jobID)
+					}
+					// requeue
+					m.Nak()
+				} else {
+					// success
+					m.Ack()
+				}
 
 				// check for max processed jobs
 				jobsProcessed += 1
@@ -318,7 +348,7 @@ func (w *Worker) showWorkerInfo() error {
 }
 
 func (w *Worker) workerHeartbeat() {
-	t := time.NewTicker(finca.WorkerTTL)
+	t := time.NewTicker(fynca.WorkerTTL)
 	for range t.C {
 		workerInfo, err := w.getWorkerInfo()
 		if err != nil {

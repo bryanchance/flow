@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	api "git.underland.io/ehazlett/finca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	ptypes "github.com/gogo/protobuf/types"
 )
 

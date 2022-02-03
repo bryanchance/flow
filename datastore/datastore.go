@@ -3,26 +3,30 @@ package datastore
 import (
 	"time"
 
-	"git.underland.io/ehazlett/finca"
+	"git.underland.io/ehazlett/fynca"
 	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pkg/errors"
 
 	"github.com/go-redis/redis/v8"
 )
 
 var (
-	dbPrefix  = "finca"
+	// ErrJobNotFound is returned when the specified job cannot be found
+	ErrJobNotFound = errors.New("job not found")
+
+	dbPrefix  = "fynca"
 	workerTTL = time.Second * 10
 )
 
 type Datastore struct {
 	storageClient *minio.Client
 	redisClient   *redis.Client
-	config        *finca.Config
+	config        *fynca.Config
 }
 
-func NewDatastore(cfg *finca.Config) (*Datastore, error) {
+func NewDatastore(cfg *fynca.Config) (*Datastore, error) {
 	mc, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
 		Secure: cfg.S3UseSSL,

@@ -1,11 +1,11 @@
 GOOS?=
 GOARCH?=
 COMMIT?=`git rev-parse --short HEAD`
-APP=finca
-DAEMON=finca
+APP=fynca
+DAEMON=fynca
 CGO_ENABLED=0
 CLI=fctl
-WORKER=finca-worker
+WORKER=fynca-worker
 REPO?=git.underland.io/ehazlett/$(APP)
 TAG?=dev
 BUILD?=-d
@@ -16,7 +16,7 @@ EXTENSIONS=$(wildcard extensions/*)
 CYCLO_PACKAGES=$(shell go list ./... | grep -v /vendor/ | sed "s/github.com\/$(NAMESPACE)\/$(APP)\///g" | tail -n +2)
 VAB_ARGS?=
 CWD=$(PWD)
-WORKER_IMAGE?=r.underland.io/apps/finca:latest
+WORKER_IMAGE?=r.underland.io/apps/fynca:latest
 
 ifeq ($(GOOS), windows)
 	EXT=.exe
@@ -39,7 +39,7 @@ $(CLI): bindir
 
 $(DAEMON): bindir
 	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD}"
-	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Finca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
+	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Fynca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
 
 $(WORKER): bindir
 	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD}"

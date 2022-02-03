@@ -1,9 +1,12 @@
 package main
 
 import (
-	"git.underland.io/ehazlett/finca"
-	"git.underland.io/ehazlett/finca/client"
+	"context"
+
+	"git.underland.io/ehazlett/fynca"
+	"git.underland.io/ehazlett/fynca/client"
 	cli "github.com/urfave/cli/v2"
+	"google.golang.org/grpc/metadata"
 )
 
 func getClient(clix *cli.Context) (*client.Client, error) {
@@ -11,7 +14,7 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 	key := clix.String("key")
 	skipVerification := clix.Bool("skip-verify")
 
-	cfg := &finca.Config{
+	cfg := &fynca.Config{
 		GRPCAddress:           clix.String("addr"),
 		TLSClientCertificate:  cert,
 		TLSClientKey:          key,
@@ -19,4 +22,14 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 	}
 
 	return client.NewClient(cfg)
+}
+
+func getContext() (context.Context, error) {
+	config, err := getLocalConfig()
+	if err != nil {
+		return nil, err
+	}
+	md := metadata.New(map[string]string{"token": config.Token})
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	return ctx, nil
 }

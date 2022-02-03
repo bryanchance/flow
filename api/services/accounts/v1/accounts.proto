@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package fynca.services.accounts.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import weak "google/protobuf/empty.proto";
+
+option go_package = "git.underland.io/ehazlett/fynca/api/services/accounts/v1;accounts";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+
+service Accounts {
+        rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+        rpc CreateAccount(CreateAccountRequest) returns (google.protobuf.Empty);
+        rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+        rpc UpdateAccount(UpdateAccountRequest) returns (google.protobuf.Empty);
+        rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty);
+        rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
+        rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+        rpc GetAccountProfile(GetAccountProfileRequest) returns (GetAccountProfileResponse);
+}
+
+message Account {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        google.protobuf.Timestamp created_at = 2 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        bool admin = 3;
+        string username = 4;
+        string first_name = 5;
+        string last_name = 6;
+        string email = 7;
+        // password is only used in account creation and password resets
+        // and is hashed with bcrypt and then cleared and never stored
+        string password = 8;
+        bytes password_crypt = 9;
+}
+
+message ListAccountsRequest {}
+
+message ListAccountsResponse {}
+
+message CreateAccountRequest {
+        Account account = 1;
+}
+
+message GetAccountRequest {
+        string username = 1;
+}
+
+message GetAccountResponse {
+        Account account = 2;
+}
+
+message UpdateAccountRequest {
+        Account account = 1;
+}
+
+message DeleteAccountRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message AuthenticateRequest {
+        string username = 1;
+        bytes password = 2;
+}
+
+message AuthenticateResponse {
+        Account account = 1;
+        bytes config = 2;
+}
+
+message ChangePasswordRequest {
+        string username = 1;
+        bytes password = 2;
+}
+
+message GetAccountProfileRequest {}
+
+message GetAccountProfileResponse {
+        Account account = 1;
+}

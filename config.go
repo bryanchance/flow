@@ -1,4 +1,4 @@
-package finca
+package fynca
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 
 const (
 	// ServerQueueGroupName is the name for the server queue group
-	ServerQueueGroupName = "finca-servers"
+	ServerQueueGroupName = "fynca-servers"
 	// WorkerQueueGroupName is the name for the worker queue group
-	WorkerQueueGroupName = "finca-workers"
+	WorkerQueueGroupName = "fynca-workers"
 
 	// S3ProjectPath is the project for project files
 	S3ProjectPath = "projects"
@@ -34,9 +34,21 @@ const (
 	// queueJobStatusSubject is the subject for job status updates
 	queueJobStatusSubject = "STATUS"
 	// kvBucketWorkerControl is the name of the kv store in the queue for issuing worker control messages
-	kvBucketWorkerControl = "finca-worker-control"
+	kvBucketWorkerControl = "fynca-worker-control"
 	// objectStoreName is the name of the object store for the system
-	objectStoreName = "finca"
+	objectStoreName = "fynca"
+
+	// CtxTokenKey is the key stored in the context for the token
+	CtxTokenKey = "token"
+	// CtxTokenKey is the key stored in the context for the username
+	CtxUsernameKey = "username"
+	// CtxTokenKey is the key stored in the context if the user is an admin
+	CtxAdminKey = "isAdmin"
+	// CtxNamespaceKey is the key stored in the context for the namespace
+	CtxNamespaceKey = "namespace"
+
+	// CtxDefaultNamespace is the default key used when unauthenticated and no auth
+	CtxDefaultNamespace = "default"
 )
 
 type duration struct {
@@ -53,6 +65,13 @@ func (d *duration) UnmarshalText(text []byte) error {
 	var err error
 	d.Duration, err = time.ParseDuration(string(text))
 	return err
+}
+
+type AuthenticatorConfig struct {
+	// Name is the name of the authenticator
+	Name string
+	// Options are passed to the authenticator
+	Options map[string]string
 }
 
 // Config is the configuration used for the server
@@ -95,6 +114,8 @@ type Config struct {
 	Workers []*Worker
 	// ProfilerAddress enables the performance profiler on the specified address
 	ProfilerAddress string
+	// Authenticator is the auth configuration
+	Authenticator *AuthenticatorConfig
 
 	// TODO: cleanup
 	// JobPrefix is the prefix for all queued jobs
@@ -161,12 +182,12 @@ func (c *Config) GetWorkerConfig(name string) *Worker {
 	return worker
 }
 
-// LoadConfig returns a Finca config from the specified file path
+// LoadConfig returns a Fynca config from the specified file path
 func LoadConfig(configPath string) (*Config, error) {
 	var cfg *Config
 	if _, err := toml.DecodeFile(configPath, &cfg); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("A config file must be specified.  Generate a new one with the \"finca config\" command.")
+			return nil, fmt.Errorf("A config file must be specified.  Generate a new one with the \"fynca config\" command.")
 		}
 		return nil, err
 	}
