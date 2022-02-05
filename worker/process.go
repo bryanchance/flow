@@ -56,8 +56,8 @@ prop.compute_device_type = 'NONE'
 for scene in bpy.data.scenes:
     scene.cycles.device = '{{ if .Request.RenderUseGPU }}GPU{{ else }}CPU{{ end }}'
     scene.cycles.samples = {{ .Request.RenderSamples }}
-    # TODO: enable configurable render engines (i.e. EEVEE)
-    scene.render.engine = 'CYCLES'
+    # TODO: enable configurable render engines (i.e. BLENDER_EEVEE)
+    scene.render.engine = '{{ .Request.RenderEngine }}'
     scene.render.resolution_x = {{ .Request.ResolutionX }}
     scene.render.resolution_y = {{ .Request.ResolutionY }}
     scene.render.resolution_percentage = {{ .Request.ResolutionScale }}
@@ -343,6 +343,8 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		}
 		blenderBinaryPath = bp
 	}
+
+	logrus.Debugf("using render engine %s", job.GetRequest().RenderEngine)
 
 	args := []string{
 		"-b",

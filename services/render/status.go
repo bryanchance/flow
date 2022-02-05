@@ -95,6 +95,7 @@ func (s *service) jobStatusListener() {
 				logMessage = jobResult.Error
 			}
 
+			logrus.Debugf("job status update setting namespace: %s", jobResult.Namespace)
 			uCtx := context.WithValue(context.Background(), fynca.CtxNamespaceKey, jobResult.Namespace)
 			ctx, cancel := context.WithTimeout(uCtx, time.Second*10)
 			// upload result to minio

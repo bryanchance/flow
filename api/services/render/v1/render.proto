@@ -34,6 +34,12 @@ message QueueJobRequest {
         }
 }
 
+enum RenderEngine {
+        UNKNOWN = 0;
+        CYCLES = 1;
+        BLENDER_EEVEE = 2;
+}
+
 message JobRequest {
         string name = 1;
         int64 resolution_x = 2;
@@ -49,6 +55,7 @@ message JobRequest {
         int64 render_slices = 12;
         string content_type = 13;
         string namespace = 14;
+        RenderEngine render_engine = 15;
 }
 
 message QueueJobResponse {

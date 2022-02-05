@@ -171,7 +171,7 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 	jobKey := getJobKey(namespace, jobID)
 	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
-		return errors.Wrapf(err, "error getting job %s from database to resolve", jobID)
+		return errors.Wrapf(err, "error getting job %s from database to resolve (%s)", jobID, jobKey)
 	}
 
 	buf := bytes.NewBuffer(data)
