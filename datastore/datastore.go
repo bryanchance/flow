@@ -39,6 +39,7 @@ func NewDatastore(cfg *fynca.Config) (*Datastore, error) {
 	if err != nil {
 		return nil, err
 	}
+	redisOpts.PoolSize = 256
 	rdb := redis.NewClient(redisOpts)
 
 	return &Datastore{
