@@ -72,11 +72,6 @@ OPTIONS:
 # NATS
 Fynca uses the [NATS](https://www.nats.io/) queue for processing render jobs.
 
-## GPU
-If a node has `GPU`, the Fynca worker will utilize GPU based rendering.
-
-**Note:** currently only Nvidia based GPUs are supported (Optix)
-
 # Redis
 [Redis](https://redis.io) is used for database storage for job metadata and user accounts.
 
@@ -90,7 +85,7 @@ jobs and stores the results in MinIO.
 
 # Render Slices
 For optimized rendering with very large resolutions or high cycle counts, render slicing can be enabled that will
-split the frame into regions to be rendered across the Nomad cluster.  When render slicing is enabled, an extra
+split the frame into regions to be rendered across the cluster.  When render slicing is enabled, an extra
 compositing task is used to composite each slice into a final render.  This is transparent to the user and the result
 is the same in Minio.  Job render times are improved dramatically depending on the number of nodes and their
 corresponding performance.
