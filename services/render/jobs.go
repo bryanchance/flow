@@ -55,7 +55,7 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 	// check nats for the job and delete
 	for _, frameJob := range job.FrameJobs {
 		if frameJob.SequenceID != 0 {
-			if err := js.DeleteMsg(s.config.NATSJobSubject, frameJob.SequenceID); err != nil {
+			if err := js.DeleteMsg(s.config.NATSJobStreamName, frameJob.SequenceID); err != nil {
 				// ignore missing
 				if !strings.Contains(err.Error(), "no message found") {
 					return empty, err
@@ -64,7 +64,7 @@ func (s *service) DeleteJob(ctx context.Context, r *api.DeleteJobRequest) (*ptyp
 		}
 		for _, sliceJob := range frameJob.SliceJobs {
 			if sliceJob.SequenceID != 0 {
-				if err := js.DeleteMsg(s.config.NATSJobSubject, sliceJob.SequenceID); err != nil {
+				if err := js.DeleteMsg(s.config.NATSJobStreamName, sliceJob.SequenceID); err != nil {
 					// ignore missing
 					if !strings.Contains(err.Error(), "no message found") {
 						return empty, err

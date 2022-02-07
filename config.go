@@ -15,6 +15,11 @@ const (
 	// WorkerQueueGroupName is the name for the worker queue group
 	WorkerQueueGroupName = "fynca-workers"
 
+	QueueSubjectJobPriorityNormal    = "normal"
+	QueueSubjectJobPriorityUrgent    = "urgent"
+	QueueSubjectJobPriorityAnimation = "animation"
+	QueueSubjectJobPriorityLow       = "low"
+
 	// S3ProjectPath is the project for project files
 	S3ProjectPath = "projects"
 	// S3RenderPath is the s3 bucket for final renders
@@ -29,10 +34,10 @@ const (
 	// WorkerTTL is the TTL for the worker heartbeat
 	WorkerTTL = time.Second * 10
 
-	// queueJobSubject is the subject for queued messages
-	queueJobSubject = "JOBS"
-	// queueJobStatusSubject is the subject for job status updates
-	queueJobStatusSubject = "STATUS"
+	// queueJobStreamName is the stream for queued messages
+	queueJobStreamName = "JOBS"
+	// queueJobStatusStreamName is the stream for job status updates
+	queueJobStatusStreamName = "STATUS"
 	// kvBucketWorkerControl is the name of the kv store in the queue for issuing worker control messages
 	kvBucketWorkerControl = "fynca-worker-control"
 	// objectStoreName is the name of the object store for the system
@@ -100,11 +105,10 @@ type Config struct {
 	S3UseSSL bool
 	// NATSUrl is the URL for the NATS server
 	NATSURL string
-	// NATSWorkerSubject is the queue subject for the workers
-	NATSJobSubject string
-	// NATSServerSubject is the queue subject for the servers
-	NATSJobStatusSubject string
-	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
+	// NATSJobStreamName is the queue subject for the workers
+	NATSJobStreamName string
+	// NATSJobStatusStreamName is the queue subject for the servers
+	NATSJobStatusStreamName   string // NATSKVBucketWorkerControl is the name of the kv store in the for worker control
 	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
 	DatabaseAddress string
@@ -153,11 +157,11 @@ func DefaultConfig() *Config {
 	return &Config{
 		GRPCAddress:               "127.0.0.1:8080",
 		NATSURL:                   nats.DefaultURL,
-		NATSJobSubject:            queueJobSubject,
-		NATSJobStatusSubject:      queueJobStatusSubject,
+		NATSJobStreamName:         queueJobStreamName,
+		NATSJobStatusStreamName:   queueJobStatusStreamName,
 		NATSKVBucketWorkerControl: kvBucketWorkerControl,
 		DatabaseAddress:           "redis://127.0.0.1:6379/0",
-		JobTimeout:                duration{time.Second * 28800},
+		JobTimeout:                duration{time.Second * 3600},
 		JobPriority:               50,
 		JobCPU:                    1000,
 		JobMemory:                 1024,

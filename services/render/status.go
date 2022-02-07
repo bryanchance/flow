@@ -23,7 +23,7 @@ func (s *service) jobStatusListener() {
 		logrus.Fatal(err)
 	}
 
-	sub, err := js.PullSubscribe(s.config.NATSJobStatusSubject, fynca.ServerQueueGroupName, nats.AckWait(ackWaitJobStatus))
+	sub, err := js.PullSubscribe(s.config.NATSJobStatusStreamName, fynca.ServerQueueGroupName, nats.AckWait(ackWaitJobStatus))
 	if err != nil {
 		logrus.Fatal(err)
 	}

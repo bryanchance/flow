@@ -17,9 +17,15 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	urgentPriorityQueueSubject = "urgent"
+	lowPriorityQueueSubject    = "low"
+	animationQueueSubject      = "animation"
+)
+
 var (
 	// timeout for worker control messages to expire
-	workerControlMessageTTL = time.Second * 300
+	workerControlMessageTTL = time.Second * 60
 	empty                   = &ptypes.Empty{}
 )
 
@@ -101,12 +107,23 @@ func (s *service) Start() error {
 		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketWorkerControl)
 	}
 
-	for _, subject := range []string{s.config.NATSJobSubject, s.config.NATSJobStatusSubject} {
-		js.AddStream(&nats.StreamConfig{
-			Name:      subject,
-			Retention: nats.WorkQueuePolicy,
-		})
-	}
+	// create queues
+	logrus.Debugf("creating stream %s", s.config.NATSJobStreamName)
+	js.AddStream(&nats.StreamConfig{
+		Name: s.config.NATSJobStreamName,
+		Subjects: []string{
+			fynca.QueueSubjectJobPriorityNormal,
+			fynca.QueueSubjectJobPriorityUrgent,
+			fynca.QueueSubjectJobPriorityAnimation,
+			fynca.QueueSubjectJobPriorityLow,
+		},
+		Retention: nats.WorkQueuePolicy,
+	})
+	logrus.Debugf("creating stream %s", s.config.NATSJobStatusStreamName)
+	js.AddStream(&nats.StreamConfig{
+		Name:      s.config.NATSJobStatusStreamName,
+		Retention: nats.WorkQueuePolicy,
+	})
 
 	logrus.Debugf("job timeout: %s", s.config.JobTimeout)
 
