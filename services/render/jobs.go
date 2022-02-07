@@ -5,22 +5,13 @@ import (
 	"strings"
 
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
-	"git.underland.io/ehazlett/fynca/datastore"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 func (s *service) ListJobs(ctx context.Context, r *api.ListJobsRequest) (*api.ListJobsResponse, error) {
-	jobOpts := []datastore.JobOpt{}
-	if r.ExcludeFrames {
-		jobOpts = append(jobOpts, datastore.WithExcludeJobFrames)
-	}
-	if r.ExcludeSlices {
-		jobOpts = append(jobOpts, datastore.WithExcludeJobSlices)
-	}
-
-	jobs, err := s.ds.GetJobs(ctx, jobOpts...)
+	jobs, err := s.ds.GetJobs(ctx)
 	if err != nil {
 		return nil, err
 	}

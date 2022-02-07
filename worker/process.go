@@ -18,9 +18,12 @@ import (
 
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -83,7 +86,16 @@ type blenderConfig struct {
 }
 
 func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.JobResult, error) {
-	logrus.Infof("processing frame job %s (%s)", job.GetID(), job.GetJobSource())
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "ProcessFrameJob")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("namespace", job.Request.Namespace))
+	span.SetAttributes(attribute.String("name", job.Request.Name))
+	span.SetAttributes(attribute.String("jobID", job.ID))
+	span.SetAttributes(attribute.Int64("renderFrame", job.RenderFrame))
+
+	logrus.Infof("processing frame job %s (%s)", job.ID, job.GetJobSource())
 	w.jobLock.Lock()
 	defer w.jobLock.Unlock()
 
@@ -97,11 +109,13 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	job.Status = api.JobStatus_RENDERING
 	wInfo, err := w.getWorkerInfo()
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	job.Worker = wInfo
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -110,7 +124,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 		Result: &api.JobResult_FrameJob{
 			FrameJob: job,
 		},
-		RenderFrame: job.GetRenderFrame(),
+		RenderFrame: job.RenderFrame,
 	}
 
 	// process
@@ -118,6 +132,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	started := time.Now()
 	if err := w.processJob(ctx, job, job.Request.Name); err != nil {
 		pErr = err
+		span.RecordError(err)
 	}
 	// update result status
 	job.FinishedAt = time.Now()
@@ -131,6 +146,7 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 	}
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -138,7 +154,17 @@ func (w *Worker) processFrameJob(ctx context.Context, job *api.FrameJob) (*api.J
 }
 
 func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.JobResult, error) {
-	logrus.Infof("processing slice job %s (%s)", job.GetID(), job.GetJobSource())
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "ProcessSliceJob")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("namespace", job.Request.Namespace))
+	span.SetAttributes(attribute.String("name", job.Request.Name))
+	span.SetAttributes(attribute.String("jobID", job.ID))
+	span.SetAttributes(attribute.Int64("renderFrame", job.RenderFrame))
+	span.SetAttributes(attribute.Int64("renderSlice", job.RenderSliceIndex))
+
+	logrus.Infof("processing slice job %s (%s)", job.ID, job.GetJobSource())
 	w.jobLock.Lock()
 	defer w.jobLock.Unlock()
 
@@ -152,11 +178,13 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 	job.Status = api.JobStatus_RENDERING
 	wInfo, err := w.getWorkerInfo()
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	job.Worker = wInfo
 
-	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+	if err := w.ds.UpdateJob(ctx, job.ID, job); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -165,13 +193,14 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 		Result: &api.JobResult_SliceJob{
 			SliceJob: job,
 		},
-		RenderFrame: job.GetRenderFrame(),
+		RenderFrame: job.RenderFrame,
 	}
 	// process
 	var pErr error
 	started := time.Now()
 	if err := w.processJob(ctx, job, fmt.Sprintf("%s_slice_%d", job.Request.Name, job.RenderSliceIndex)); err != nil {
 		pErr = err
+		span.RecordError(err)
 	}
 	// update result status
 	job.FinishedAt = time.Now()
@@ -185,6 +214,7 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 	}
 
 	if err := w.ds.UpdateJob(ctx, job.GetID(), job); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -192,6 +222,17 @@ func (w *Worker) processSliceJob(ctx context.Context, job *api.SliceJob) (*api.J
 }
 
 func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix string) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "ProcessJob")
+	defer span.End()
+
+	span.SetAttributes(attribute.Int64("renderSamples", job.GetRequest().RenderSamples))
+	span.SetAttributes(attribute.Int64("renderResolutionX", job.GetRequest().ResolutionX))
+	span.SetAttributes(attribute.Int64("renderResolutionY", job.GetRequest().ResolutionY))
+	span.SetAttributes(attribute.Int64("renderResolutionScale", job.GetRequest().ResolutionScale))
+	span.SetAttributes(attribute.Bool("renderUseGPU", job.GetRequest().RenderUseGPU))
+	span.SetAttributes(attribute.String("renderEngine", job.GetRequest().RenderEngine.String()))
+
 	// render with blender
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-%s", job.GetID()))
 	if err != nil {
@@ -216,7 +257,10 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 
 	logrus.Debugf("getting job source %s", job.GetJobSource())
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+	span.SetAttributes(attribute.String("jobSource", job.GetJobSource()))
 
+	_, gspan := tracing.StartSpan(ctx, "getJobSource")
+	gspan.SetAttributes(attribute.String("bucket", w.config.S3Bucket))
 	object, err := mc.GetObject(ctx, w.config.S3Bucket, path.Join(job.GetJobSource()), minio.GetObjectOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "error getting job source %s", job.GetJobSource())
@@ -234,6 +278,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	if _, err := io.Copy(projectFile, object); err != nil {
 		return err
 	}
+	gspan.End()
 
 	projectFilePath := projectFile.Name()
 
@@ -245,6 +290,8 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 
 	switch contentType {
 	case "application/zip":
+		_, zspan := tracing.StartSpan(ctx, "contentTypeZip")
+		zspan.SetAttributes(attribute.String("projectFilePath", projectFilePath))
 		logrus.Debug("zip archive detected; extracting")
 		a, err := zip.OpenReader(projectFilePath)
 		if err != nil {
@@ -300,6 +347,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		if len(projectFiles) > 1 {
 			logrus.Warnf("multiple Blender (.blend) projects found; using first detected: %s", projectFilePath)
 		}
+		zspan.End()
 	default:
 	}
 
@@ -329,7 +377,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	workerConfig := w.config.GetWorkerConfig(w.id)
 	logrus.Debugf("worker config: %+v", workerConfig)
 	for _, engine := range workerConfig.RenderEngines {
-		logrus.Debugf("checking render engine config: %s", engine)
+		logrus.Debugf("checking render engine config: %+v", engine)
 		if strings.ToLower(engine.Name) == "blender" {
 			logrus.Infof("using blender render path: %s", engine.Path)
 			blenderBinaryPath = engine.Path
@@ -359,6 +407,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	args = append(args, blenderCommandPlatformArgs...)
 
 	logrus.Debugf("blender args: %v", args)
+	_, cspan := tracing.StartSpan(ctx, "workerJob.render")
 	c := exec.CommandContext(ctx, blenderBinaryPath, args...)
 
 	out, err := c.CombinedOutput()
@@ -372,9 +421,12 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 		logrus.WithError(err).Errorf("error log available at %s", tmpLogPath)
 		return errors.Wrap(err, string(out))
 	}
+	cspan.End()
 
 	logrus.Debug(string(out))
 
+	_, uspan := tracing.StartSpan(ctx, "upload")
+	uspan.SetAttributes(attribute.String("outputDir", outputDir))
 	logrus.Debugf("uploading output files from %s", outputDir)
 	// upload results to minio
 	files, err := filepath.Glob(filepath.Join(outputDir, "*"))
@@ -426,6 +478,7 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 	if _, err := mc.PutObject(ctx, w.config.S3Bucket, path.Join(namespace, fynca.S3RenderPath, job.GetID(), logFilename), logFile, fi.Size(), minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
 		return err
 	}
+	uspan.End()
 
 	// check for render slice job; if so, check s3 for number of renders. if matches render slices
 	// assume project is complete and composite images into single result
@@ -441,6 +494,10 @@ func (w *Worker) processJob(ctx context.Context, job api.RenderJob, outputPrefix
 }
 
 func (w *Worker) compositeRender(ctx context.Context, namespace string, job api.RenderJob, frame int64, outputDir string) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "compositeRender")
+	defer span.End()
+
 	mc, err := w.getMinioClient()
 	if err != nil {
 		return err
@@ -478,11 +535,12 @@ func (w *Worker) compositeRender(ctx context.Context, namespace string, job api.
 
 	renderStartFrame := job.GetRequest().RenderStartFrame
 	renderEndFrame := job.GetRequest().RenderEndFrame
+	span.SetAttributes(attribute.Int64("renderStartFrame", renderStartFrame))
+	span.SetAttributes(attribute.Int64("renderEndFrame", renderEndFrame))
 	if renderEndFrame == 0 {
 		renderEndFrame = renderStartFrame
 	}
-	//cctx := context.WithValue(ctx, fynca.CtxNamespaceKey, namespace)
-	data, err := w.ds.CompositeFrameRender(ctx, job.GetID(), job.GetRequest().Name, frame)
+	data, err := w.ds.CompositeFrameRender(ctx, job.GetID(), frame)
 	if err != nil {
 		return err
 	}

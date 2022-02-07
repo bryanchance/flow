@@ -1,11 +1,10 @@
 package render
 
 import (
-	"bytes"
 	"context"
 
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 )
 
 func (s *service) ListWorkers(ctx context.Context, r *api.ListWorkersRequest) (*api.ListWorkersResponse, error) {
@@ -31,13 +30,12 @@ func (s *service) ControlWorker(ctx context.Context, r *api.ControlWorkerRequest
 		return nil, err
 	}
 
-	buf := &bytes.Buffer{}
-	m := &jsonpb.Marshaler{}
-	if err := m.Marshal(buf, r); err != nil {
+	data, err := proto.Marshal(r)
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := kv.Put(r.WorkerID, buf.Bytes()); err != nil {
+	if _, err := kv.Put(r.WorkerID, data); err != nil {
 		return nil, err
 	}
 

@@ -1,10 +1,8 @@
 package worker
 
 import (
-	"bytes"
-
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
 )
@@ -37,9 +35,8 @@ func (w *Worker) workerControlListener() {
 			continue
 		}
 		if msg.Key() == w.id {
-			r := &api.ControlWorkerRequest{}
-			buf := bytes.NewBuffer(msg.Value())
-			if err := jsonpb.Unmarshal(buf, r); err != nil {
+			r := api.ControlWorkerRequest{}
+			if err := proto.Unmarshal(msg.Value(), &r); err != nil {
 				logrus.WithError(err).Errorf("error unmarshaling object %s", msg.Key())
 				continue
 			}

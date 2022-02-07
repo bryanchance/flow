@@ -12,13 +12,21 @@ import (
 
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	"github.com/go-redis/redis/v8"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	jobCacheTTL = time.Second * 10
 )
 
 type ByCreatedAt []*api.Job
@@ -27,19 +35,15 @@ func (s ByCreatedAt) Len() int           { return len(s) }
 func (s ByCreatedAt) Less(i, j int) bool { return s[i].CreatedAt.After(s[j].CreatedAt) }
 func (s ByCreatedAt) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-type JobOptConfig struct {
-	excludeFrames bool
-	excludeSlices bool
-}
-
 // GetJobs returns a list of jobs
-func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job, error) {
-	cfg := &JobOptConfig{}
-	for _, o := range jobOpts {
-		o(cfg)
-	}
+func (d *Datastore) GetJobs(ctx context.Context) ([]*api.Job, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetJobs")
+	defer span.End()
 
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	span.SetAttributes(attribute.String("namespace", namespace))
 
 	keys, err := d.redisClient.Keys(ctx, getJobKey(namespace, "*")).Result()
 	if err != nil {
@@ -67,75 +71,117 @@ func (d *Datastore) GetJobs(ctx context.Context, jobOpts ...JobOpt) ([]*api.Job,
 }
 
 // GetJob returns a job by id from the datastore
-func (d *Datastore) GetJob(ctx context.Context, jobID string, jobOpts ...JobOpt) (*api.Job, error) {
+func (d *Datastore) GetJob(ctx context.Context, jobID string) (*api.Job, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetJob")
+	defer span.End()
+
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
-	cfg := &JobOptConfig{}
-	for _, o := range jobOpts {
-		o(cfg)
-	}
+
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("jobID", jobID))
+
+	// lookup from cache
+	cacheKey := getJobCacheKey(jobID)
+	// TODO: revisit caching
+	//// cache url and retrieve if less than the ttl
+	//cacheData, err := d.GetCacheObject(ctx, cacheKey)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if cacheData != nil {
+	//	logrus.Debugf("fetching job %s from cache", jobID)
+	//	_, cspan := d.tracer().Start(ctx, "GetJob.GetCacheObject")
+	//	cspan.SetAttributes(attribute.String("cacheKey", cacheKey))
+	//	var j api.Job
+	//	if err := proto.Unmarshal(cacheData, &j); err != nil {
+	//		logrus.WithError(err).Errorf("error unmarshaling job %s from cache", jobID)
+	//	}
+	//	cspan.End()
+
+	//	return &j, nil
+	//}
 
 	jobKey := getJobKey(namespace, jobID)
+
 	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, status.Errorf(codes.NotFound, "job %s not found", jobID)
 		}
+		span.RecordError(err)
 		return nil, errors.Wrapf(err, "error getting job %s from database", jobID)
 	}
 
-	buf := bytes.NewBuffer(data)
-	job := &api.Job{}
-	if err := jsonpb.Unmarshal(buf, job); err != nil {
+	job := api.Job{}
+	if err := proto.Unmarshal(data, &job); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
 	job.FrameJobs = []*api.FrameJob{}
+	span.SetAttributes(attribute.Int64("renderStartFrame", job.Request.RenderStartFrame))
+	span.SetAttributes(attribute.Int64("renderEndFrame", job.Request.RenderEndFrame))
 
 	// filter
-	if !cfg.excludeFrames {
-		for frame := job.Request.RenderStartFrame; frame <= job.Request.RenderEndFrame; frame++ {
-			frameKey := getFrameKey(namespace, jobID, frame)
-			data, err := d.redisClient.Get(ctx, frameKey).Bytes()
-			if err != nil {
-				return nil, errors.Wrapf(err, "error getting frame %d for job %s from database", frame, jobID)
-			}
-
-			buf := bytes.NewBuffer(data)
-			frameJob := &api.FrameJob{}
-			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
-				return nil, err
-			}
-
-			if !cfg.excludeSlices {
-				if job.Request.RenderSlices > 0 {
-					frameJob.SliceJobs = []*api.SliceJob{}
-					for i := int64(0); i < job.Request.RenderSlices; i++ {
-						sliceKey := getSliceKey(namespace, jobID, frame, i)
-						data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
-						if err != nil {
-							return nil, errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", i, frame, jobID)
-						}
-
-						buf := bytes.NewBuffer(data)
-						sliceJob := &api.SliceJob{}
-						if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
-							return nil, err
-						}
-						frameJob.SliceJobs = append(frameJob.SliceJobs, sliceJob)
-					}
-				}
-			}
-			job.FrameJobs = append(job.FrameJobs, frameJob)
+	for frame := job.Request.RenderStartFrame; frame <= job.Request.RenderEndFrame; frame++ {
+		frameKey := getFrameKey(namespace, jobID, frame)
+		data, err := d.redisClient.Get(ctx, frameKey).Bytes()
+		if err != nil {
+			return nil, errors.Wrapf(err, "error getting frame %d for job %s from database", frame, jobID)
 		}
+
+		frameJob := api.FrameJob{}
+		if err := proto.Unmarshal(data, &frameJob); err != nil {
+			return nil, err
+		}
+
+		if job.Request.RenderSlices > 0 {
+			frameJob.SliceJobs = []*api.SliceJob{}
+			for i := int64(0); i < job.Request.RenderSlices; i++ {
+				sliceKey := getSliceKey(namespace, jobID, frame, i)
+				data, err := d.redisClient.Get(ctx, sliceKey).Bytes()
+				if err != nil {
+					return nil, errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", i, frame, jobID)
+				}
+
+				sliceJob := api.SliceJob{}
+				if err := proto.Unmarshal(data, &sliceJob); err != nil {
+					return nil, err
+				}
+				frameJob.SliceJobs = append(frameJob.SliceJobs, &sliceJob)
+			}
+		}
+		job.FrameJobs = append(job.FrameJobs, &frameJob)
 	}
 
-	if err := resolveJob(job); err != nil {
+	if err := resolveJob(ctx, &job); err != nil {
 		return nil, err
 	}
-	return job, nil
+
+	// cache
+	ttl := jobCacheTTL
+	if job.Status == api.JobStatus_FINISHED {
+		// cache finished jobs more aggressive
+		ttl = time.Second * 300
+	}
+	cData, err := proto.Marshal(&job)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := d.SetCacheObject(ctx, cacheKey, cData, ttl); err != nil {
+		logrus.WithError(err).Warnf("error caching object for job %s", job.ID)
+	}
+
+	return &job, nil
 }
 
 func (d *Datastore) GetJobLog(ctx context.Context, jobID string) (*api.JobLog, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetJobLog")
+	defer span.End()
+
 	job, err := d.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, err
@@ -147,6 +193,8 @@ func (d *Datastore) GetJobLog(ctx context.Context, jobID string) (*api.JobLog, e
 	}
 
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	span.SetAttributes(attribute.String("namespace", namespace))
 
 	logPath := getJobLogPath(namespace, jobID)
 	// get key data
@@ -167,16 +215,22 @@ func (d *Datastore) GetJobLog(ctx context.Context, jobID string) (*api.JobLog, e
 
 // ResolveJob resolves a job from all frame and slice jobs and stores the result in the database
 func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "ResolveJob")
+	defer span.End()
+
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	span.SetAttributes(attribute.String("namespace", namespace))
+
 	jobKey := getJobKey(namespace, jobID)
 	data, err := d.redisClient.Get(ctx, jobKey).Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "error getting job %s from database to resolve (%s)", jobID, jobKey)
 	}
 
-	buf := bytes.NewBuffer(data)
-	job := &api.Job{}
-	if err := jsonpb.Unmarshal(buf, job); err != nil {
+	job := api.Job{}
+	if err := proto.Unmarshal(data, &job); err != nil {
 		return err
 	}
 
@@ -184,6 +238,8 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: ??
 
 	jobs := []*api.Job{}
 	for _, k := range keys {
@@ -199,6 +255,7 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 		}
 		jobs = append(jobs, job)
 	}
+
 	frameJobs := []*api.FrameJob{}
 
 	// load frames
@@ -211,12 +268,12 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 				return errors.Wrapf(err, "error getting frame %d for job %s from database", f.RenderFrame, jobID)
 			}
 
-			buf := bytes.NewBuffer(data)
-			frameJob := &api.FrameJob{}
-			if err := jsonpb.Unmarshal(buf, frameJob); err != nil {
+			frameJob := api.FrameJob{}
+			if err := proto.Unmarshal(data, &frameJob); err != nil {
 				return err
 			}
-			frameJobs = append(frameJobs, frameJob)
+
+			frameJobs = append(frameJobs, &frameJob)
 			continue
 		}
 		// load slices
@@ -228,13 +285,12 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 				return errors.Wrapf(err, "error getting slice %d (frame %d) for job %s from database", slice.RenderSliceIndex, f.RenderFrame, jobID)
 			}
 
-			buf := bytes.NewBuffer(data)
-			sliceJob := &api.SliceJob{}
-			if err := jsonpb.Unmarshal(buf, sliceJob); err != nil {
+			sliceJob := api.SliceJob{}
+			if err := proto.Unmarshal(data, &sliceJob); err != nil {
 				return err
 			}
 
-			sliceJobs = append(sliceJobs, sliceJob)
+			sliceJobs = append(sliceJobs, &sliceJob)
 		}
 		f.SliceJobs = sliceJobs
 		frameJobs = append(frameJobs, f)
@@ -242,11 +298,11 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 
 	job.FrameJobs = frameJobs
 
-	if err := resolveJob(job); err != nil {
+	if err := resolveJob(ctx, &job); err != nil {
 		return err
 	}
 
-	if err := d.UpdateJob(ctx, jobID, job); err != nil {
+	if err := d.UpdateJob(ctx, jobID, &job); err != nil {
 		return err
 	}
 
@@ -255,31 +311,45 @@ func (d *Datastore) ResolveJob(ctx context.Context, jobID string) error {
 
 // UpdateJob updates the status of a job
 func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "UpdateJob")
+	defer span.End()
+
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("jobID", jobID))
+
 	dbKey := ""
-	buf := &bytes.Buffer{}
+	var data []byte
 
 	switch v := o.(type) {
 	case *api.Job:
 		dbKey = getJobKey(namespace, jobID)
-		if err := d.Marshaler().Marshal(buf, v); err != nil {
+		d, err := proto.Marshal(v)
+		if err != nil {
 			return err
 		}
+		data = d
 	case *api.FrameJob:
 		dbKey = getFrameKey(namespace, jobID, v.RenderFrame)
-		if err := d.Marshaler().Marshal(buf, v); err != nil {
+		d, err := proto.Marshal(v)
+		if err != nil {
 			return err
 		}
+		data = d
 	case *api.SliceJob:
 		dbKey = getSliceKey(namespace, jobID, v.RenderFrame, v.RenderSliceIndex)
-		if err := d.Marshaler().Marshal(buf, v); err != nil {
+		d, err := proto.Marshal(v)
+		if err != nil {
 			return err
 		}
+		data = d
 	default:
 		return fmt.Errorf("job type %+T is unknown", v)
 	}
 
-	if err := d.redisClient.Set(ctx, dbKey, buf.Bytes(), 0).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, dbKey, data, 0).Err(); err != nil {
 		return errors.Wrapf(err, "error saving job %s in database", jobID)
 	}
 
@@ -288,7 +358,15 @@ func (d *Datastore) UpdateJob(ctx context.Context, jobID string, o interface{}) 
 
 // DeleteJob deletes a job and all related files from the datastore
 func (d *Datastore) DeleteJob(ctx context.Context, jobID string) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "DeleteJob")
+	defer span.End()
+
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("jobID", jobID))
+
 	// delete from db
 	keys := []string{
 		getJobKey(namespace, jobID),
@@ -384,7 +462,15 @@ func getSliceKey(namespace, jobID string, frame interface{}, sliceIndex interfac
 // resolveJob "merges" and "resolves" all frame and slice jobs
 // in the passed job and will set the status at the least progressed and set the
 // render time at the longest time of the individual frames and slices
-func resolveJob(job *api.Job) error {
+func resolveJob(ctx context.Context, job *api.Job) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "resolveJob")
+	defer span.End()
+
+	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("jobID", job.ID))
+
 	renderTimeSeconds := float64(0.0)
 	job.Status = api.JobStatus_QUEUED
 	finishedFrames := 0
@@ -534,9 +620,14 @@ func resolveJob(job *api.Job) error {
 
 	renderTime, err := time.ParseDuration(fmt.Sprintf("%0.2fs", renderTimeSeconds))
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 	job.Duration = renderTime
 
 	return nil
+}
+
+func getJobCacheKey(jobID string) string {
+	return fmt.Sprintf("%s", jobID)
 }

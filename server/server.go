@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 var (
@@ -61,7 +62,9 @@ type Server struct {
 func NewServer(cfg *fynca.Config) (*Server, error) {
 	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting fynca server")
 
-	grpcOpts := []grpc.ServerOption{}
+	grpcOpts := []grpc.ServerOption{
+		grpc.MaxMsgSize(10 * 1024 * 1024),
+	}
 	if cfg.TLSServerCertificate != "" && cfg.TLSServerKey != "" {
 		logrus.WithFields(logrus.Fields{
 			"cert": cfg.TLSServerCertificate,
@@ -86,7 +89,7 @@ func NewServer(cfg *fynca.Config) (*Server, error) {
 		cfg.Authenticator = &fynca.AuthenticatorConfig{Name: "none"}
 	}
 
-	// unary interceptors
+	// interceptors
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{}
 
@@ -113,6 +116,10 @@ func NewServer(cfg *fynca.Config) (*Server, error) {
 	streamServerInterceptors = append(streamServerInterceptors, authenticator.StreamServerInterceptor)
 
 	logrus.Debugf("loaded authenticator %s", authenticator.Name())
+
+	// telemetry
+	unaryServerInterceptors = append(unaryServerInterceptors, otelgrpc.UnaryServerInterceptor())
+	streamServerInterceptors = append(streamServerInterceptors, otelgrpc.StreamServerInterceptor())
 
 	for _, m := range grpcMiddleware {
 		unaryServerInterceptors = append(unaryServerInterceptors, m.UnaryServerInterceptor)

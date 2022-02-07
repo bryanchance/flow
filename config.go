@@ -108,7 +108,8 @@ type Config struct {
 	// NATSJobStreamName is the queue subject for the workers
 	NATSJobStreamName string
 	// NATSJobStatusStreamName is the queue subject for the servers
-	NATSJobStatusStreamName   string // NATSKVBucketWorkerControl is the name of the kv store in the for worker control
+	NATSJobStatusStreamName string
+	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
 	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
 	DatabaseAddress string
@@ -118,6 +119,10 @@ type Config struct {
 	Workers []*Worker
 	// ProfilerAddress enables the performance profiler on the specified address
 	ProfilerAddress string
+	// TraceEndpoint is the endpoint of the telemetry tracer
+	TraceEndpoint string
+	// Environment is the environment the app is running in
+	Environment string
 	// Authenticator is the auth configuration
 	Authenticator *AuthenticatorConfig
 

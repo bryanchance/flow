@@ -19,8 +19,11 @@ import (
 
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/sirupsen/logrus"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -30,7 +33,11 @@ var (
 	latestRenderSliceCacheTTL = time.Second * 10
 )
 
-func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, jobName string, frame int64, hasSlices bool, ttl time.Duration) (string, error) {
+func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, frame int64, ttl time.Duration) (string, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetLatestRender")
+	defer span.End()
+
 	cacheKey := getLatestRenderCacheKey(jobID, frame)
 	// cache url and retrieve if less than the ttl
 	cacheData, err := d.GetCacheObject(ctx, cacheKey)
@@ -48,12 +55,14 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, jobName s
 		return "", err
 	}
 
+	hasSlices := job.Request.RenderSlices > 0
+
 	// if cached, return if not a sliced render
 	// improve sliced render cache
 	if cacheData != nil {
 		// get composite if sliced
 		if hasSlices && job.Status == api.JobStatus_RENDERING {
-			return d.GetCompositeRender(ctx, jobID, jobName, frame, latestRenderSliceCacheTTL)
+			return d.GetCompositeRender(ctx, jobID, frame, latestRenderSliceCacheTTL)
 		}
 		return string(cacheData), nil
 	}
@@ -116,6 +125,9 @@ func (d *Datastore) GetLatestRender(ctx context.Context, jobID string, jobName s
 }
 
 func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
+	span := trace.SpanFromContext(ctx)
+	defer span.End()
+
 	objCh := d.storageClient.ListObjects(ctx, d.config.S3Bucket, minio.ListObjectsOptions{
 		Prefix:    path.Join(fynca.S3RenderPath, id),
 		Recursive: true,
@@ -134,7 +146,11 @@ func (d *Datastore) DeleteRenders(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, jobName string, frame int64, ttl time.Duration) (string, error) {
+func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, frame int64, ttl time.Duration) (string, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetCompositeRender")
+	defer span.End()
+
 	cacheKey := getLatestRenderCompositeCacheKey(jobID, frame)
 	// cache url and retrieve if less than the ttl
 	cacheData, err := d.GetCacheObject(ctx, cacheKey)
@@ -147,7 +163,7 @@ func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, jobNam
 
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 
-	data, err := d.CompositeFrameRender(ctx, jobID, jobName, frame)
+	data, err := d.CompositeFrameRender(ctx, jobID, frame)
 	if err != nil {
 		return "", err
 	}
@@ -177,7 +193,11 @@ func (d *Datastore) GetCompositeRender(ctx context.Context, jobID string, jobNam
 	return presignedURL.String(), nil
 }
 
-func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, jobName string, frame int64) ([]byte, error) {
+func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, frame int64) ([]byte, error) {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "GetCompositeFrameRender")
+	defer span.End()
+
 	logrus.Debugf("compositing frame render for %s frame %d", jobID, frame)
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
 
@@ -194,7 +214,7 @@ func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, jobN
 	slices := []string{}
 	for o := range objCh {
 		if o.Err != nil {
-			return nil, err
+			return nil, o.Err
 		}
 
 		// filter logs
@@ -262,7 +282,7 @@ func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, jobN
 		draw.Draw(finalImage, bounds, img, image.ZP, draw.Over)
 	}
 
-	finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", jobName, frame))
+	finalFilePath := filepath.Join(tmpDir, fmt.Sprintf("%s_%04d.png", jobID, frame))
 	final, err := os.Create(finalFilePath)
 	if err != nil {
 		return nil, err
@@ -284,6 +304,10 @@ func (d *Datastore) CompositeFrameRender(ctx context.Context, jobID string, jobN
 }
 
 func (d *Datastore) ClearLatestRenderCache(ctx context.Context, jobID string, frame int64) error {
+	var span trace.Span
+	ctx, span = tracing.StartSpan(ctx, "ClearLatestRenderCache")
+	defer span.End()
+
 	logrus.Debugf("clearing render cache for job %s (frame %d)", jobID, frame)
 	latestRenderKey := getLatestRenderCacheKey(jobID, frame)
 	latestCompositeKey := getLatestRenderCompositeCacheKey(jobID, frame)
@@ -305,6 +329,7 @@ func (d *Datastore) ClearLatestRenderCache(ctx context.Context, jobID string, fr
 func getLatestRenderCacheKey(jobID string, frame int64) string {
 	return fmt.Sprintf("%s-%d", jobID, frame)
 }
+
 func getLatestRenderCompositeCacheKey(jobID string, frame int64) string {
 	return fmt.Sprintf("composite-%s-%d", jobID, frame)
 }

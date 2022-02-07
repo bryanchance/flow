@@ -1,14 +1,13 @@
 package render
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	nats "github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
 )
@@ -57,9 +56,8 @@ func (s *service) jobStatusListener() {
 		case <-s.stopCh:
 			return
 		case m := <-msgCh:
-			jobResult := &api.JobResult{}
-			buf := bytes.NewBuffer(m.Data)
-			if err := jsonpb.Unmarshal(buf, jobResult); err != nil {
+			jobResult := api.JobResult{}
+			if err := proto.Unmarshal(m.Data, &jobResult); err != nil {
 				logrus.WithError(err).Error("error unmarshaling api.JobResult from message")
 				continue
 			}
