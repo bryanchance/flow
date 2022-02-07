@@ -40,6 +40,12 @@ enum RenderEngine {
         BLENDER_EEVEE = 2;
 }
 
+enum JobPriority {
+        NORMAL = 0;
+        URGENT = 1;
+        LOW = 2;
+}
+
 message JobRequest {
         string name = 1;
         int64 resolution_x = 2;
@@ -56,6 +62,7 @@ message JobRequest {
         string content_type = 13;
         string namespace = 14;
         RenderEngine render_engine = 15;
+        JobPriority priority = 16;
 }
 
 message QueueJobResponse {

@@ -126,10 +126,12 @@ func (w *Worker) Run() error {
 	doneCh := make(chan bool)
 
 	// connect to nats stream and listen for messages
-	logrus.Debugf("monitoring jobs on subject %s", w.config.NATSJobSubject)
-	sub, err := js.PullSubscribe(w.config.NATSJobSubject, fynca.WorkerQueueGroupName, nats.AckWait(w.config.GetJobTimeout()))
+	logrus.Debugf("monitoring jobs on stream %s", w.config.NATSJobStreamName)
+
+	// setup subscriptions
+	sub, err := newSubscriber(w.config)
 	if err != nil {
-		return errors.Wrapf(err, "error subscribing to nats subject %s", w.config.NATSJobSubject)
+		return err
 	}
 
 	logrus.Debugf("worker max jobs: %d", w.maxJobs)
@@ -145,30 +147,20 @@ func (w *Worker) Run() error {
 		for {
 			select {
 			case <-w.stopCh:
-				logrus.Debug("unsubscribing from subject")
-				sub.Unsubscribe()
-
-				logrus.Debug("draining")
-				sub.Drain()
-
+				sub.stop()
 				close(msgCh)
 				return
 			case <-jobTicker.C:
-				msgs, err := sub.Fetch(1)
+				m, err := sub.nextMessage()
 				if err != nil {
-					// if stop has been called the subscription will be drained and closed
-					// ignore the subscription error and exit
-					if !sub.IsValid() {
-						continue
-					}
-					if err == nats.ErrTimeout {
-						// ignore NextMsg timeouts
-						continue
-					}
 					logrus.Warn(err)
 					continue
 				}
-				m := msgs[0]
+				// if stop has been called the subscription will be drained and closed
+				// ignore the subscription error and exit
+				if m == nil {
+					continue
+				}
 
 				buf := bytes.NewBuffer(m.Data)
 				workerJob := &api.WorkerJob{}
@@ -247,7 +239,7 @@ func (w *Worker) Run() error {
 					logrus.WithError(err).Error("error publishing job result")
 					continue
 				}
-				js.Publish(w.config.NATSJobStatusSubject, b.Bytes())
+				js.Publish(w.config.NATSJobStatusStreamName, b.Bytes())
 
 				// ack message for completion
 				if result.Status == api.JobStatus_ERROR {
@@ -267,8 +259,7 @@ func (w *Worker) Run() error {
 				jobsProcessed += 1
 				if w.maxJobs != 0 && jobsProcessed >= w.maxJobs {
 					logrus.Infof("worker reached max jobs (%d), exiting", w.maxJobs)
-					sub.Unsubscribe()
-					sub.Drain()
+					sub.stop()
 					close(msgCh)
 					return
 				}

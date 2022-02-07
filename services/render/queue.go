@@ -131,7 +131,7 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 		return err
 	}
 
-	subjectName := s.config.NATSJobSubject
+	subjectName := s.config.NATSJobStreamName
 	jobSourceFileName, err := getStorageJobPath(jobID, req)
 	if err != nil {
 		return err
@@ -143,6 +143,8 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 	if req.RenderEndFrame == 0 {
 		req.RenderEndFrame = req.RenderStartFrame
 	}
+
+	jobQueueSubject := getJobQueueSubject(req)
 
 	job := &api.Job{
 		CreatedAt: time.Now(),
@@ -191,7 +193,8 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 					return err
 				}
 				logrus.Debugf("publishing slice job %s (frame:%d slice:%d)", jobID, frame, i)
-				ack, err := js.Publish(subjectName, buf.Bytes())
+				//ack, err := js.Publish(subjectName, buf.Bytes())
+				ack, err := js.Publish(jobQueueSubject, buf.Bytes())
 				if err != nil {
 					return err
 				}
@@ -227,10 +230,11 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 			return err
 		}
 
-		ack, err := js.Publish(subjectName, buf.Bytes())
+		ack, err := js.Publish(jobQueueSubject, buf.Bytes())
 		if err != nil {
 			return err
 		}
+
 		frameJob.SequenceID = ack.Sequence
 		frameJob.Status = api.JobStatus_QUEUED
 		frameJob.QueuedAt = time.Now()
@@ -254,7 +258,7 @@ func (s *service) getJobID(req *api.JobRequest) string {
 }
 
 func (s *service) getSubjectName(req *api.JobRequest) string {
-	return fmt.Sprintf("%s.%s", s.config.NATSJobSubject, s.getJobID(req))
+	return fmt.Sprintf("%s.%s", s.config.NATSJobStreamName, s.getJobID(req))
 }
 
 func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {
@@ -272,6 +276,23 @@ func getStorageJobPath(jobID string, req *api.JobRequest) (string, error) {
 	}
 	objName := fmt.Sprintf("%s-%s.%s", jobID, req.Name, ext)
 	return path.Join(getStoragePath(req.Namespace, jobID), objName), nil
+}
+
+func getJobQueueSubject(req *api.JobRequest) string {
+	if req.Priority == api.JobPriority_URGENT {
+		return fynca.QueueSubjectJobPriorityUrgent
+	}
+
+	// set to animation if more than 1 frame requested
+	if (req.RenderEndFrame - req.RenderStartFrame) > 0 {
+		return fynca.QueueSubjectJobPriorityAnimation
+	}
+
+	if req.Priority == api.JobPriority_LOW {
+		return fynca.QueueSubjectJobPriorityLow
+	}
+
+	return fynca.QueueSubjectJobPriorityNormal
 }
 
 func getStoragePath(namespace, jobID string) string {

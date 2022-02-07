@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/pkg/errors"
@@ -64,11 +65,16 @@ var queueJobCommand = &cli.Command{
 			Aliases: []string{"g"},
 			Usage:   "use gpu for rendering",
 		},
-		&cli.IntFlag{
-			Name:    "render-priority",
+		&cli.StringFlag{
+			Name:    "priority",
 			Aliases: []string{"p"},
-			Usage:   "set render priority (0-100)",
-			Value:   50,
+			Usage:   "set render priority (urgent, normal, low)",
+			Value:   "normal",
+		},
+		&cli.StringFlag{
+			Name:  "render-engine",
+			Usage: "set render engine",
+			Value: "CYCLES",
 		},
 		&cli.IntFlag{
 			Name:  "cpu",
@@ -132,6 +138,16 @@ func queueAction(clix *cli.Context) error {
 		return err
 	}
 
+	renderEngine, err := getRenderEngine(clix.String("render-engine"))
+	if err != nil {
+		return err
+	}
+
+	jobPriority, err := getJobPriority(clix.String("priority"))
+	if err != nil {
+		return err
+	}
+
 	if err := stream.Send(&api.QueueJobRequest{
 		Data: &api.QueueJobRequest_Request{
 			Request: &api.JobRequest{
@@ -141,6 +157,7 @@ func queueAction(clix *cli.Context) error {
 				ResolutionScale:  int64(clix.Int("resolution-scale")),
 				RenderStartFrame: int64(clix.Int("render-start-frame")),
 				RenderEndFrame:   int64(clix.Int("render-end-frame")),
+				RenderEngine:     renderEngine,
 				RenderSamples:    int64(clix.Int("render-samples")),
 				RenderUseGPU:     clix.Bool("render-use-gpu"),
 				RenderPriority:   int64(priority),
@@ -148,6 +165,7 @@ func queueAction(clix *cli.Context) error {
 				Memory:           int64(clix.Int("memory")),
 				RenderSlices:     int64(clix.Int("render-slices")),
 				ContentType:      contentType,
+				Priority:         jobPriority,
 			},
 		},
 	}); err != nil {
@@ -188,4 +206,26 @@ func queueAction(clix *cli.Context) error {
 
 	logrus.Printf("queued job %s", res.GetUUID())
 	return nil
+}
+
+func getRenderEngine(v string) (api.RenderEngine, error) {
+	switch strings.ToLower(v) {
+	case "cycles":
+		return api.RenderEngine_CYCLES, nil
+	case "eevee":
+		return api.RenderEngine_BLENDER_EEVEE, nil
+	}
+	return api.RenderEngine_UNKNOWN, fmt.Errorf("unknown render engine %s", v)
+}
+
+func getJobPriority(v string) (api.JobPriority, error) {
+	switch strings.ToLower(v) {
+	case "urgent":
+		return api.JobPriority_URGENT, nil
+	case "normal":
+		return api.JobPriority_NORMAL, nil
+	case "low":
+		return api.JobPriority_LOW, nil
+	}
+	return api.JobPriority_NORMAL, fmt.Errorf("unknown priority %s", v)
 }

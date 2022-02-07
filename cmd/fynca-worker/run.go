@@ -38,13 +38,6 @@ func runAction(clix *cli.Context) error {
 	doneCh := make(chan bool, 1)
 	errCh := make(chan error, 1)
 
-	go func() {
-		if err := w.Run(); err != nil {
-			errCh <- err
-		}
-		doneCh <- true
-	}()
-
 	var runErr error
 	go func() {
 		for {
@@ -67,6 +60,13 @@ func runAction(clix *cli.Context) error {
 				}
 			}
 		}
+	}()
+
+	go func() {
+		if err := w.Run(); err != nil {
+			logrus.WithError(err).Fatal("error starting worker")
+		}
+		doneCh <- true
 	}()
 
 	<-doneCh
