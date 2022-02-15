@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -14,7 +13,7 @@ import (
 	"git.underland.io/ehazlett/fynca/version"
 	"github.com/dustin/go-humanize"
 	"github.com/ehazlett/ttlcache"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
@@ -23,6 +22,10 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	serviceName = "worker"
 )
 
 var (
@@ -162,9 +165,8 @@ func (w *Worker) Run() error {
 					continue
 				}
 
-				buf := bytes.NewBuffer(m.Data)
-				workerJob := &api.WorkerJob{}
-				if err := jsonpb.Unmarshal(buf, workerJob); err != nil {
+				workerJob := api.WorkerJob{}
+				if err := proto.Unmarshal(m.Data, &workerJob); err != nil {
 					logrus.WithError(err).Error("error unmarshaling api.WorkerJob from message")
 					continue
 				}
@@ -234,12 +236,12 @@ func (w *Worker) Run() error {
 				logrus.Infof("completed job %s: status=%s", jobID, result.Status)
 
 				// publish status event for server
-				b := &bytes.Buffer{}
-				if err := w.ds.Marshaler().Marshal(b, result); err != nil {
+				data, err := proto.Marshal(result)
+				if err != nil {
 					logrus.WithError(err).Error("error publishing job result")
 					continue
 				}
-				js.Publish(w.config.NATSJobStatusStreamName, b.Bytes())
+				js.Publish(w.config.NATSJobStatusStreamName, data)
 
 				// ack message for completion
 				if result.Status == api.JobStatus_ERROR {

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"git.underland.io/ehazlett/fynca"
+	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	"git.underland.io/ehazlett/fynca/server"
 	"git.underland.io/ehazlett/fynca/services"
 	accountsservice "git.underland.io/ehazlett/fynca/services/accounts"
@@ -30,6 +33,12 @@ var serverCommand = &cli.Command{
 
 func serverAction(clix *cli.Context) error {
 	cfg, err := fynca.LoadConfig(clix.String("config"))
+	if err != nil {
+		return err
+	}
+
+	// enable tracing if specified
+	tp, err := tracing.NewProvider(cfg.TraceEndpoint, "fynca", cfg.Environment)
 	if err != nil {
 		return err
 	}
@@ -93,6 +102,8 @@ func serverAction(clix *cli.Context) error {
 	}()
 
 	<-doneCh
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	return nil
+	return tp.Shutdown(ctx)
 }

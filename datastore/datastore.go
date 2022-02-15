@@ -4,12 +4,15 @@ import (
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
-	"github.com/gogo/protobuf/jsonpb"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"
 
 	"github.com/go-redis/redis/v8"
+)
+
+const (
+	serviceName = "datastore"
 )
 
 var (
@@ -47,11 +50,4 @@ func NewDatastore(cfg *fynca.Config) (*Datastore, error) {
 		redisClient:   rdb,
 		config:        cfg,
 	}, nil
-}
-
-func (d *Datastore) Marshaler() *jsonpb.Marshaler {
-	m := &jsonpb.Marshaler{
-		EmitDefaults: true,
-	}
-	return m
 }

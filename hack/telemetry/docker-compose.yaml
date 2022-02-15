@@ -1,0 +1,66 @@
+version: "2"
+services:
+  influxdb:
+    image: influxdb:latest
+    ports:
+      - 8086:8086
+    environment:
+      - "DOCKER_INFLUXDB_INIT_MODE=setup"
+      - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
+      - "DOCKER_INFLUXDB_INIT_PASSWORD=fyncaadmin"
+      - "DOCKER_INFLUXDB_INIT_ORG=system"
+      - "DOCKER_INFLUXDB_INIT_BUCKET=default"
+      - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=secret-token"
+
+  telegraf:
+    image: telegraf:latest
+    ports:
+      - 24317:24317
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf
+    depends_on:
+      - influxdb
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - 3200:3200
+      - 14317:14317
+    command: ["tempo", "-config.file", "/etc/tempo.conf"]
+    volumes:
+      - ./tempo.conf:/etc/tempo.conf
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    ports:
+      - 3000:3000
+    environment:
+      - "GF_FEATURE_TOGGLES_ENABLE=tempoSearch"
+    depends_on:
+      - tempo
+
+  otel:
+    image: otel/opentelemetry-collector-contrib-dev:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - 1888:1888
+      - 4317:4317
+      - 4318:4318
+      - 8888:8888
+      - 8889:8889
+      - 55679:55679
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    depends_on:
+      - telegraf
+      - tempo
+      - prometheus

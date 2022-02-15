@@ -12,6 +12,7 @@ import (
 
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -183,18 +184,17 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 					RenderFrame:      int64(frame),
 				}
 				// queue slice job
-				buf := &bytes.Buffer{}
-				if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+				data, err := proto.Marshal(&api.WorkerJob{
 					ID: jobID,
 					Job: &api.WorkerJob_SliceJob{
 						SliceJob: sliceJob,
 					},
-				}); err != nil {
+				})
+				if err != nil {
 					return err
 				}
 				logrus.Debugf("publishing slice job %s (frame:%d slice:%d)", jobID, frame, i)
-				//ack, err := js.Publish(subjectName, buf.Bytes())
-				ack, err := js.Publish(jobQueueSubject, buf.Bytes())
+				ack, err := js.Publish(jobQueueSubject, data)
 				if err != nil {
 					return err
 				}
@@ -220,17 +220,17 @@ func (s *service) queueJob(ctx context.Context, jobID string, req *api.JobReques
 		// not using slices; publish job for full frame render
 		logrus.Debugf("publishing frame job %s (%d) to %s", jobID, frame, subjectName)
 
-		buf := &bytes.Buffer{}
-		if err := s.ds.Marshaler().Marshal(buf, &api.WorkerJob{
+		data, err := proto.Marshal(&api.WorkerJob{
 			ID: jobID,
 			Job: &api.WorkerJob_FrameJob{
 				FrameJob: frameJob,
 			},
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
-		ack, err := js.Publish(jobQueueSubject, buf.Bytes())
+		ack, err := js.Publish(jobQueueSubject, data)
 		if err != nil {
 			return err
 		}

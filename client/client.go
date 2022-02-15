@@ -11,6 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 type Client struct {
@@ -45,11 +48,24 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 		}
 	}
 
-	// client interceptors
+	// interceptors
+	unaryClientInterceptors := []grpc.UnaryClientInterceptor{}
+	streamClientInterceptors := []grpc.StreamClientInterceptor{}
+
+	// auth
 	authenticator := newClientAuthenticator(clientConfig)
+	unaryClientInterceptors = append(unaryClientInterceptors, authenticator.authUnaryInterceptor)
+	streamClientInterceptors = append(streamClientInterceptors, authenticator.authStreamInterceptor)
+
+	// telemetry
+	unaryClientInterceptors = append(unaryClientInterceptors, otelgrpc.UnaryClientInterceptor())
+	streamClientInterceptors = append(streamClientInterceptors, otelgrpc.StreamClientInterceptor())
+
 	opts = append(opts,
-		grpc.WithUnaryInterceptor(authenticator.authUnaryInterceptor),
-		grpc.WithStreamInterceptor(authenticator.authStreamInterceptor),
+		//grpc.WithUnaryInterceptor(authenticator.authUnaryInterceptor),
+		//grpc.WithStreamInterceptor(authenticator.authStreamInterceptor),
+		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(unaryClientInterceptors...)),
+		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(streamClientInterceptors...)),
 	)
 
 	c, err := grpc.DialContext(ctx,

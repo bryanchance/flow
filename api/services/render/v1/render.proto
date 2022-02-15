@@ -154,10 +154,7 @@ message JobResult {
         string error = 7;
 }
 
-message ListJobsRequest {
-        bool exclude_frames = 1;
-        bool exclude_slices = 2;
-}
+message ListJobsRequest {}
 
 message ListJobsResponse {
         repeated Job jobs = 1;

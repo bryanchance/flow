@@ -1,7 +1,6 @@
 package datastore
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -9,7 +8,7 @@ import (
 
 	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
 	"github.com/go-redis/redis/v8"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -50,12 +49,11 @@ func (d *Datastore) GetAccount(ctx context.Context, username string) (*api.Accou
 		return nil, errors.Wrapf(err, "error getting account %s from database", username)
 	}
 
-	buf := bytes.NewBuffer(data)
-	account := &api.Account{}
-	if err := jsonpb.Unmarshal(buf, account); err != nil {
+	account := api.Account{}
+	if err := proto.Unmarshal(data, &account); err != nil {
 		return nil, err
 	}
-	return account, nil
+	return &account, nil
 }
 
 func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) error {
@@ -87,11 +85,12 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 
 	account.PasswordCrypt = passwordCrypt
 
-	buf := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(buf, account); err != nil {
+	data, err := proto.Marshal(account)
+	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, accountKey, buf.Bytes(), 0).Err(); err != nil {
+
+	if err := d.redisClient.Set(ctx, accountKey, data, 0).Err(); err != nil {
 		return errors.Wrapf(err, "error updating account for %s in database", account.Username)
 	}
 
@@ -102,11 +101,11 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 func (d *Datastore) UpdateAccount(ctx context.Context, account *api.Account) error {
 	accountKey := getAccountKey(account.Username)
 
-	buf := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(buf, account); err != nil {
+	data, err := proto.Marshal(account)
+	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, accountKey, buf.Bytes(), 0).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, accountKey, data, 0).Err(); err != nil {
 		return errors.Wrapf(err, "error updating account for %s in database", account.Username)
 	}
 	return nil

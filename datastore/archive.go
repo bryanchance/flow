@@ -2,7 +2,6 @@ package datastore
 
 import (
 	"archive/zip"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -16,7 +15,7 @@ import (
 	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
 	"github.com/go-redis/redis/v8"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -39,11 +38,11 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	jobArchiveKey := getJobArchiveKey(namespace, job.ID)
 	jobArchive := &api.JobArchive{}
 
-	buf := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(buf, jobArchive); err != nil {
+	data, err := proto.Marshal(jobArchive)
+	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, jobArchiveKey, buf.Bytes(), 0).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, jobArchiveKey, data, 0).Err(); err != nil {
 		return errors.Wrapf(err, "error saving job archive for %s in database", job.ID)
 	}
 
@@ -159,11 +158,11 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 
 	jobArchive.ArchiveUrl = presignedURL.String()
 
-	b := &bytes.Buffer{}
-	if err := d.Marshaler().Marshal(b, jobArchive); err != nil {
+	jData, err := proto.Marshal(jobArchive)
+	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, jobArchiveKey, b.Bytes(), 0).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, jobArchiveKey, jData, 0).Err(); err != nil {
 		return errors.Wrapf(err, "error saving job archive for %s in database", job.ID)
 	}
 
@@ -186,13 +185,12 @@ func (d *Datastore) GetJobArchiveStatus(ctx context.Context, jobID string) (*api
 		return nil, errors.Wrapf(err, "error getting job archive %s from database", jobID)
 	}
 
-	buf := bytes.NewBuffer(data)
-	jobArchive := &api.JobArchive{}
-	if err := jsonpb.Unmarshal(buf, jobArchive); err != nil {
+	jobArchive := api.JobArchive{}
+	if err := proto.Unmarshal(data, &jobArchive); err != nil {
 		return nil, err
 	}
 
-	return jobArchive, nil
+	return &jobArchive, nil
 }
 
 func getJobArchiveKey(namespace, jobID string) string {

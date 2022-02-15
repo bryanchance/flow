@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"git.underland.io/ehazlett/fynca"
+	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	"git.underland.io/ehazlett/fynca/version"
 	"git.underland.io/ehazlett/fynca/worker"
 	"github.com/sirupsen/logrus"
@@ -26,6 +29,15 @@ func runAction(clix *cli.Context) error {
 	// check for profiler
 	if v := clix.String("profiler-address"); v != "" {
 		cfg.ProfilerAddress = v
+	}
+
+	// enable tracing if specified
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tp, err := tracing.NewProvider(cfg.TraceEndpoint, "fynca-worker", cfg.Environment)
+	if err != nil {
+		return err
 	}
 
 	w, err := worker.NewWorker(id, cfg)
@@ -70,6 +82,8 @@ func runAction(clix *cli.Context) error {
 	}()
 
 	<-doneCh
+
+	tp.Shutdown(ctx)
 
 	return runErr
 }

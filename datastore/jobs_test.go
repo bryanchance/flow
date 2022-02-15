@@ -1,12 +1,17 @@
 package datastore
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"git.underland.io/ehazlett/fynca"
 	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
-	ptypes "github.com/gogo/protobuf/types"
 )
+
+func getContext() context.Context {
+	return context.WithValue(context.Background(), fynca.CtxNamespaceKey, "testing")
+}
 
 func TestJobsFramesQueued(t *testing.T) {
 	job := &api.Job{
@@ -20,7 +25,9 @@ func TestJobsFramesQueued(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -47,7 +54,8 @@ func TestJobsFramesRendering(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,12 +86,14 @@ func TestJobsFramesDurationSingle(t *testing.T) {
 		},
 	}
 
-	expectedDuration := ptypes.DurationProto(time.Second * 5)
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	expectedDuration := time.Second * 5
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
-	if !job.Duration.Equal(expectedDuration) {
+	if job.Duration != expectedDuration {
 		t.Fatalf("expected duration %s; received %s", expectedDuration, job.Duration)
 	}
 }
@@ -114,12 +124,14 @@ func TestJobsFramesDurationMultiple(t *testing.T) {
 		},
 	}
 
-	expectedDuration := ptypes.DurationProto(time.Second * 15)
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	expectedDuration := time.Second * 15
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
-	if !job.Duration.Equal(expectedDuration) {
+	if job.Duration != expectedDuration {
 		t.Fatalf("expected duration %s; received %s", expectedDuration, job.Duration)
 	}
 }
@@ -151,12 +163,14 @@ func TestJobsFramesStartedFinished(t *testing.T) {
 		},
 	}
 
-	expectedDuration := ptypes.DurationProto(time.Second * 20)
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	expectedDuration := time.Second * 20
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
-	if !job.Duration.Equal(expectedDuration) {
+	if job.Duration != expectedDuration {
 		t.Fatalf("expected duration %s; received %s", expectedDuration, job.Duration)
 	}
 
@@ -188,7 +202,9 @@ func TestJobsSlicesQueued(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -220,7 +236,9 @@ func TestJobsSlicesQueuedAndRendering(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,7 +269,9 @@ func TestJobsSlicesRenderingAndQueued(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -283,7 +303,9 @@ func TestJobsSlicesQueuedAndError(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -315,7 +337,9 @@ func TestJobsSlicesErrorAndQueued(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -347,7 +371,9 @@ func TestJobsSlicesQueuedAndFinished(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -379,7 +405,9 @@ func TestJobsSlicesFinishedAndQueued(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -411,7 +439,9 @@ func TestJobsSlicesRendering(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -443,7 +473,9 @@ func TestJobsSlicesFinished(t *testing.T) {
 		},
 	}
 
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
@@ -481,12 +513,14 @@ func TestJobsSlicesDuration(t *testing.T) {
 		},
 	}
 
-	expectedDuration := ptypes.DurationProto(time.Second * 10)
-	if err := resolveJob(job); err != nil {
+	ctx := getContext()
+
+	expectedDuration := time.Second * 10
+	if err := resolveJob(ctx, job); err != nil {
 		t.Fatal(err)
 	}
 
-	if !job.Duration.Equal(expectedDuration) {
+	if job.Duration != expectedDuration {
 		t.Fatalf("expected duration %s; received %s", expectedDuration, job.Duration)
 	}
 }
