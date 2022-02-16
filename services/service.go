@@ -8,7 +8,7 @@ import (
 type Type string
 
 const (
-	RenderService   Type = "fynca.services.render.v1"
+	JobsService     Type = "fynca.services.jobs.v1"
 	AccountsService Type = "fynca.services.accounts.v1"
 )
 

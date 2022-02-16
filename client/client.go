@@ -7,7 +7,7 @@ import (
 
 	"git.underland.io/ehazlett/fynca"
 	accountsapi "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
-	renderapi "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	jobsapi "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -17,7 +17,7 @@ import (
 )
 
 type Client struct {
-	renderapi.RenderClient
+	jobsapi.JobsClient
 	accountsapi.AccountsClient
 	config *fynca.Config
 	conn   *grpc.ClientConn
@@ -77,7 +77,7 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 	}
 
 	client := &Client{
-		renderapi.NewRenderClient(c),
+		jobsapi.NewJobsClient(c),
 		accountsapi.NewAccountsClient(c),
 		cfg,
 		c,

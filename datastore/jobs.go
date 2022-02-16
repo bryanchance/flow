@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
 	"git.underland.io/ehazlett/fynca/pkg/tracing"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/proto"

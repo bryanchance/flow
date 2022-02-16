@@ -12,7 +12,7 @@ import (
 	"git.underland.io/ehazlett/fynca/server"
 	"git.underland.io/ehazlett/fynca/services"
 	accountsservice "git.underland.io/ehazlett/fynca/services/accounts"
-	renderservice "git.underland.io/ehazlett/fynca/services/render"
+	renderservice "git.underland.io/ehazlett/fynca/services/jobs"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )

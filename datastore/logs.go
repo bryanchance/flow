@@ -10,7 +10,7 @@ import (
 	"regexp"
 
 	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

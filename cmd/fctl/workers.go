@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	api "git.underland.io/ehazlett/fynca/api/services/render/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
 	"github.com/dustin/go-humanize"
 	cli "github.com/urfave/cli/v2"
 )
