@@ -1,10 +1,10 @@
-package render
+package workers
 
 import (
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
 	"git.underland.io/ehazlett/fynca/datastore"
 	"git.underland.io/ehazlett/fynca/pkg/auth"
 	"git.underland.io/ehazlett/fynca/services"
@@ -13,14 +13,7 @@ import (
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-)
-
-const (
-	urgentPriorityQueueSubject = "urgent"
-	lowPriorityQueueSubject    = "low"
-	animationQueueSubject      = "animation"
 )
 
 var (
@@ -29,20 +22,12 @@ var (
 	empty                   = &ptypes.Empty{}
 )
 
-type jobArchiveRequest struct {
-	Namespace string
-	ID        string
-}
-
 type service struct {
-	config                  *fynca.Config
-	natsClient              *nats.Conn
-	storageClient           *minio.Client
-	ds                      *datastore.Datastore
-	serverQueueSubscription *nats.Subscription
-	authenticator           auth.Authenticator
-	jobArchiveCh            chan *jobArchiveRequest
-	stopCh                  chan bool
+	config        *fynca.Config
+	natsClient    *nats.Conn
+	storageClient *minio.Client
+	ds            *datastore.Datastore
+	authenticator auth.Authenticator
 }
 
 func New(cfg *fynca.Config) (services.Service, error) {
@@ -71,7 +56,6 @@ func New(cfg *fynca.Config) (services.Service, error) {
 		natsClient:    nc,
 		storageClient: mc,
 		ds:            ds,
-		jobArchiveCh:  make(chan *jobArchiveRequest),
 	}, nil
 }
 
@@ -81,12 +65,12 @@ func (s *service) Configure(a auth.Authenticator) error {
 }
 
 func (s *service) Register(server *grpc.Server) error {
-	api.RegisterJobsServer(server, s)
+	api.RegisterWorkersServer(server, s)
 	return nil
 }
 
 func (s *service) Type() services.Type {
-	return services.JobsService
+	return services.WorkersService
 }
 
 func (s *service) Requires() []services.Type {
@@ -99,39 +83,17 @@ func (s *service) Start() error {
 		return errors.Wrap(err, "error getting nats jetstream context")
 	}
 
-	// create queues
-	logrus.Debugf("creating stream %s", s.config.NATSJobStreamName)
-	js.AddStream(&nats.StreamConfig{
-		Name: s.config.NATSJobStreamName,
-		Subjects: []string{
-			fynca.QueueSubjectJobPriorityNormal,
-			fynca.QueueSubjectJobPriorityUrgent,
-			fynca.QueueSubjectJobPriorityAnimation,
-			fynca.QueueSubjectJobPriorityLow,
-		},
-		Retention: nats.WorkQueuePolicy,
-	})
-	logrus.Debugf("creating stream %s", s.config.NATSJobStatusStreamName)
-	js.AddStream(&nats.StreamConfig{
-		Name:      s.config.NATSJobStatusStreamName,
-		Retention: nats.WorkQueuePolicy,
-	})
-
-	logrus.Debugf("job timeout: %s", s.config.JobTimeout)
-
-	// start background listener for job updates from workers
-	go s.jobStatusListener()
-
-	// start background listener for job archive requests
-	go s.jobArchiveListener()
+	// kv for worker control
+	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
+		Bucket: s.config.NATSKVBucketWorkerControl,
+		TTL:    workerControlMessageTTL,
+	}); err != nil {
+		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketWorkerControl)
+	}
 
 	return nil
 }
 
 func (s *service) Stop() error {
-	if sub := s.serverQueueSubscription; sub != nil {
-		sub.Unsubscribe()
-		sub.Drain()
-	}
 	return nil
 }

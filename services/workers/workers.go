@@ -1,9 +1,9 @@
-package render
+package workers
 
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
 	"github.com/gogo/protobuf/proto"
 )
 

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 )

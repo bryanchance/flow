@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	jobapi "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	workersapi "git.underland.io/ehazlett/fynca/api/services/workers/v1"
 	"git.underland.io/ehazlett/fynca/datastore"
 	"git.underland.io/ehazlett/fynca/pkg/profiler"
 	"git.underland.io/ehazlett/fynca/version"
@@ -165,9 +166,9 @@ func (w *Worker) Run() error {
 					continue
 				}
 
-				workerJob := api.WorkerJob{}
+				workerJob := jobapi.WorkerJob{}
 				if err := proto.Unmarshal(m.Data, &workerJob); err != nil {
-					logrus.WithError(err).Error("error unmarshaling api.WorkerJob from message")
+					logrus.WithError(err).Error("error unmarshaling jobapi.WorkerJob from message")
 					continue
 				}
 				logrus.Debugf("received worker job %s", workerJob.ID)
@@ -194,14 +195,14 @@ func (w *Worker) Run() error {
 
 				ctx, cancel := context.WithTimeout(context.Background(), w.config.GetJobTimeout())
 
-				result := &api.JobResult{}
+				result := &jobapi.JobResult{}
 
 				var pErr error
 				switch v := workerJob.GetJob().(type) {
-				case *api.WorkerJob_FrameJob:
+				case *jobapi.WorkerJob_FrameJob:
 					pCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, v.FrameJob.Request.Namespace)
 					result, pErr = w.processFrameJob(pCtx, v.FrameJob)
-				case *api.WorkerJob_SliceJob:
+				case *jobapi.WorkerJob_SliceJob:
 					pCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, v.SliceJob.Request.Namespace)
 					result, pErr = w.processSliceJob(pCtx, v.SliceJob)
 				default:
@@ -225,9 +226,9 @@ func (w *Worker) Run() error {
 						// no timeout; requeue job
 						logrus.WithError(pErr).Error("error occurred while processing job")
 						if result == nil {
-							result = &api.JobResult{}
+							result = &jobapi.JobResult{}
 						}
-						result.Status = api.JobStatus_ERROR
+						result.Status = jobapi.JobStatus_ERROR
 						result.Error = pErr.Error()
 						cancel()
 					}
@@ -244,7 +245,7 @@ func (w *Worker) Run() error {
 				js.Publish(w.config.NATSJobStatusStreamName, data)
 
 				// ack message for completion
-				if result.Status == api.JobStatus_ERROR {
+				if result.Status == jobapi.JobStatus_ERROR {
 					logrus.WithError(pErr).Infof("error processing job; requeueing %s", jobID)
 					// add to failed job cache to prevent reprocessing immediately
 					if err := w.failedJobCache.Set(jobID, true); err != nil {
@@ -290,7 +291,7 @@ func (w *Worker) getMinioClient() (*minio.Client, error) {
 	})
 }
 
-func (w *Worker) getWorkerInfo() (*api.Worker, error) {
+func (w *Worker) getWorkerInfo() (*workersapi.Worker, error) {
 	gpuInfo := []string{}
 	for _, gpu := range w.gpus {
 		gpuInfo = append(gpuInfo, fmt.Sprintf("%s: %s", gpu.Vendor, gpu.Product))
@@ -311,7 +312,7 @@ func (w *Worker) getWorkerInfo() (*api.Worker, error) {
 		return nil, err
 	}
 
-	return &api.Worker{
+	return &workersapi.Worker{
 		Name:            w.id,
 		Version:         version.BuildVersion(),
 		CPUs:            uint32(cpus),

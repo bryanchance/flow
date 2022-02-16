@@ -6,6 +6,7 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import weak "google/protobuf/empty.proto";
+import "git.underland.io/ehazlett/fynca/api/services/workers/v1/workers.proto";
 
 option go_package = "git.underland.io/ehazlett/fynca/api/services/jobs/v1;jobs";
 
@@ -17,10 +18,8 @@ service Jobs {
         rpc QueueJob(stream QueueJobRequest) returns (QueueJobResponse);
         rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
         rpc GetJob(GetJobRequest) returns (GetJobResponse);
-        rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
         rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
         rpc GetLatestRender(GetLatestRenderRequest) returns (GetLatestRenderResponse);
-        rpc ControlWorker(ControlWorkerRequest) returns (ControlWorkerResponse);
         rpc Version(VersionRequest) returns (VersionResponse);
         rpc JobLog(JobLogRequest) returns (JobLogResponse);
         rpc RenderLog(RenderLogRequest) returns (RenderLogResponse);
@@ -69,18 +68,6 @@ message QueueJobResponse {
         string uuid = 1 [(gogoproto.customname) = "UUID"];
 }
 
-message Worker {
-        string name = 1;
-        string version = 2;
-        uint32 cpus = 3 [(gogoproto.customname) = "CPUs"];
-        int64 memory_total = 4;
-        int64 memory_available = 5;
-        repeated string gpus = 6 [(gogoproto.customname) = "GPUs"];
-        double load1 = 7;
-        double load5 = 8;
-        double load15 = 9;
-}
-
 enum JobStatus {
         QUEUED = 0;
         RENDERING = 1;
@@ -108,7 +95,7 @@ message FrameJob {
         string job_source = 3;
         int64 render_frame = 4;
         uint64 sequence_id = 5 [(gogoproto.customname) = "SequenceID"];
-        Worker worker = 6;
+        fynca.services.workers.v1.Worker worker = 6;
         repeated SliceJob slice_jobs = 7;
         google.protobuf.Timestamp queued_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp started_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
@@ -127,7 +114,7 @@ message SliceJob {
         float render_slice_min_y = 8;
         float render_slice_max_y = 9;
         int64 render_frame = 10;
-        Worker worker = 11;
+        fynca.services.workers.v1.Worker worker = 11;
         google.protobuf.Timestamp queued_at = 12 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp started_at = 13 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp finished_at = 14 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
@@ -168,12 +155,6 @@ message GetJobResponse {
         Job job = 1;
 }
 
-message ListWorkersRequest {}
-
-message ListWorkersResponse {
-        repeated Worker workers = 1;
-}
-
 message DeleteJobRequest {
         string id = 1 [(gogoproto.customname) = "ID"];
 }
@@ -188,17 +169,6 @@ message GetLatestRenderResponse {
         string url = 1;
         int64 frame = 2;
 }
-
-message ControlWorkerRequest {
-        string worker_id = 1 [(gogoproto.customname) = "WorkerID"];
-        oneof message {
-                WorkerStop stop = 2;
-        }
-}
-
-message WorkerStop {}
-
-message ControlWorkerResponse {}
 
 message VersionRequest {}
 

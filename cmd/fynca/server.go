@@ -12,7 +12,8 @@ import (
 	"git.underland.io/ehazlett/fynca/server"
 	"git.underland.io/ehazlett/fynca/services"
 	accountsservice "git.underland.io/ehazlett/fynca/services/accounts"
-	renderservice "git.underland.io/ehazlett/fynca/services/jobs"
+	jobsservice "git.underland.io/ehazlett/fynca/services/jobs"
+	workersservice "git.underland.io/ehazlett/fynca/services/workers"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
@@ -54,7 +55,8 @@ func serverAction(clix *cli.Context) error {
 	}
 
 	svcs := []func(cfg *fynca.Config) (services.Service, error){
-		renderservice.New,
+		jobsservice.New,
+		workersservice.New,
 	}
 
 	if cfg.Authenticator != nil && cfg.Authenticator.Name != "none" {
