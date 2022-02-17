@@ -1,0 +1,16 @@
+[Unit]
+Description=fynca worker
+Documentation=https://fynca.io
+After=network.target local-fs.target
+
+[Service]
+ExecStart=/usr/local/bin/fynca-worker -D -c /etc/fynca.toml
+Restart=always
+RestartSec=5
+LimitNPROC=infinity
+LimitCORE=infinity
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target
+

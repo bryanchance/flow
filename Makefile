@@ -1,5 +1,5 @@
-GOOS?=
-GOARCH?=
+GOOS?=$(shell go env GOOS)
+GOARCH?=$(shell go env GOARCH)
 COMMIT?=`git rev-parse --short HEAD`
 APP=fynca
 DAEMON=fynca
@@ -44,6 +44,8 @@ $(DAEMON): bindir
 $(WORKER): bindir
 	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD}"
 	@cd cmd/$(WORKER) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(WORKER)$(EXT) .
+	@mkdir -p bin/updates/fynca-worker/
+	@cp ./bin/$(WORKER)$(EXT) ./bin/updates/fynca-worker/$(GOOS)-$(GOARCH)
 
 vet:
 	@echo " -> $@"
@@ -52,10 +54,6 @@ vet:
 lint:
 	@echo " -> $@"
 	@golint -set_exit_status ${PACKAGES}
-
-cyclo:
-	@echo " -> $@"
-	@gocyclo -over 20 ${CYCLO_PACKAGES}
 
 check: vet lint
 

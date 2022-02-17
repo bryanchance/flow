@@ -8,3 +8,10 @@ func WithToken(token string) ClientOpt {
 		c.Token = token
 	}
 }
+
+// WithUsername is an opt that sets the client username
+func WithUsername(username string) ClientOpt {
+	return func(c *ClientConfig) {
+		c.Username = username
+	}
+}

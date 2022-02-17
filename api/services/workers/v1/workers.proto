@@ -26,12 +26,18 @@ message ListWorkersResponse {
 
 message ControlWorkerRequest {
         string worker_id = 1 [(gogoproto.customname) = "WorkerID"];
+        string requestor = 2;
         oneof message {
-                WorkerStop stop = 2;
+                WorkerStop stop = 3;
+                WorkerUpdate update = 4;
         }
 }
 
 message WorkerStop {}
+
+message WorkerUpdate {
+        string url = 1 [(gogoproto.customname) = "URL"];
+}
 
 message ControlWorkerResponse {}
 

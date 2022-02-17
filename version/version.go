@@ -7,7 +7,7 @@ var (
 	Name = "fynca"
 
 	// Version defines the application version
-	Version = "0.1.0"
+	Version = "0.1.0.0002"
 
 	// Description is the application description
 	Description = "fynca render management"
