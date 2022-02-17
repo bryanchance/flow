@@ -36,8 +36,8 @@ var (
 
 	// admin required routes
 	adminRoutes = []string{
-		"Jobs/ListWorkers",
-		"Jobs/ControlWorker",
+		"Workers/ListWorkers",
+		"Workers/ControlWorker",
 		// TODO: add RegisterAccount gRPC method to allow user signup
 		"Accounts/CreateAccount",
 		"Accounts/DeleteAccount",

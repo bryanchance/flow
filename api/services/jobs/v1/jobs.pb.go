@@ -7,6 +7,7 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
+	v1 "git.underland.io/ehazlett/fynca/api/services/workers/v1"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
@@ -421,117 +422,6 @@ func (m *QueueJobResponse) GetUUID() string {
 	return ""
 }
 
-type Worker struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Version              string   `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	CPUs                 uint32   `protobuf:"varint,3,opt,name=cpus,proto3" json:"cpus,omitempty"`
-	MemoryTotal          int64    `protobuf:"varint,4,opt,name=memory_total,json=memoryTotal,proto3" json:"memory_total,omitempty"`
-	MemoryAvailable      int64    `protobuf:"varint,5,opt,name=memory_available,json=memoryAvailable,proto3" json:"memory_available,omitempty"`
-	GPUs                 []string `protobuf:"bytes,6,rep,name=gpus,proto3" json:"gpus,omitempty"`
-	Load1                float64  `protobuf:"fixed64,7,opt,name=load1,proto3" json:"load1,omitempty"`
-	Load5                float64  `protobuf:"fixed64,8,opt,name=load5,proto3" json:"load5,omitempty"`
-	Load15               float64  `protobuf:"fixed64,9,opt,name=load15,proto3" json:"load15,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *Worker) Reset()         { *m = Worker{} }
-func (m *Worker) String() string { return proto.CompactTextString(m) }
-func (*Worker) ProtoMessage()    {}
-func (*Worker) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{3}
-}
-func (m *Worker) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Worker) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Worker.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Worker) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Worker.Merge(m, src)
-}
-func (m *Worker) XXX_Size() int {
-	return m.Size()
-}
-func (m *Worker) XXX_DiscardUnknown() {
-	xxx_messageInfo_Worker.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Worker proto.InternalMessageInfo
-
-func (m *Worker) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-func (m *Worker) GetVersion() string {
-	if m != nil {
-		return m.Version
-	}
-	return ""
-}
-
-func (m *Worker) GetCPUs() uint32 {
-	if m != nil {
-		return m.CPUs
-	}
-	return 0
-}
-
-func (m *Worker) GetMemoryTotal() int64 {
-	if m != nil {
-		return m.MemoryTotal
-	}
-	return 0
-}
-
-func (m *Worker) GetMemoryAvailable() int64 {
-	if m != nil {
-		return m.MemoryAvailable
-	}
-	return 0
-}
-
-func (m *Worker) GetGPUs() []string {
-	if m != nil {
-		return m.GPUs
-	}
-	return nil
-}
-
-func (m *Worker) GetLoad1() float64 {
-	if m != nil {
-		return m.Load1
-	}
-	return 0
-}
-
-func (m *Worker) GetLoad5() float64 {
-	if m != nil {
-		return m.Load5
-	}
-	return 0
-}
-
-func (m *Worker) GetLoad15() float64 {
-	if m != nil {
-		return m.Load15
-	}
-	return 0
-}
-
 type Job struct {
 	ID                   string        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Request              *JobRequest   `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
@@ -553,7 +443,7 @@ func (m *Job) Reset()         { *m = Job{} }
 func (m *Job) String() string { return proto.CompactTextString(m) }
 func (*Job) ProtoMessage()    {}
 func (*Job) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{4}
+	return fileDescriptor_e53402233b70a94a, []int{3}
 }
 func (m *Job) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -665,7 +555,7 @@ type FrameJob struct {
 	JobSource            string      `protobuf:"bytes,3,opt,name=job_source,json=jobSource,proto3" json:"job_source,omitempty"`
 	RenderFrame          int64       `protobuf:"varint,4,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
 	SequenceID           uint64      `protobuf:"varint,5,opt,name=sequence_id,json=sequenceId,proto3" json:"sequence_id,omitempty"`
-	Worker               *Worker     `protobuf:"bytes,6,opt,name=worker,proto3" json:"worker,omitempty"`
+	Worker               *v1.Worker  `protobuf:"bytes,6,opt,name=worker,proto3" json:"worker,omitempty"`
 	SliceJobs            []*SliceJob `protobuf:"bytes,7,rep,name=slice_jobs,json=sliceJobs,proto3" json:"slice_jobs,omitempty"`
 	QueuedAt             time.Time   `protobuf:"bytes,8,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
 	StartedAt            time.Time   `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
@@ -680,7 +570,7 @@ func (m *FrameJob) Reset()         { *m = FrameJob{} }
 func (m *FrameJob) String() string { return proto.CompactTextString(m) }
 func (*FrameJob) ProtoMessage()    {}
 func (*FrameJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{5}
+	return fileDescriptor_e53402233b70a94a, []int{4}
 }
 func (m *FrameJob) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -744,7 +634,7 @@ func (m *FrameJob) GetSequenceID() uint64 {
 	return 0
 }
 
-func (m *FrameJob) GetWorker() *Worker {
+func (m *FrameJob) GetWorker() *v1.Worker {
 	if m != nil {
 		return m.Worker
 	}
@@ -797,7 +687,7 @@ type SliceJob struct {
 	RenderSliceMinY      float32     `protobuf:"fixed32,8,opt,name=render_slice_min_y,json=renderSliceMinY,proto3" json:"render_slice_min_y,omitempty"`
 	RenderSliceMaxY      float32     `protobuf:"fixed32,9,opt,name=render_slice_max_y,json=renderSliceMaxY,proto3" json:"render_slice_max_y,omitempty"`
 	RenderFrame          int64       `protobuf:"varint,10,opt,name=render_frame,json=renderFrame,proto3" json:"render_frame,omitempty"`
-	Worker               *Worker     `protobuf:"bytes,11,opt,name=worker,proto3" json:"worker,omitempty"`
+	Worker               *v1.Worker  `protobuf:"bytes,11,opt,name=worker,proto3" json:"worker,omitempty"`
 	QueuedAt             time.Time   `protobuf:"bytes,12,opt,name=queued_at,json=queuedAt,proto3,stdtime" json:"queued_at"`
 	StartedAt            time.Time   `protobuf:"bytes,13,opt,name=started_at,json=startedAt,proto3,stdtime" json:"started_at"`
 	FinishedAt           time.Time   `protobuf:"bytes,14,opt,name=finished_at,json=finishedAt,proto3,stdtime" json:"finished_at"`
@@ -811,7 +701,7 @@ func (m *SliceJob) Reset()         { *m = SliceJob{} }
 func (m *SliceJob) String() string { return proto.CompactTextString(m) }
 func (*SliceJob) ProtoMessage()    {}
 func (*SliceJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{6}
+	return fileDescriptor_e53402233b70a94a, []int{5}
 }
 func (m *SliceJob) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -910,7 +800,7 @@ func (m *SliceJob) GetRenderFrame() int64 {
 	return 0
 }
 
-func (m *SliceJob) GetWorker() *Worker {
+func (m *SliceJob) GetWorker() *v1.Worker {
 	if m != nil {
 		return m.Worker
 	}
@@ -960,7 +850,7 @@ func (m *WorkerJob) Reset()         { *m = WorkerJob{} }
 func (m *WorkerJob) String() string { return proto.CompactTextString(m) }
 func (*WorkerJob) ProtoMessage()    {}
 func (*WorkerJob) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{7}
+	return fileDescriptor_e53402233b70a94a, []int{6}
 }
 func (m *WorkerJob) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1060,7 +950,7 @@ func (m *JobResult) Reset()         { *m = JobResult{} }
 func (m *JobResult) String() string { return proto.CompactTextString(m) }
 func (*JobResult) ProtoMessage()    {}
 func (*JobResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{8}
+	return fileDescriptor_e53402233b70a94a, []int{7}
 }
 func (m *JobResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1179,7 +1069,7 @@ func (m *ListJobsRequest) Reset()         { *m = ListJobsRequest{} }
 func (m *ListJobsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListJobsRequest) ProtoMessage()    {}
 func (*ListJobsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{9}
+	return fileDescriptor_e53402233b70a94a, []int{8}
 }
 func (m *ListJobsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1219,7 +1109,7 @@ func (m *ListJobsResponse) Reset()         { *m = ListJobsResponse{} }
 func (m *ListJobsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListJobsResponse) ProtoMessage()    {}
 func (*ListJobsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{10}
+	return fileDescriptor_e53402233b70a94a, []int{9}
 }
 func (m *ListJobsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1266,7 +1156,7 @@ func (m *GetJobRequest) Reset()         { *m = GetJobRequest{} }
 func (m *GetJobRequest) String() string { return proto.CompactTextString(m) }
 func (*GetJobRequest) ProtoMessage()    {}
 func (*GetJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{11}
+	return fileDescriptor_e53402233b70a94a, []int{10}
 }
 func (m *GetJobRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1313,7 +1203,7 @@ func (m *GetJobResponse) Reset()         { *m = GetJobResponse{} }
 func (m *GetJobResponse) String() string { return proto.CompactTextString(m) }
 func (*GetJobResponse) ProtoMessage()    {}
 func (*GetJobResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{12}
+	return fileDescriptor_e53402233b70a94a, []int{11}
 }
 func (m *GetJobResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1349,92 +1239,6 @@ func (m *GetJobResponse) GetJob() *Job {
 	return nil
 }
 
-type ListWorkersRequest struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ListWorkersRequest) Reset()         { *m = ListWorkersRequest{} }
-func (m *ListWorkersRequest) String() string { return proto.CompactTextString(m) }
-func (*ListWorkersRequest) ProtoMessage()    {}
-func (*ListWorkersRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{13}
-}
-func (m *ListWorkersRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListWorkersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListWorkersRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListWorkersRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListWorkersRequest.Merge(m, src)
-}
-func (m *ListWorkersRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListWorkersRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListWorkersRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListWorkersRequest proto.InternalMessageInfo
-
-type ListWorkersResponse struct {
-	Workers              []*Worker `protobuf:"bytes,1,rep,name=workers,proto3" json:"workers,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
-}
-
-func (m *ListWorkersResponse) Reset()         { *m = ListWorkersResponse{} }
-func (m *ListWorkersResponse) String() string { return proto.CompactTextString(m) }
-func (*ListWorkersResponse) ProtoMessage()    {}
-func (*ListWorkersResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{14}
-}
-func (m *ListWorkersResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ListWorkersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ListWorkersResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ListWorkersResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListWorkersResponse.Merge(m, src)
-}
-func (m *ListWorkersResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *ListWorkersResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListWorkersResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ListWorkersResponse proto.InternalMessageInfo
-
-func (m *ListWorkersResponse) GetWorkers() []*Worker {
-	if m != nil {
-		return m.Workers
-	}
-	return nil
-}
-
 type DeleteJobRequest struct {
 	ID                   string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -1446,7 +1250,7 @@ func (m *DeleteJobRequest) Reset()         { *m = DeleteJobRequest{} }
 func (m *DeleteJobRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteJobRequest) ProtoMessage()    {}
 func (*DeleteJobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{15}
+	return fileDescriptor_e53402233b70a94a, []int{12}
 }
 func (m *DeleteJobRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1495,7 +1299,7 @@ func (m *GetLatestRenderRequest) Reset()         { *m = GetLatestRenderRequest{}
 func (m *GetLatestRenderRequest) String() string { return proto.CompactTextString(m) }
 func (*GetLatestRenderRequest) ProtoMessage()    {}
 func (*GetLatestRenderRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{16}
+	return fileDescriptor_e53402233b70a94a, []int{13}
 }
 func (m *GetLatestRenderRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1557,7 +1361,7 @@ func (m *GetLatestRenderResponse) Reset()         { *m = GetLatestRenderResponse
 func (m *GetLatestRenderResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLatestRenderResponse) ProtoMessage()    {}
 func (*GetLatestRenderResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{17}
+	return fileDescriptor_e53402233b70a94a, []int{14}
 }
 func (m *GetLatestRenderResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1600,167 +1404,6 @@ func (m *GetLatestRenderResponse) GetFrame() int64 {
 	return 0
 }
 
-type ControlWorkerRequest struct {
-	WorkerID string `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
-	// Types that are valid to be assigned to Message:
-	//	*ControlWorkerRequest_Stop
-	Message              isControlWorkerRequest_Message `protobuf_oneof:"message"`
-	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
-	XXX_unrecognized     []byte                         `json:"-"`
-	XXX_sizecache        int32                          `json:"-"`
-}
-
-func (m *ControlWorkerRequest) Reset()         { *m = ControlWorkerRequest{} }
-func (m *ControlWorkerRequest) String() string { return proto.CompactTextString(m) }
-func (*ControlWorkerRequest) ProtoMessage()    {}
-func (*ControlWorkerRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{18}
-}
-func (m *ControlWorkerRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ControlWorkerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ControlWorkerRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ControlWorkerRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ControlWorkerRequest.Merge(m, src)
-}
-func (m *ControlWorkerRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *ControlWorkerRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ControlWorkerRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ControlWorkerRequest proto.InternalMessageInfo
-
-type isControlWorkerRequest_Message interface {
-	isControlWorkerRequest_Message()
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type ControlWorkerRequest_Stop struct {
-	Stop *WorkerStop `protobuf:"bytes,2,opt,name=stop,proto3,oneof" json:"stop,omitempty"`
-}
-
-func (*ControlWorkerRequest_Stop) isControlWorkerRequest_Message() {}
-
-func (m *ControlWorkerRequest) GetMessage() isControlWorkerRequest_Message {
-	if m != nil {
-		return m.Message
-	}
-	return nil
-}
-
-func (m *ControlWorkerRequest) GetWorkerID() string {
-	if m != nil {
-		return m.WorkerID
-	}
-	return ""
-}
-
-func (m *ControlWorkerRequest) GetStop() *WorkerStop {
-	if x, ok := m.GetMessage().(*ControlWorkerRequest_Stop); ok {
-		return x.Stop
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*ControlWorkerRequest) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*ControlWorkerRequest_Stop)(nil),
-	}
-}
-
-type WorkerStop struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *WorkerStop) Reset()         { *m = WorkerStop{} }
-func (m *WorkerStop) String() string { return proto.CompactTextString(m) }
-func (*WorkerStop) ProtoMessage()    {}
-func (*WorkerStop) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{19}
-}
-func (m *WorkerStop) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *WorkerStop) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_WorkerStop.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *WorkerStop) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WorkerStop.Merge(m, src)
-}
-func (m *WorkerStop) XXX_Size() int {
-	return m.Size()
-}
-func (m *WorkerStop) XXX_DiscardUnknown() {
-	xxx_messageInfo_WorkerStop.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_WorkerStop proto.InternalMessageInfo
-
-type ControlWorkerResponse struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *ControlWorkerResponse) Reset()         { *m = ControlWorkerResponse{} }
-func (m *ControlWorkerResponse) String() string { return proto.CompactTextString(m) }
-func (*ControlWorkerResponse) ProtoMessage()    {}
-func (*ControlWorkerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{20}
-}
-func (m *ControlWorkerResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ControlWorkerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ControlWorkerResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ControlWorkerResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ControlWorkerResponse.Merge(m, src)
-}
-func (m *ControlWorkerResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *ControlWorkerResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ControlWorkerResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ControlWorkerResponse proto.InternalMessageInfo
-
 type VersionRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1771,7 +1414,7 @@ func (m *VersionRequest) Reset()         { *m = VersionRequest{} }
 func (m *VersionRequest) String() string { return proto.CompactTextString(m) }
 func (*VersionRequest) ProtoMessage()    {}
 func (*VersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{21}
+	return fileDescriptor_e53402233b70a94a, []int{15}
 }
 func (m *VersionRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1815,7 +1458,7 @@ func (m *VersionResponse) Reset()         { *m = VersionResponse{} }
 func (m *VersionResponse) String() string { return proto.CompactTextString(m) }
 func (*VersionResponse) ProtoMessage()    {}
 func (*VersionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{22}
+	return fileDescriptor_e53402233b70a94a, []int{16}
 }
 func (m *VersionResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1892,7 +1535,7 @@ func (m *RenderLogRequest) Reset()         { *m = RenderLogRequest{} }
 func (m *RenderLogRequest) String() string { return proto.CompactTextString(m) }
 func (*RenderLogRequest) ProtoMessage()    {}
 func (*RenderLogRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{23}
+	return fileDescriptor_e53402233b70a94a, []int{17}
 }
 func (m *RenderLogRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1955,7 +1598,7 @@ func (m *RenderLog) Reset()         { *m = RenderLog{} }
 func (m *RenderLog) String() string { return proto.CompactTextString(m) }
 func (*RenderLog) ProtoMessage()    {}
 func (*RenderLog) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{24}
+	return fileDescriptor_e53402233b70a94a, []int{18}
 }
 func (m *RenderLog) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2016,7 +1659,7 @@ func (m *RenderLogResponse) Reset()         { *m = RenderLogResponse{} }
 func (m *RenderLogResponse) String() string { return proto.CompactTextString(m) }
 func (*RenderLogResponse) ProtoMessage()    {}
 func (*RenderLogResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{25}
+	return fileDescriptor_e53402233b70a94a, []int{19}
 }
 func (m *RenderLogResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2063,7 +1706,7 @@ func (m *JobLogRequest) Reset()         { *m = JobLogRequest{} }
 func (m *JobLogRequest) String() string { return proto.CompactTextString(m) }
 func (*JobLogRequest) ProtoMessage()    {}
 func (*JobLogRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{26}
+	return fileDescriptor_e53402233b70a94a, []int{20}
 }
 func (m *JobLogRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2112,7 +1755,7 @@ func (m *JobLog) Reset()         { *m = JobLog{} }
 func (m *JobLog) String() string { return proto.CompactTextString(m) }
 func (*JobLog) ProtoMessage()    {}
 func (*JobLog) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{27}
+	return fileDescriptor_e53402233b70a94a, []int{21}
 }
 func (m *JobLog) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2173,7 +1816,7 @@ func (m *JobLogResponse) Reset()         { *m = JobLogResponse{} }
 func (m *JobLogResponse) String() string { return proto.CompactTextString(m) }
 func (*JobLogResponse) ProtoMessage()    {}
 func (*JobLogResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{28}
+	return fileDescriptor_e53402233b70a94a, []int{22}
 }
 func (m *JobLogResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2220,7 +1863,7 @@ func (m *GetJobArchiveRequest) Reset()         { *m = GetJobArchiveRequest{} }
 func (m *GetJobArchiveRequest) String() string { return proto.CompactTextString(m) }
 func (*GetJobArchiveRequest) ProtoMessage()    {}
 func (*GetJobArchiveRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{29}
+	return fileDescriptor_e53402233b70a94a, []int{23}
 }
 func (m *GetJobArchiveRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2267,7 +1910,7 @@ func (m *JobArchive) Reset()         { *m = JobArchive{} }
 func (m *JobArchive) String() string { return proto.CompactTextString(m) }
 func (*JobArchive) ProtoMessage()    {}
 func (*JobArchive) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{30}
+	return fileDescriptor_e53402233b70a94a, []int{24}
 }
 func (m *JobArchive) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2315,7 +1958,7 @@ func (m *GetJobArchiveResponse) Reset()         { *m = GetJobArchiveResponse{} }
 func (m *GetJobArchiveResponse) String() string { return proto.CompactTextString(m) }
 func (*GetJobArchiveResponse) ProtoMessage()    {}
 func (*GetJobArchiveResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e53402233b70a94a, []int{31}
+	return fileDescriptor_e53402233b70a94a, []int{25}
 }
 func (m *GetJobArchiveResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2365,7 +2008,6 @@ func init() {
 	proto.RegisterType((*QueueJobRequest)(nil), "fynca.services.jobs.v1.QueueJobRequest")
 	proto.RegisterType((*JobRequest)(nil), "fynca.services.jobs.v1.JobRequest")
 	proto.RegisterType((*QueueJobResponse)(nil), "fynca.services.jobs.v1.QueueJobResponse")
-	proto.RegisterType((*Worker)(nil), "fynca.services.jobs.v1.Worker")
 	proto.RegisterType((*Job)(nil), "fynca.services.jobs.v1.Job")
 	proto.RegisterType((*FrameJob)(nil), "fynca.services.jobs.v1.FrameJob")
 	proto.RegisterType((*SliceJob)(nil), "fynca.services.jobs.v1.SliceJob")
@@ -2375,14 +2017,9 @@ func init() {
 	proto.RegisterType((*ListJobsResponse)(nil), "fynca.services.jobs.v1.ListJobsResponse")
 	proto.RegisterType((*GetJobRequest)(nil), "fynca.services.jobs.v1.GetJobRequest")
 	proto.RegisterType((*GetJobResponse)(nil), "fynca.services.jobs.v1.GetJobResponse")
-	proto.RegisterType((*ListWorkersRequest)(nil), "fynca.services.jobs.v1.ListWorkersRequest")
-	proto.RegisterType((*ListWorkersResponse)(nil), "fynca.services.jobs.v1.ListWorkersResponse")
 	proto.RegisterType((*DeleteJobRequest)(nil), "fynca.services.jobs.v1.DeleteJobRequest")
 	proto.RegisterType((*GetLatestRenderRequest)(nil), "fynca.services.jobs.v1.GetLatestRenderRequest")
 	proto.RegisterType((*GetLatestRenderResponse)(nil), "fynca.services.jobs.v1.GetLatestRenderResponse")
-	proto.RegisterType((*ControlWorkerRequest)(nil), "fynca.services.jobs.v1.ControlWorkerRequest")
-	proto.RegisterType((*WorkerStop)(nil), "fynca.services.jobs.v1.WorkerStop")
-	proto.RegisterType((*ControlWorkerResponse)(nil), "fynca.services.jobs.v1.ControlWorkerResponse")
 	proto.RegisterType((*VersionRequest)(nil), "fynca.services.jobs.v1.VersionRequest")
 	proto.RegisterType((*VersionResponse)(nil), "fynca.services.jobs.v1.VersionResponse")
 	proto.RegisterType((*RenderLogRequest)(nil), "fynca.services.jobs.v1.RenderLogRequest")
@@ -2401,136 +2038,122 @@ func init() {
 }
 
 var fileDescriptor_e53402233b70a94a = []byte{
-	// 2059 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x59, 0x4b, 0x73, 0xe3, 0xc6,
-	0x11, 0x16, 0xf8, 0x46, 0x83, 0x14, 0xb1, 0x13, 0x59, 0xa6, 0xe9, 0x44, 0x94, 0x61, 0x6f, 0x56,
-	0x2b, 0x7b, 0xc9, 0xac, 0x52, 0xeb, 0xd8, 0x89, 0x2b, 0x8a, 0x28, 0xd2, 0x12, 0x37, 0x5a, 0x49,
-	0x86, 0xc4, 0x7d, 0xb8, 0x2a, 0xc5, 0x80, 0xe4, 0x88, 0x82, 0x0c, 0x62, 0x68, 0x60, 0xa0, 0x48,
-	0x3e, 0xbb, 0x72, 0x4e, 0x55, 0xaa, 0x52, 0xf9, 0x11, 0xf9, 0x0b, 0xb9, 0xfb, 0x98, 0x53, 0x8e,
-	0x4a, 0x4a, 0x47, 0xff, 0x81, 0x5c, 0x53, 0xf3, 0x00, 0x9f, 0xa2, 0x28, 0xae, 0x5d, 0xe5, 0x2a,
-	0x9f, 0x88, 0xe9, 0xf9, 0xba, 0x67, 0xba, 0xe7, 0xeb, 0xee, 0x01, 0x08, 0x9b, 0x1d, 0x9b, 0x16,
-	0x03, 0xb7, 0x8d, 0x3d, 0xc7, 0x72, 0xdb, 0x45, 0x9b, 0x94, 0xf0, 0xa9, 0xf5, 0x95, 0x83, 0x29,
-	0x2d, 0x9d, 0x5c, 0xba, 0x2d, 0xab, 0x64, 0xf5, 0xec, 0x92, 0x8f, 0xbd, 0x73, 0xbb, 0x85, 0xfd,
-	0xd2, 0x19, 0x69, 0xfa, 0xa5, 0xf3, 0xc7, 0xfc, 0xb7, 0xd8, 0xf3, 0x08, 0x25, 0x68, 0x99, 0xc3,
-	0x8a, 0x21, 0xa4, 0xc8, 0xa7, 0xce, 0x1f, 0xe7, 0x97, 0x3a, 0xa4, 0x43, 0x38, 0xa4, 0xc4, 0x9e,
-	0x04, 0x3a, 0xbf, 0xd2, 0x21, 0xa4, 0xe3, 0xe0, 0x12, 0x1f, 0x35, 0x83, 0x93, 0x52, 0x3b, 0xf0,
-	0x2c, 0x6a, 0x13, 0x57, 0xce, 0x17, 0xc6, 0xe7, 0xa9, 0xdd, 0xc5, 0x3e, 0xb5, 0xba, 0x3d, 0x09,
-	0x78, 0x7b, 0x1c, 0x80, 0xbb, 0x3d, 0x7a, 0x29, 0x26, 0x8d, 0xaf, 0x20, 0xfb, 0x59, 0x80, 0x03,
-	0xfc, 0x94, 0x34, 0x4d, 0xfc, 0x65, 0x80, 0x7d, 0x8a, 0x7e, 0x0b, 0x49, 0x4f, 0x3c, 0xe6, 0x94,
-	0x55, 0x65, 0x4d, 0xdb, 0x30, 0x8a, 0x37, 0x6f, 0xb8, 0x38, 0x50, 0xda, 0x5d, 0x30, 0x43, 0x25,
-	0x54, 0x00, 0x68, 0x9d, 0x06, 0xee, 0x17, 0x8d, 0xb6, 0x45, 0xad, 0x5c, 0x64, 0x55, 0x59, 0x4b,
-	0xef, 0x2e, 0x98, 0x2a, 0x97, 0x55, 0x2c, 0x6a, 0x95, 0x13, 0x10, 0x63, 0x53, 0xc6, 0xdf, 0xe2,
-	0x00, 0x43, 0xeb, 0x22, 0x88, 0xb9, 0x56, 0x17, 0xf3, 0x45, 0x55, 0x93, 0x3f, 0xa3, 0x77, 0x20,
-	0xed, 0x61, 0x9f, 0x38, 0x01, 0x73, 0xb8, 0x71, 0xc1, 0xad, 0x45, 0x4d, 0x6d, 0x20, 0x7b, 0x39,
-	0x06, 0xb9, 0xcc, 0x45, 0xc7, 0x21, 0xaf, 0xd0, 0x43, 0xd0, 0x87, 0x20, 0x7e, 0xcb, 0x72, 0x70,
-	0x2e, 0xc6, 0x61, 0xd9, 0x81, 0xfc, 0x88, 0x89, 0xd1, 0x7d, 0x58, 0xf4, 0x30, 0x3b, 0xdb, 0x86,
-	0x6f, 0x75, 0x7b, 0x0e, 0xf6, 0x73, 0x71, 0x0e, 0xcc, 0x08, 0xe9, 0x91, 0x10, 0xa2, 0x0f, 0x00,
-	0x85, 0x30, 0x6a, 0x79, 0xb4, 0x71, 0xe2, 0xb1, 0x9d, 0x27, 0x38, 0x54, 0x97, 0x50, 0x36, 0xf1,
-	0x29, 0x93, 0xa3, 0x35, 0x90, 0xb2, 0x06, 0x76, 0xdb, 0x12, 0x9b, 0xe4, 0x58, 0xb9, 0x58, 0xd5,
-	0x6d, 0x0b, 0xe4, 0x87, 0xfd, 0xe5, 0x03, 0x1f, 0x37, 0x3a, 0xbd, 0x20, 0x97, 0x5a, 0x55, 0xd6,
-	0x52, 0x65, 0xfd, 0xfa, 0xaa, 0x90, 0x36, 0xf9, 0x4c, 0xdd, 0xc7, 0x3b, 0x87, 0x75, 0x33, 0xed,
-	0xf5, 0x47, 0xbd, 0x00, 0x3d, 0x80, 0xac, 0xd4, 0xeb, 0x79, 0x36, 0xf1, 0x6c, 0x7a, 0x99, 0x53,
-	0x87, 0x17, 0x38, 0x94, 0x52, 0xf4, 0x16, 0x44, 0x5b, 0xbd, 0x20, 0x07, 0x6c, 0xb2, 0x9c, 0xbc,
-	0xbe, 0x2a, 0x44, 0xb7, 0x0f, 0xeb, 0x26, 0x93, 0xa1, 0x65, 0x48, 0x74, 0x71, 0x97, 0x78, 0x97,
-	0x39, 0x8d, 0xab, 0xca, 0x11, 0x7a, 0x17, 0x32, 0xa1, 0xaf, 0x0e, 0x3b, 0xfe, 0x5c, 0x9a, 0x4f,
-	0xcb, 0x0d, 0x1c, 0x71, 0x19, 0x3b, 0x85, 0x16, 0x71, 0x29, 0x76, 0x69, 0x83, 0x5e, 0xf6, 0x70,
-	0x2e, 0xc3, 0x0f, 0x51, 0x93, 0xb2, 0xe3, 0xcb, 0x1e, 0x46, 0x3f, 0x05, 0x95, 0x9d, 0xa9, 0xdf,
-	0xb3, 0x5a, 0x38, 0xb7, 0xc8, 0xe7, 0x07, 0x02, 0x54, 0xeb, 0xaf, 0x82, 0xdd, 0x8e, 0xed, 0xe2,
-	0x5c, 0x76, 0x55, 0x59, 0x5b, 0xdc, 0x78, 0x6f, 0x1a, 0xf7, 0x4c, 0x19, 0x38, 0x86, 0x0d, 0xf7,
-	0x22, 0x46, 0x68, 0x13, 0x52, 0xfd, 0x28, 0xe8, 0xdc, 0xca, 0xbb, 0xb7, 0x30, 0x38, 0x0c, 0x8d,
-	0xd9, 0x57, 0x32, 0x7e, 0x01, 0xfa, 0x20, 0x29, 0xfc, 0x1e, 0x71, 0x7d, 0xb6, 0xfb, 0x58, 0x10,
-	0xd8, 0x6d, 0xc1, 0xce, 0x72, 0xea, 0xfa, 0xaa, 0x10, 0xab, 0xd7, 0x6b, 0x15, 0x93, 0x4b, 0x8d,
-	0xaf, 0x23, 0x90, 0x78, 0x41, 0xbc, 0x2f, 0xb0, 0x77, 0x23, 0x8d, 0x73, 0x90, 0x3c, 0xc7, 0x9e,
-	0x6f, 0x13, 0x97, 0x33, 0x58, 0x35, 0xc3, 0x21, 0x33, 0xdb, 0xea, 0x05, 0x3e, 0x67, 0x6d, 0x46,
-	0x98, 0xdd, 0x3e, 0xac, 0xfb, 0x26, 0x97, 0xb2, 0xa8, 0x8a, 0x43, 0x68, 0x50, 0x42, 0x2d, 0x47,
-	0x92, 0x56, 0x13, 0xb2, 0x63, 0x26, 0x62, 0xdc, 0x96, 0x10, 0xeb, 0xdc, 0xb2, 0x1d, 0xab, 0xe9,
-	0x60, 0x49, 0xd9, 0xac, 0x90, 0x6f, 0x85, 0x62, 0xb6, 0x56, 0x87, 0xad, 0x95, 0x58, 0x8d, 0x86,
-	0x2e, 0xec, 0xf0, 0xb5, 0x98, 0x14, 0x2d, 0x41, 0xdc, 0x21, 0x56, 0xfb, 0x31, 0x67, 0xa6, 0x62,
-	0x8a, 0x41, 0x28, 0x7d, 0xc2, 0x79, 0x28, 0xa5, 0x4f, 0x18, 0x55, 0xf8, 0xf4, 0x13, 0xce, 0x32,
-	0xc5, 0x94, 0x23, 0xe3, 0xdb, 0x18, 0x44, 0x9f, 0x92, 0x26, 0x5a, 0x86, 0x48, 0x3f, 0x54, 0x89,
-	0xeb, 0xab, 0x42, 0xa4, 0x56, 0x31, 0x23, 0x76, 0x1b, 0x7d, 0x32, 0x28, 0x2d, 0x91, 0xbb, 0x96,
-	0x96, 0x41, 0x61, 0xf9, 0x19, 0xc0, 0x19, 0x69, 0x36, 0x7c, 0x12, 0x78, 0x2d, 0xcc, 0x23, 0xa6,
-	0x9a, 0xea, 0x19, 0x69, 0x1e, 0x71, 0x01, 0x9b, 0x26, 0x01, 0xed, 0x05, 0xb4, 0xd1, 0xb6, 0x3d,
-	0x1e, 0x2a, 0xd5, 0x54, 0x85, 0xa4, 0x62, 0x7b, 0xe8, 0x63, 0x48, 0xf8, 0xd4, 0xa2, 0x81, 0xc8,
-	0xe8, 0xc5, 0x8d, 0x77, 0x6e, 0x59, 0xfa, 0x88, 0x03, 0x4d, 0xa9, 0x80, 0x36, 0x01, 0x78, 0xd2,
-	0x36, 0x18, 0x84, 0x87, 0x4f, 0xdb, 0x58, 0x9d, 0xa6, 0xce, 0x13, 0x99, 0x6d, 0x5f, 0x3d, 0x91,
-	0x4f, 0x3e, 0xda, 0x06, 0x68, 0x79, 0xd8, 0xa2, 0xb8, 0xdd, 0xb0, 0x28, 0x0f, 0xb0, 0xb6, 0x91,
-	0x2f, 0x8a, 0xba, 0x5c, 0x0c, 0xeb, 0x72, 0xf1, 0x38, 0x2c, 0xdc, 0xe5, 0xd4, 0x37, 0x57, 0x85,
-	0x85, 0xbf, 0xfc, 0xa7, 0xa0, 0x98, 0xaa, 0xd4, 0xdb, 0xa2, 0x68, 0x0b, 0xd4, 0x2f, 0x19, 0x2b,
-	0xb9, 0x8d, 0xd4, 0x1c, 0x36, 0x52, 0x42, 0x6d, 0x8b, 0xb2, 0x7d, 0xf0, 0x7a, 0x25, 0x6c, 0xa8,
-	0xf3, 0xec, 0x43, 0xea, 0x6d, 0x51, 0x54, 0x05, 0xed, 0xc4, 0x76, 0x6d, 0xff, 0x54, 0x58, 0x81,
-	0x39, 0xac, 0x40, 0xa8, 0xb8, 0x45, 0x59, 0x96, 0x86, 0x9d, 0x8c, 0x17, 0x1c, 0x6d, 0xe3, 0xad,
-	0x09, 0x1b, 0x15, 0x09, 0x10, 0x26, 0xfe, 0xce, 0x9d, 0x09, 0x95, 0x8c, 0x7f, 0xc7, 0x20, 0x15,
-	0x06, 0xfb, 0x87, 0x61, 0x1c, 0x6f, 0x3d, 0xbc, 0x66, 0x89, 0x9a, 0x1e, 0x0b, 0x5b, 0x0f, 0x93,
-	0x89, 0x82, 0x5e, 0x02, 0xcd, 0x67, 0xc6, 0xdc, 0x16, 0x6e, 0xd8, 0x6d, 0x4e, 0xbd, 0x58, 0x79,
-	0xf1, 0xfa, 0xaa, 0x00, 0x47, 0x52, 0x5c, 0xab, 0x98, 0x10, 0x42, 0x6a, 0x6d, 0xf4, 0x21, 0x24,
-	0xfe, 0xc4, 0x0b, 0x09, 0xef, 0x26, 0xda, 0xc6, 0xca, 0xb4, 0xfd, 0x8a, 0x72, 0x63, 0x4a, 0x34,
-	0xe3, 0x28, 0x2f, 0xcf, 0x82, 0xa3, 0xc9, 0xdb, 0x39, 0xca, 0x8b, 0x36, 0xe7, 0xa8, 0x2f, 0x9f,
-	0xfc, 0x1f, 0x1b, 0xbd, 0x06, 0xe9, 0xae, 0xcd, 0x99, 0xee, 0xc6, 0xff, 0xe2, 0x90, 0x0a, 0x23,
-	0xf4, 0xc3, 0x10, 0x6b, 0x8c, 0x35, 0xb1, 0x99, 0xac, 0x19, 0xba, 0x8f, 0x70, 0x12, 0xd8, 0x6e,
-	0x1b, 0x5f, 0xc8, 0x3e, 0xa0, 0x0f, 0x35, 0xea, 0x1a, 0x93, 0xa3, 0xf7, 0xc7, 0xd0, 0x5d, 0x9b,
-	0xdd, 0xad, 0x18, 0xdf, 0x22, 0x66, 0x76, 0x08, 0xfd, 0xcc, 0x76, 0x5f, 0x4e, 0x82, 0xad, 0x8b,
-	0xc6, 0x05, 0xaf, 0x61, 0x63, 0x60, 0xeb, 0xe2, 0xe5, 0x8d, 0x96, 0x2f, 0x39, 0x9b, 0x26, 0x2c,
-	0xbf, 0xba, 0xd1, 0xb2, 0xb8, 0xb7, 0x4c, 0x58, 0x7e, 0x35, 0x91, 0x6b, 0x30, 0x99, 0x6b, 0x83,
-	0xd4, 0xd1, 0xe6, 0x4a, 0x9d, 0x11, 0xe6, 0xa7, 0xbf, 0x07, 0xe6, 0x67, 0xbe, 0x17, 0xe6, 0x2f,
-	0x7e, 0x67, 0xe6, 0x67, 0xe7, 0x65, 0xfe, 0x3f, 0x14, 0x50, 0x45, 0x70, 0x18, 0xf5, 0x37, 0x41,
-	0xed, 0xb7, 0x3d, 0xf9, 0x2a, 0x30, 0xb3, 0xeb, 0xed, 0x2e, 0x98, 0xa9, 0xb0, 0xef, 0x31, 0x03,
-	0xfd, 0x9a, 0x24, 0xb3, 0x64, 0x66, 0x49, 0x62, 0x06, 0xfc, 0xd1, 0xe4, 0x8b, 0x8e, 0x27, 0x5f,
-	0x39, 0x0e, 0xd1, 0x33, 0xd2, 0x34, 0xbe, 0x8d, 0x80, 0x2a, 0xee, 0x68, 0x81, 0x43, 0x47, 0xef,
-	0x97, 0xca, 0xf8, 0xfd, 0x72, 0xc4, 0x99, 0xc8, 0x77, 0x75, 0x26, 0xfa, 0x1a, 0xce, 0x0c, 0x37,
-	0xbc, 0xd8, 0x6b, 0x34, 0xbc, 0x89, 0x14, 0x88, 0x4f, 0xa6, 0xc0, 0xe0, 0xec, 0x13, 0xf3, 0x5e,
-	0x72, 0x96, 0x20, 0x8e, 0x3d, 0x8f, 0x78, 0x3c, 0xb5, 0x55, 0x53, 0x0c, 0xca, 0x29, 0x48, 0x78,
-	0x3c, 0xbc, 0xc6, 0x3d, 0xc8, 0xee, 0xd9, 0x3e, 0x65, 0xbd, 0x42, 0x96, 0x33, 0x63, 0x1b, 0xf4,
-	0x81, 0x48, 0xde, 0x93, 0x4b, 0x10, 0xe3, 0x1d, 0x48, 0xe1, 0x1d, 0xe8, 0xed, 0xdb, 0x8a, 0x22,
-	0x07, 0x1a, 0x0f, 0x20, 0xb3, 0x83, 0xe9, 0xd0, 0x7b, 0xe0, 0x94, 0x8a, 0x6b, 0x6c, 0xc2, 0x62,
-	0x08, 0x94, 0x6b, 0x3d, 0xe2, 0x34, 0x90, 0xd4, 0xbc, 0x75, 0x29, 0x4e, 0x97, 0x25, 0x40, 0x6c,
-	0xbb, 0x82, 0xe0, 0x7d, 0x27, 0x0e, 0xe0, 0x27, 0x23, 0x52, 0x69, 0xfb, 0x23, 0x48, 0x8a, 0xf2,
-	0x10, 0xba, 0x32, 0xab, 0x9a, 0x84, 0x70, 0x63, 0x1d, 0xf4, 0x0a, 0x76, 0x30, 0xc5, 0x77, 0xf0,
-	0xe9, 0x6b, 0x05, 0x96, 0x77, 0x30, 0xdd, 0xb3, 0x28, 0x6b, 0x0f, 0xfc, 0x20, 0x67, 0xa8, 0xb0,
-	0x73, 0x12, 0xc7, 0x2f, 0xde, 0x85, 0xc5, 0x00, 0x7d, 0x02, 0x51, 0x4a, 0x1d, 0xc9, 0xcb, 0x5b,
-	0x78, 0x95, 0x65, 0xbc, 0x62, 0xaf, 0x7d, 0xc7, 0xc7, 0x7b, 0x9c, 0x5e, 0x4c, 0xcd, 0xd8, 0x82,
-	0x37, 0x27, 0x76, 0x21, 0xe3, 0xa0, 0x43, 0x34, 0xf0, 0x1c, 0x99, 0x4f, 0xec, 0xf1, 0xe6, 0x0d,
-	0x18, 0x7f, 0x56, 0x60, 0x69, 0x9b, 0xb8, 0xd4, 0x23, 0x8e, 0x0c, 0x88, 0xf4, 0xe3, 0x21, 0xa8,
-	0x22, 0x32, 0x8d, 0xbe, 0x3b, 0xe9, 0xeb, 0xab, 0x42, 0x4a, 0xa0, 0x6a, 0x15, 0x33, 0x25, 0xa6,
-	0x6b, 0x6d, 0xf4, 0x11, 0xc4, 0x7c, 0x4a, 0x7a, 0xb3, 0x1a, 0xaa, 0xd0, 0x3c, 0xa2, 0xa4, 0xb7,
-	0xbb, 0x60, 0x72, 0x8d, 0xb2, 0x0a, 0xc9, 0x2e, 0xf6, 0x7d, 0xab, 0x83, 0x8d, 0x34, 0xc0, 0x00,
-	0x60, 0xbc, 0x09, 0x6f, 0x8c, 0xed, 0x4a, 0xf8, 0x65, 0xe8, 0xb0, 0xf8, 0x5c, 0xbc, 0x83, 0x85,
-	0x44, 0xf8, 0xab, 0x02, 0xd9, 0xbe, 0x48, 0x7a, 0x3f, 0xdf, 0xcb, 0xdc, 0x12, 0xc4, 0x9b, 0x81,
-	0xed, 0xc8, 0x8a, 0x65, 0x8a, 0x01, 0x7b, 0x59, 0x6a, 0x91, 0x6e, 0xd7, 0xa6, 0xf2, 0x9d, 0x44,
-	0x8e, 0xd0, 0x7b, 0x90, 0xb1, 0x02, 0x7a, 0x8a, 0x5d, 0x6a, 0xb7, 0x2c, 0x4a, 0x3c, 0x9e, 0xcf,
-	0xaa, 0x39, 0x2a, 0x34, 0x9e, 0x83, 0x2e, 0x4e, 0x64, 0x8f, 0x74, 0x5e, 0x8f, 0x1a, 0x4b, 0x10,
-	0xe7, 0x35, 0x48, 0x7e, 0x19, 0x11, 0x03, 0xa3, 0x06, 0x6a, 0xdf, 0x2e, 0x3b, 0x64, 0x87, 0x74,
-	0xc2, 0x43, 0x76, 0x48, 0x67, 0x2e, 0x53, 0x75, 0xb8, 0x37, 0xb4, 0x45, 0x19, 0xb9, 0xdf, 0x01,
-	0xc8, 0x62, 0x15, 0x5a, 0xd6, 0xa6, 0x57, 0xa3, 0x81, 0xba, 0xea, 0x85, 0x8f, 0xac, 0x30, 0x3c,
-	0x25, 0xcd, 0xd9, 0x6e, 0x1b, 0x87, 0x90, 0x10, 0xc0, 0xa9, 0x81, 0x19, 0x69, 0x0d, 0x91, 0xf1,
-	0xd6, 0x20, 0xbd, 0x8f, 0xf6, 0xbd, 0x37, 0x6a, 0xb0, 0x18, 0x2e, 0x2d, 0xdd, 0xf9, 0x15, 0x24,
-	0xd9, 0x85, 0x6d, 0xe0, 0xcb, 0xca, 0x2d, 0xe5, 0x86, 0x29, 0x26, 0xce, 0xf8, 0xaf, 0x51, 0x84,
-	0x25, 0x51, 0xb5, 0xb6, 0xbc, 0xd6, 0xa9, 0x7d, 0x8e, 0x67, 0x39, 0xf3, 0x88, 0x7f, 0x13, 0x93,
-	0x60, 0x54, 0x00, 0xcd, 0x12, 0x8f, 0x8d, 0x41, 0x16, 0x82, 0x14, 0xd5, 0x3d, 0xc7, 0xa0, 0xf0,
-	0xc6, 0x98, 0x79, 0xb9, 0xe1, 0x69, 0xa1, 0xd8, 0x06, 0x8d, 0x39, 0x22, 0x4d, 0xdc, 0xe1, 0xee,
-	0x1a, 0x1a, 0x66, 0x17, 0x56, 0xf9, 0xbc, 0xfe, 0x6b, 0x48, 0x0f, 0x7f, 0x7f, 0x41, 0x1a, 0x24,
-	0xeb, 0xfb, 0xbf, 0xdf, 0x3f, 0x78, 0xb1, 0xaf, 0x2f, 0x20, 0x80, 0xc4, 0xf6, 0xab, 0xed, 0xbd,
-	0xea, 0x91, 0xae, 0xa0, 0x7b, 0x90, 0x29, 0xef, 0x55, 0xf7, 0x2b, 0x55, 0xb3, 0x51, 0xad, 0x3e,
-	0xaf, 0x56, 0xf5, 0xc8, 0x7a, 0x11, 0xb4, 0xa1, 0xaf, 0x2e, 0x0c, 0xbd, 0x7f, 0x60, 0x3e, 0xdb,
-	0xda, 0x13, 0x9a, 0x75, 0x73, 0xa7, 0xba, 0x7f, 0xac, 0x2b, 0x28, 0x09, 0xd1, 0xbd, 0x83, 0x17,
-	0x7a, 0x64, 0x7d, 0x93, 0xf7, 0x78, 0xd1, 0xac, 0x18, 0xe2, 0xb3, 0x7a, 0xb5, 0x5e, 0xad, 0xe8,
-	0x0b, 0x28, 0x03, 0xaa, 0xc9, 0x4d, 0xd7, 0xf6, 0x77, 0x74, 0x05, 0xa9, 0x10, 0xaf, 0x9a, 0xe6,
-	0x81, 0xa9, 0x47, 0x50, 0x1a, 0x52, 0x9f, 0xd6, 0xf6, 0x6b, 0x47, 0xbb, 0xd5, 0x8a, 0x1e, 0xdd,
-	0xf8, 0x67, 0x0a, 0x62, 0xfc, 0x0d, 0xa7, 0x01, 0xa9, 0xf0, 0xb3, 0x0e, 0x7a, 0x30, 0xcd, 0xe3,
-	0xb1, 0xaf, 0xa1, 0xf9, 0xb5, 0xd9, 0x40, 0x11, 0xf1, 0x35, 0x05, 0xfd, 0x01, 0x52, 0x61, 0x3f,
-	0x9c, 0xbe, 0xc0, 0x58, 0x13, 0x9d, 0xbe, 0xc0, 0x44, 0x6b, 0x7d, 0x01, 0x09, 0x71, 0xd6, 0xe8,
-	0xfe, 0x34, 0x9d, 0x91, 0x4e, 0x9a, 0xff, 0xf9, 0x2c, 0x98, 0x34, 0x7c, 0x02, 0xda, 0x50, 0x0b,
-	0x44, 0xeb, 0xb7, 0xed, 0x68, 0xb4, 0x7b, 0xe6, 0xdf, 0xbf, 0x13, 0x56, 0xae, 0xf3, 0x0c, 0xd4,
-	0x7e, 0x67, 0x44, 0x53, 0xfd, 0x1e, 0x6f, 0x9e, 0xf9, 0xe5, 0x89, 0x76, 0x56, 0xed, 0xf6, 0xe8,
-	0x25, 0xf2, 0x20, 0x3b, 0xd6, 0xb5, 0x50, 0xf1, 0x16, 0x8f, 0x6f, 0x68, 0xb2, 0xf9, 0xd2, 0x9d,
-	0xf1, 0xd2, 0x05, 0x07, 0x32, 0x23, 0xfd, 0x04, 0x7d, 0x30, 0xcd, 0xc2, 0x4d, 0xcd, 0x30, 0xff,
-	0xe8, 0x8e, 0x68, 0xb9, 0xda, 0xe7, 0x90, 0x94, 0x1d, 0x09, 0x4d, 0x3d, 0xcb, 0xd1, 0x2e, 0x96,
-	0x7f, 0x30, 0x13, 0x37, 0x60, 0x93, 0xac, 0x9a, 0xf7, 0x67, 0x94, 0xb2, 0x59, 0x6c, 0x1a, 0x2b,
-	0x95, 0x7f, 0x1c, 0xee, 0x2c, 0x6b, 0xb3, 0x4b, 0xbe, 0x34, 0xff, 0xf0, 0x0e, 0xc8, 0xc1, 0x21,
-	0x8c, 0x14, 0xbd, 0xe9, 0x87, 0x70, 0x53, 0xe9, 0x9d, 0x7e, 0x08, 0x37, 0x56, 0xd2, 0xf2, 0xce,
-	0x37, 0xd7, 0x2b, 0xca, 0xbf, 0xae, 0x57, 0x94, 0xff, 0x5e, 0xaf, 0x28, 0x9f, 0x7f, 0xfc, 0x3a,
-	0xff, 0xfe, 0xfc, 0x86, 0xfd, 0xbe, 0x8c, 0x36, 0x13, 0x9c, 0xc1, 0xbf, 0xfc, 0x7f, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x74, 0xce, 0x67, 0x62, 0x43, 0x1a, 0x00, 0x00,
+	// 1835 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x58, 0x5f, 0x6f, 0xe3, 0xc6,
+	0x11, 0x37, 0x25, 0x59, 0x12, 0x87, 0xb6, 0xc4, 0x5b, 0x5c, 0x5d, 0x45, 0x69, 0x2d, 0x87, 0xc9,
+	0xf5, 0x94, 0x6b, 0x4e, 0xea, 0xb9, 0x40, 0x8b, 0xb4, 0x41, 0x5d, 0xcb, 0x62, 0x7c, 0xba, 0xfa,
+	0x7c, 0x17, 0xda, 0xba, 0x3f, 0x01, 0x0a, 0x96, 0x92, 0xd6, 0x32, 0x1d, 0x8a, 0x54, 0xc8, 0xa5,
+	0x6b, 0xe5, 0xb9, 0x1f, 0xa0, 0x40, 0x81, 0xa2, 0x1f, 0xa2, 0x1f, 0x24, 0x8f, 0x7d, 0xed, 0x8b,
+	0x5b, 0xe8, 0xa5, 0x40, 0x3e, 0x42, 0x9f, 0x8a, 0xfd, 0x43, 0xfd, 0xa1, 0x2c, 0xc9, 0x72, 0x02,
+	0x04, 0xe8, 0x93, 0x76, 0x67, 0x7f, 0x33, 0xbb, 0x33, 0xfb, 0x9b, 0x99, 0xa5, 0x60, 0xaf, 0x6b,
+	0x93, 0x4a, 0xe8, 0x76, 0xb0, 0xef, 0x58, 0x6e, 0xa7, 0x62, 0x7b, 0x55, 0x7c, 0x6e, 0x7d, 0xe5,
+	0x60, 0x42, 0xaa, 0x67, 0x03, 0xb7, 0x6d, 0x55, 0xad, 0xbe, 0x5d, 0x0d, 0xb0, 0x7f, 0x69, 0xb7,
+	0x71, 0x50, 0xbd, 0xf0, 0x5a, 0x41, 0xf5, 0xf2, 0x09, 0xfb, 0xad, 0xf4, 0x7d, 0x8f, 0x78, 0x68,
+	0x8b, 0xc1, 0x2a, 0x11, 0xa4, 0xc2, 0x96, 0x2e, 0x9f, 0x14, 0xef, 0x77, 0xbd, 0xae, 0xc7, 0x20,
+	0x55, 0x3a, 0xe2, 0xe8, 0xe2, 0x76, 0xd7, 0xf3, 0xba, 0x0e, 0xae, 0xb2, 0x59, 0x2b, 0x3c, 0xab,
+	0x76, 0x42, 0xdf, 0x22, 0xb6, 0xe7, 0x8a, 0xf5, 0x52, 0x7c, 0x9d, 0xd8, 0x3d, 0x1c, 0x10, 0xab,
+	0xd7, 0x17, 0x80, 0x77, 0xe3, 0x00, 0xdc, 0xeb, 0x93, 0x81, 0x58, 0xd4, 0x57, 0x72, 0xe6, 0x8f,
+	0x9e, 0xff, 0x05, 0xf6, 0x99, 0x3f, 0x62, 0xc8, 0xcd, 0x68, 0x5f, 0x41, 0xfe, 0xb3, 0x10, 0x87,
+	0xf8, 0x99, 0xd7, 0x32, 0xf0, 0x97, 0x21, 0x0e, 0x08, 0xfa, 0x0d, 0x64, 0x7c, 0x3e, 0x2c, 0x48,
+	0x3b, 0x52, 0x59, 0xd9, 0xd5, 0x2a, 0x37, 0xfb, 0x5d, 0x19, 0x2b, 0x3d, 0x5d, 0x33, 0x22, 0x25,
+	0x54, 0x02, 0x68, 0x9f, 0x87, 0xee, 0x17, 0x66, 0xc7, 0x22, 0x56, 0x21, 0xb1, 0x23, 0x95, 0x37,
+	0x9e, 0xae, 0x19, 0x32, 0x93, 0xd5, 0x2d, 0x62, 0xd5, 0xd2, 0x90, 0xa2, 0x4b, 0xda, 0x5f, 0xd7,
+	0x01, 0x26, 0xf6, 0x45, 0x90, 0x72, 0xad, 0x1e, 0x66, 0x9b, 0xca, 0x06, 0x1b, 0xa3, 0xf7, 0x60,
+	0xc3, 0xc7, 0x81, 0xe7, 0x84, 0x34, 0x6e, 0xe6, 0x15, 0xb3, 0x96, 0x34, 0x94, 0xb1, 0xec, 0x4d,
+	0x0c, 0x32, 0x28, 0x24, 0xe3, 0x90, 0xb7, 0xe8, 0x43, 0x50, 0x27, 0x20, 0x41, 0xdb, 0x72, 0x70,
+	0x21, 0xc5, 0x60, 0xf9, 0xb1, 0xfc, 0x84, 0x8a, 0xd1, 0x03, 0xc8, 0xf9, 0x98, 0x46, 0xd5, 0x0c,
+	0xac, 0x5e, 0xdf, 0xc1, 0x41, 0x61, 0x9d, 0x01, 0x37, 0xb9, 0xf4, 0x84, 0x0b, 0xd1, 0x47, 0x80,
+	0x22, 0x18, 0xb1, 0x7c, 0x62, 0x9e, 0xf9, 0xf4, 0xe4, 0x69, 0x06, 0x55, 0x05, 0x94, 0x2e, 0x7c,
+	0x4a, 0xe5, 0xa8, 0x0c, 0x42, 0x66, 0x62, 0xb7, 0x23, 0xb0, 0x19, 0x86, 0x15, 0x9b, 0xe9, 0x6e,
+	0x87, 0x23, 0x7f, 0x31, 0xda, 0x3e, 0x0c, 0xb0, 0xd9, 0xed, 0x87, 0x85, 0xec, 0x8e, 0x54, 0xce,
+	0xd6, 0xd4, 0xe1, 0x75, 0x69, 0xc3, 0x60, 0x2b, 0xcd, 0x00, 0x1f, 0xbe, 0x6c, 0x1a, 0x1b, 0xfe,
+	0x68, 0xd6, 0x0f, 0xd1, 0x43, 0xc8, 0x0b, 0xbd, 0xbe, 0x6f, 0x7b, 0xbe, 0x4d, 0x06, 0x05, 0x79,
+	0x72, 0x83, 0x97, 0x42, 0x8a, 0xde, 0x81, 0x64, 0xbb, 0x1f, 0x16, 0x80, 0x2e, 0xd6, 0x32, 0xc3,
+	0xeb, 0x52, 0xf2, 0xe0, 0x65, 0xd3, 0xa0, 0x32, 0xb4, 0x05, 0xe9, 0x1e, 0xee, 0x79, 0xfe, 0xa0,
+	0xa0, 0x30, 0x55, 0x31, 0x43, 0xef, 0xc3, 0x66, 0xe4, 0xab, 0x43, 0xaf, 0xbf, 0xb0, 0xc1, 0x96,
+	0xc5, 0x01, 0x4e, 0x98, 0x8c, 0xde, 0x42, 0xdb, 0x73, 0x09, 0x76, 0x89, 0x49, 0x06, 0x7d, 0x5c,
+	0xd8, 0x64, 0x97, 0xa8, 0x08, 0xd9, 0xe9, 0xa0, 0x8f, 0xd1, 0x8f, 0x40, 0xa6, 0x77, 0x1a, 0xf4,
+	0xad, 0x36, 0x2e, 0xe4, 0xd8, 0xfa, 0x58, 0x80, 0x1a, 0xa3, 0x5d, 0xb0, 0xdb, 0xb5, 0x5d, 0x5c,
+	0xc8, 0xef, 0x48, 0xe5, 0xdc, 0xee, 0x07, 0xf3, 0xb8, 0x67, 0x88, 0xc0, 0x51, 0x6c, 0x74, 0x16,
+	0x3e, 0x43, 0x7b, 0x90, 0x1d, 0x45, 0x41, 0x65, 0x56, 0xde, 0x5f, 0xc0, 0xe0, 0x28, 0x34, 0xc6,
+	0x48, 0x49, 0xfb, 0x19, 0xa8, 0xe3, 0xa4, 0x08, 0xfa, 0x9e, 0x1b, 0xd0, 0xd3, 0xa7, 0xc2, 0xd0,
+	0xee, 0x70, 0x76, 0xd6, 0xb2, 0xc3, 0xeb, 0x52, 0xaa, 0xd9, 0x6c, 0xd4, 0x0d, 0x26, 0xd5, 0xbe,
+	0x49, 0x41, 0xf2, 0x99, 0xd7, 0x42, 0x5b, 0x90, 0x18, 0x61, 0xd2, 0xc3, 0xeb, 0x52, 0xa2, 0x51,
+	0x37, 0x12, 0x76, 0x07, 0x7d, 0x32, 0xce, 0xa9, 0xc4, 0x6d, 0x73, 0x6a, 0x9c, 0x51, 0x3f, 0x06,
+	0xb8, 0xf0, 0x5a, 0x66, 0xe0, 0x85, 0x7e, 0x1b, 0x33, 0x82, 0xcb, 0x86, 0x7c, 0xe1, 0xb5, 0x4e,
+	0x98, 0x80, 0x2e, 0x7b, 0x21, 0xe9, 0x87, 0xc4, 0xec, 0xd8, 0x3e, 0x23, 0xb6, 0x6c, 0xc8, 0x5c,
+	0x52, 0xb7, 0x7d, 0xf4, 0x31, 0xa4, 0x03, 0x62, 0x91, 0x90, 0x53, 0x39, 0xb7, 0xfb, 0xde, 0x82,
+	0xad, 0x4f, 0x18, 0xd0, 0x10, 0x0a, 0x68, 0x0f, 0x80, 0xb1, 0xd5, 0xa4, 0x90, 0x42, 0x7a, 0x27,
+	0x59, 0x56, 0x76, 0x77, 0xe6, 0xa9, 0x33, 0x06, 0xd3, 0xe3, 0xcb, 0x67, 0x62, 0x14, 0xa0, 0x03,
+	0x80, 0xb6, 0x8f, 0x2d, 0x82, 0x3b, 0xa6, 0x45, 0x18, 0xe7, 0x95, 0xdd, 0x62, 0x85, 0xd7, 0xb5,
+	0x4a, 0x54, 0xd7, 0x2a, 0xa7, 0x51, 0xe1, 0xab, 0x65, 0xbf, 0xbe, 0x2e, 0xad, 0xfd, 0xf9, 0x5f,
+	0x25, 0xc9, 0x90, 0x85, 0xde, 0x3e, 0x41, 0xfb, 0x20, 0x7f, 0x49, 0xaf, 0x83, 0xd9, 0xc8, 0xae,
+	0x60, 0x23, 0xcb, 0xd5, 0xf6, 0x09, 0x3d, 0x07, 0x4b, 0x54, 0x6e, 0x43, 0x5e, 0xe5, 0x1c, 0x42,
+	0x6f, 0x9f, 0x20, 0x1d, 0x94, 0x33, 0xdb, 0xb5, 0x83, 0x73, 0x6e, 0x05, 0x56, 0xb0, 0x02, 0x91,
+	0xe2, 0x3e, 0xa1, 0xf4, 0x8c, 0x3a, 0x01, 0xcb, 0x34, 0x65, 0xf7, 0x9d, 0x19, 0x1b, 0x75, 0x01,
+	0xe0, 0x26, 0xfe, 0xc6, 0x9c, 0x89, 0x94, 0xb4, 0x7f, 0xa6, 0x20, 0x1b, 0x05, 0xfb, 0xfb, 0x61,
+	0x1c, 0xab, 0xb9, 0x2c, 0x59, 0x79, 0x31, 0x4b, 0x45, 0x35, 0x97, 0xca, 0x78, 0x25, 0xab, 0x82,
+	0x12, 0x50, 0x63, 0x6e, 0x1b, 0x9b, 0x76, 0x87, 0x51, 0x2f, 0x55, 0xcb, 0x0d, 0xaf, 0x4b, 0x70,
+	0x22, 0xc4, 0x8d, 0xba, 0x01, 0x11, 0xa4, 0xd1, 0xa1, 0x34, 0xe5, 0xad, 0x89, 0x95, 0x51, 0x65,
+	0x96, 0xa6, 0x51, 0xe3, 0xba, 0x7c, 0x52, 0x79, 0xcd, 0x86, 0x86, 0x50, 0xa0, 0x34, 0x65, 0xa5,
+	0x89, 0xd3, 0x34, 0xb3, 0x98, 0xa6, 0xac, 0x60, 0x31, 0x9a, 0x06, 0x62, 0x14, 0xfc, 0xbf, 0x31,
+	0x6c, 0x9c, 0xf1, 0xca, 0x8a, 0x19, 0xaf, 0xfd, 0x77, 0x1d, 0xb2, 0x51, 0x84, 0xbe, 0x1f, 0x6e,
+	0xc5, 0x88, 0x93, 0x5a, 0x4a, 0x9c, 0x89, 0x5e, 0xcc, 0x48, 0x60, 0xbb, 0x1d, 0x7c, 0x25, 0xda,
+	0xb6, 0x3a, 0xd1, 0xa4, 0x1a, 0x54, 0x8e, 0x7e, 0x1a, 0x43, 0xf7, 0x6c, 0xfa, 0xae, 0xa0, 0x94,
+	0x4b, 0x18, 0xf9, 0x09, 0xf4, 0x73, 0xdb, 0x7d, 0x33, 0x0b, 0xb6, 0xae, 0xcc, 0x2b, 0x56, 0xc6,
+	0x62, 0x60, 0xeb, 0xea, 0xcd, 0x8d, 0x96, 0x07, 0x8c, 0x4d, 0x33, 0x96, 0xdf, 0xde, 0x68, 0x99,
+	0xf7, 0xec, 0x19, 0xcb, 0x6f, 0x67, 0xd2, 0x0d, 0x66, 0xd3, 0x6d, 0x9c, 0x3d, 0xca, 0xaa, 0xd9,
+	0x33, 0x45, 0xfe, 0x8d, 0xef, 0x80, 0xfc, 0x9b, 0xdf, 0x09, 0xf9, 0x73, 0xdf, 0x9a, 0xfc, 0xf9,
+	0x55, 0xc9, 0xff, 0x77, 0x09, 0x64, 0x1e, 0x1c, 0xca, 0xfe, 0x3d, 0x90, 0x47, 0xcd, 0x4f, 0xbc,
+	0x84, 0x97, 0xf6, 0xbe, 0xa7, 0x6b, 0x46, 0x36, 0xea, 0x7e, 0xd4, 0xc0, 0xa8, 0x2c, 0x89, 0x44,
+	0x59, 0x5a, 0x95, 0xa8, 0x81, 0x60, 0x3a, 0xff, 0x92, 0xf1, 0xfc, 0xab, 0xad, 0x43, 0xf2, 0xc2,
+	0x6b, 0x69, 0xdf, 0x24, 0x40, 0xe6, 0x4f, 0x94, 0xd0, 0x21, 0xd3, 0xcf, 0x2b, 0x29, 0xfe, 0xbc,
+	0x9a, 0x72, 0x26, 0xf1, 0x6d, 0x9d, 0x49, 0xde, 0xc1, 0x99, 0xc9, 0xb6, 0x97, 0xba, 0x43, 0xdb,
+	0x9b, 0xc9, 0x82, 0xf5, 0x1b, 0xb3, 0x40, 0xdc, 0x7d, 0x7a, 0xd5, 0xa7, 0xce, 0x7d, 0x58, 0xc7,
+	0xbe, 0xef, 0xf9, 0x2c, 0xbb, 0x65, 0x83, 0x4f, 0x6a, 0x59, 0x48, 0xfb, 0x2c, 0xbc, 0xda, 0x3d,
+	0xc8, 0x1f, 0xd9, 0x01, 0xa1, 0xed, 0x42, 0x54, 0x34, 0xed, 0x00, 0xd4, 0xb1, 0x48, 0x3c, 0x13,
+	0xab, 0x90, 0x62, 0x4d, 0x48, 0x62, 0x4d, 0xe8, 0xdd, 0x45, 0x75, 0x91, 0x01, 0xb5, 0x87, 0xb0,
+	0x79, 0x88, 0xc9, 0xc4, 0x67, 0xd0, 0x9c, 0xa2, 0xab, 0xed, 0x41, 0x2e, 0x02, 0x8a, 0xbd, 0x1e,
+	0x33, 0x1a, 0x08, 0x6a, 0x2e, 0xdc, 0x8a, 0xd1, 0xe5, 0x11, 0xa8, 0x75, 0xec, 0x60, 0x82, 0x6f,
+	0xb1, 0xd9, 0x9f, 0x24, 0xd8, 0x3a, 0xc4, 0xe4, 0xc8, 0x22, 0xb4, 0x74, 0xb3, 0x08, 0x2f, 0x51,
+	0xa1, 0x01, 0xe4, 0xf7, 0xc2, 0xbf, 0xd1, 0xf8, 0x04, 0x7d, 0x02, 0x49, 0x42, 0x1c, 0x41, 0x98,
+	0x05, 0x17, 0x9e, 0xa7, 0x17, 0x4e, 0x3f, 0x47, 0x4e, 0x4f, 0x8f, 0xd8, 0xbd, 0x53, 0x35, 0x6d,
+	0x1f, 0x7e, 0x38, 0x73, 0x0a, 0xe1, 0xbc, 0x0a, 0xc9, 0xd0, 0x77, 0x04, 0xd1, 0xe9, 0xf0, 0xe6,
+	0x03, 0x68, 0x2a, 0xe4, 0x5e, 0x61, 0x3f, 0xb0, 0x3d, 0x37, 0xba, 0xb6, 0xbf, 0x48, 0x90, 0x1f,
+	0x89, 0x84, 0xb5, 0x9b, 0xbe, 0x3d, 0x0b, 0x90, 0xb9, 0xe4, 0x30, 0x66, 0x51, 0x36, 0xa2, 0x29,
+	0xdd, 0xa9, 0x15, 0xda, 0x8e, 0x48, 0x4d, 0x83, 0x4f, 0xe8, 0xf7, 0x53, 0xdb, 0xeb, 0xf5, 0x6c,
+	0x22, 0x9e, 0xe0, 0x62, 0x86, 0x3e, 0x80, 0x4d, 0x2b, 0x24, 0xe7, 0xd8, 0x25, 0x76, 0xdb, 0x22,
+	0x9e, 0xcf, 0x88, 0x2b, 0x1b, 0xd3, 0x42, 0xed, 0x15, 0xa8, 0xdc, 0xc3, 0x23, 0xaf, 0x7b, 0xb7,
+	0x50, 0xdf, 0x87, 0x75, 0x96, 0x6c, 0xe2, 0x0b, 0x98, 0x4f, 0xb4, 0x06, 0xc8, 0x23, 0xbb, 0x34,
+	0x68, 0x8e, 0xd7, 0x8d, 0x82, 0xe6, 0x78, 0xdd, 0x95, 0x4c, 0x35, 0xe1, 0xde, 0xc4, 0x11, 0x45,
+	0xe4, 0x7e, 0x0b, 0x20, 0xb2, 0x32, 0xb2, 0xac, 0xcc, 0x4f, 0xbb, 0xb1, 0xba, 0xec, 0x47, 0x43,
+	0x9a, 0x01, 0xcf, 0xbc, 0xd6, 0x72, 0xb7, 0xb5, 0x97, 0x90, 0xe6, 0xc0, 0xb9, 0x81, 0x99, 0xaa,
+	0x81, 0x89, 0x78, 0x0d, 0x14, 0xde, 0x27, 0x47, 0xde, 0x6b, 0x0d, 0xc8, 0x45, 0x5b, 0x0b, 0x77,
+	0x7e, 0x09, 0x19, 0xfa, 0x38, 0x19, 0xfb, 0xb2, 0xbd, 0x20, 0xaf, 0xa8, 0x62, 0xfa, 0x82, 0xfd,
+	0x6a, 0x15, 0xb8, 0xcf, 0xd3, 0x73, 0xdf, 0x6f, 0x9f, 0xdb, 0x97, 0x78, 0x99, 0x33, 0x8f, 0xd9,
+	0x7f, 0x1f, 0x02, 0x8c, 0x4a, 0xa0, 0x58, 0x7c, 0x68, 0x8e, 0x59, 0x0d, 0x42, 0xd4, 0xf4, 0x1d,
+	0x8d, 0xc0, 0x0f, 0x62, 0xe6, 0xc5, 0x81, 0xe7, 0x85, 0xe2, 0x00, 0x14, 0xea, 0x88, 0x30, 0x71,
+	0x8b, 0x77, 0x5a, 0x64, 0x98, 0x3e, 0xce, 0xc4, 0xf8, 0xd1, 0xaf, 0x60, 0x63, 0xf2, 0x3b, 0x1b,
+	0x29, 0x90, 0x69, 0x1e, 0xff, 0xee, 0xf8, 0xc5, 0xeb, 0x63, 0x75, 0x0d, 0x01, 0xa4, 0x0f, 0xde,
+	0x1e, 0x1c, 0xe9, 0x27, 0xaa, 0x84, 0xee, 0xc1, 0x66, 0xed, 0x48, 0x3f, 0xae, 0xeb, 0x86, 0xa9,
+	0xeb, 0xaf, 0x74, 0x5d, 0x4d, 0x3c, 0xaa, 0x80, 0x32, 0xf1, 0x75, 0x4d, 0xd1, 0xc7, 0x2f, 0x8c,
+	0xe7, 0xfb, 0x47, 0x5c, 0xb3, 0x69, 0x1c, 0xea, 0xc7, 0xa7, 0xaa, 0x84, 0x32, 0x90, 0x3c, 0x7a,
+	0xf1, 0x5a, 0x4d, 0x3c, 0xda, 0x63, 0xcd, 0x8c, 0x57, 0x65, 0x8a, 0xf8, 0xac, 0xa9, 0x37, 0xf5,
+	0xba, 0xba, 0x86, 0x36, 0x41, 0x36, 0x98, 0xe9, 0xc6, 0xf1, 0xa1, 0x2a, 0x21, 0x19, 0xd6, 0x75,
+	0xc3, 0x78, 0x61, 0xa8, 0x09, 0xb4, 0x01, 0xd9, 0x4f, 0x1b, 0xc7, 0x8d, 0x93, 0xa7, 0x7a, 0x5d,
+	0x4d, 0xee, 0xfe, 0x27, 0x0d, 0x29, 0xf6, 0x9a, 0x37, 0x21, 0x1b, 0x7d, 0xbe, 0xa3, 0x87, 0xf3,
+	0x3c, 0x8e, 0xfd, 0xeb, 0x55, 0x2c, 0x2f, 0x07, 0xf2, 0x88, 0x97, 0x25, 0xf4, 0x7b, 0xc8, 0x46,
+	0x85, 0x7f, 0xfe, 0x06, 0xb1, 0x6e, 0x31, 0x7f, 0x83, 0x99, 0x1e, 0xf2, 0x1a, 0xd2, 0xfc, 0xae,
+	0xd1, 0x83, 0x79, 0x3a, 0x53, 0x2d, 0xa3, 0xf8, 0x93, 0x65, 0x30, 0x61, 0xf8, 0x39, 0xc8, 0xa3,
+	0x0e, 0x80, 0xe6, 0x9e, 0x27, 0xde, 0x24, 0x8a, 0x5b, 0x33, 0x65, 0x5b, 0xef, 0xf5, 0xc9, 0x00,
+	0xf9, 0x90, 0x8f, 0x55, 0x67, 0x54, 0x59, 0x70, 0x92, 0x1b, 0x9a, 0x49, 0xb1, 0x7a, 0x6b, 0xbc,
+	0x70, 0xe1, 0x73, 0xc8, 0x88, 0xda, 0x8d, 0xe6, 0x7a, 0x3d, 0x5d, 0xef, 0x8b, 0x0f, 0x97, 0xe2,
+	0xc6, 0x71, 0x17, 0xf5, 0xe5, 0xc1, 0x92, 0xa4, 0x5f, 0x16, 0xf7, 0x58, 0x51, 0xf9, 0xc3, 0x64,
+	0x0d, 0x2e, 0x2f, 0x2f, 0x8e, 0xc2, 0xfc, 0x87, 0xb7, 0x40, 0x8a, 0x1d, 0x9c, 0xe8, 0x15, 0x11,
+	0x15, 0x94, 0x8f, 0x16, 0x53, 0x62, 0xba, 0x48, 0x15, 0x1f, 0xdf, 0x12, 0xcd, 0x77, 0xab, 0x1d,
+	0x7e, 0x3d, 0xdc, 0x96, 0xfe, 0x31, 0xdc, 0x96, 0xfe, 0x3d, 0xdc, 0x96, 0x3e, 0xff, 0xf8, 0x2e,
+	0x7f, 0xab, 0xff, 0x9a, 0xfe, 0xbe, 0x49, 0xb6, 0xd2, 0x8c, 0x53, 0x3f, 0xff, 0x5f, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0x56, 0x43, 0x36, 0x6d, 0x9c, 0x17, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2548,10 +2171,8 @@ type JobsClient interface {
 	QueueJob(ctx context.Context, opts ...grpc.CallOption) (Jobs_QueueJobClient, error)
 	ListJobs(ctx context.Context, in *ListJobsRequest, opts ...grpc.CallOption) (*ListJobsResponse, error)
 	GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc.CallOption) (*GetJobResponse, error)
-	ListWorkers(ctx context.Context, in *ListWorkersRequest, opts ...grpc.CallOption) (*ListWorkersResponse, error)
 	DeleteJob(ctx context.Context, in *DeleteJobRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	GetLatestRender(ctx context.Context, in *GetLatestRenderRequest, opts ...grpc.CallOption) (*GetLatestRenderResponse, error)
-	ControlWorker(ctx context.Context, in *ControlWorkerRequest, opts ...grpc.CallOption) (*ControlWorkerResponse, error)
 	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error)
 	JobLog(ctx context.Context, in *JobLogRequest, opts ...grpc.CallOption) (*JobLogResponse, error)
 	RenderLog(ctx context.Context, in *RenderLogRequest, opts ...grpc.CallOption) (*RenderLogResponse, error)
@@ -2618,15 +2239,6 @@ func (c *jobsClient) GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc
 	return out, nil
 }
 
-func (c *jobsClient) ListWorkers(ctx context.Context, in *ListWorkersRequest, opts ...grpc.CallOption) (*ListWorkersResponse, error) {
-	out := new(ListWorkersResponse)
-	err := c.cc.Invoke(ctx, "/fynca.services.jobs.v1.Jobs/ListWorkers", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *jobsClient) DeleteJob(ctx context.Context, in *DeleteJobRequest, opts ...grpc.CallOption) (*types.Empty, error) {
 	out := new(types.Empty)
 	err := c.cc.Invoke(ctx, "/fynca.services.jobs.v1.Jobs/DeleteJob", in, out, opts...)
@@ -2639,15 +2251,6 @@ func (c *jobsClient) DeleteJob(ctx context.Context, in *DeleteJobRequest, opts .
 func (c *jobsClient) GetLatestRender(ctx context.Context, in *GetLatestRenderRequest, opts ...grpc.CallOption) (*GetLatestRenderResponse, error) {
 	out := new(GetLatestRenderResponse)
 	err := c.cc.Invoke(ctx, "/fynca.services.jobs.v1.Jobs/GetLatestRender", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *jobsClient) ControlWorker(ctx context.Context, in *ControlWorkerRequest, opts ...grpc.CallOption) (*ControlWorkerResponse, error) {
-	out := new(ControlWorkerResponse)
-	err := c.cc.Invoke(ctx, "/fynca.services.jobs.v1.Jobs/ControlWorker", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2695,10 +2298,8 @@ type JobsServer interface {
 	QueueJob(Jobs_QueueJobServer) error
 	ListJobs(context.Context, *ListJobsRequest) (*ListJobsResponse, error)
 	GetJob(context.Context, *GetJobRequest) (*GetJobResponse, error)
-	ListWorkers(context.Context, *ListWorkersRequest) (*ListWorkersResponse, error)
 	DeleteJob(context.Context, *DeleteJobRequest) (*types.Empty, error)
 	GetLatestRender(context.Context, *GetLatestRenderRequest) (*GetLatestRenderResponse, error)
-	ControlWorker(context.Context, *ControlWorkerRequest) (*ControlWorkerResponse, error)
 	Version(context.Context, *VersionRequest) (*VersionResponse, error)
 	JobLog(context.Context, *JobLogRequest) (*JobLogResponse, error)
 	RenderLog(context.Context, *RenderLogRequest) (*RenderLogResponse, error)
@@ -2718,17 +2319,11 @@ func (*UnimplementedJobsServer) ListJobs(ctx context.Context, req *ListJobsReque
 func (*UnimplementedJobsServer) GetJob(ctx context.Context, req *GetJobRequest) (*GetJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJob not implemented")
 }
-func (*UnimplementedJobsServer) ListWorkers(ctx context.Context, req *ListWorkersRequest) (*ListWorkersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListWorkers not implemented")
-}
 func (*UnimplementedJobsServer) DeleteJob(ctx context.Context, req *DeleteJobRequest) (*types.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteJob not implemented")
 }
 func (*UnimplementedJobsServer) GetLatestRender(ctx context.Context, req *GetLatestRenderRequest) (*GetLatestRenderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLatestRender not implemented")
-}
-func (*UnimplementedJobsServer) ControlWorker(ctx context.Context, req *ControlWorkerRequest) (*ControlWorkerResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ControlWorker not implemented")
 }
 func (*UnimplementedJobsServer) Version(ctx context.Context, req *VersionRequest) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
@@ -2809,24 +2404,6 @@ func _Jobs_GetJob_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Jobs_ListWorkers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListWorkersRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(JobsServer).ListWorkers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/fynca.services.jobs.v1.Jobs/ListWorkers",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(JobsServer).ListWorkers(ctx, req.(*ListWorkersRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Jobs_DeleteJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteJobRequest)
 	if err := dec(in); err != nil {
@@ -2859,24 +2436,6 @@ func _Jobs_GetLatestRender_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(JobsServer).GetLatestRender(ctx, req.(*GetLatestRenderRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Jobs_ControlWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ControlWorkerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(JobsServer).ControlWorker(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/fynca.services.jobs.v1.Jobs/ControlWorker",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(JobsServer).ControlWorker(ctx, req.(*ControlWorkerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2966,20 +2525,12 @@ var _Jobs_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Jobs_GetJob_Handler,
 		},
 		{
-			MethodName: "ListWorkers",
-			Handler:    _Jobs_ListWorkers_Handler,
-		},
-		{
 			MethodName: "DeleteJob",
 			Handler:    _Jobs_DeleteJob_Handler,
 		},
 		{
 			MethodName: "GetLatestRender",
 			Handler:    _Jobs_GetLatestRender_Handler,
-		},
-		{
-			MethodName: "ControlWorker",
-			Handler:    _Jobs_ControlWorker_Handler,
 		},
 		{
 			MethodName: "Version",
@@ -3229,89 +2780,6 @@ func (m *QueueJobResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.UUID)
 		copy(dAtA[i:], m.UUID)
 		i = encodeVarintJobs(dAtA, i, uint64(len(m.UUID)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Worker) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Worker) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Worker) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.Load15 != 0 {
-		i -= 8
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Load15))))
-		i--
-		dAtA[i] = 0x49
-	}
-	if m.Load5 != 0 {
-		i -= 8
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Load5))))
-		i--
-		dAtA[i] = 0x41
-	}
-	if m.Load1 != 0 {
-		i -= 8
-		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Load1))))
-		i--
-		dAtA[i] = 0x39
-	}
-	if len(m.GPUs) > 0 {
-		for iNdEx := len(m.GPUs) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.GPUs[iNdEx])
-			copy(dAtA[i:], m.GPUs[iNdEx])
-			i = encodeVarintJobs(dAtA, i, uint64(len(m.GPUs[iNdEx])))
-			i--
-			dAtA[i] = 0x32
-		}
-	}
-	if m.MemoryAvailable != 0 {
-		i = encodeVarintJobs(dAtA, i, uint64(m.MemoryAvailable))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.MemoryTotal != 0 {
-		i = encodeVarintJobs(dAtA, i, uint64(m.MemoryTotal))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.CPUs != 0 {
-		i = encodeVarintJobs(dAtA, i, uint64(m.CPUs))
-		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.Version) > 0 {
-		i -= len(m.Version)
-		copy(dAtA[i:], m.Version)
-		i = encodeVarintJobs(dAtA, i, uint64(len(m.Version)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintJobs(dAtA, i, uint64(len(m.Name)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -4024,74 +3492,6 @@ func (m *GetJobResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ListWorkersRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListWorkersRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListWorkersRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ListWorkersResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ListWorkersResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListWorkersResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Workers) > 0 {
-		for iNdEx := len(m.Workers) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Workers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintJobs(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *DeleteJobRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4208,124 +3608,6 @@ func (m *GetLatestRenderResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i = encodeVarintJobs(dAtA, i, uint64(len(m.Url)))
 		i--
 		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ControlWorkerRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ControlWorkerRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ControlWorkerRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.Message != nil {
-		{
-			size := m.Message.Size()
-			i -= size
-			if _, err := m.Message.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	if len(m.WorkerID) > 0 {
-		i -= len(m.WorkerID)
-		copy(dAtA[i:], m.WorkerID)
-		i = encodeVarintJobs(dAtA, i, uint64(len(m.WorkerID)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ControlWorkerRequest_Stop) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ControlWorkerRequest_Stop) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.Stop != nil {
-		{
-			size, err := m.Stop.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintJobs(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *WorkerStop) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *WorkerStop) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *WorkerStop) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ControlWorkerResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ControlWorkerResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ControlWorkerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	return len(dAtA) - i, nil
 }
@@ -4910,50 +4192,6 @@ func (m *QueueJobResponse) Size() (n int) {
 	return n
 }
 
-func (m *Worker) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Name)
-	if l > 0 {
-		n += 1 + l + sovJobs(uint64(l))
-	}
-	l = len(m.Version)
-	if l > 0 {
-		n += 1 + l + sovJobs(uint64(l))
-	}
-	if m.CPUs != 0 {
-		n += 1 + sovJobs(uint64(m.CPUs))
-	}
-	if m.MemoryTotal != 0 {
-		n += 1 + sovJobs(uint64(m.MemoryTotal))
-	}
-	if m.MemoryAvailable != 0 {
-		n += 1 + sovJobs(uint64(m.MemoryAvailable))
-	}
-	if len(m.GPUs) > 0 {
-		for _, s := range m.GPUs {
-			l = len(s)
-			n += 1 + l + sovJobs(uint64(l))
-		}
-	}
-	if m.Load1 != 0 {
-		n += 9
-	}
-	if m.Load5 != 0 {
-		n += 9
-	}
-	if m.Load15 != 0 {
-		n += 9
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
 func (m *Job) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5268,36 +4506,6 @@ func (m *GetJobResponse) Size() (n int) {
 	return n
 }
 
-func (m *ListWorkersRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ListWorkersResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Workers) > 0 {
-		for _, e := range m.Workers {
-			l = e.Size()
-			n += 1 + l + sovJobs(uint64(l))
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
 func (m *DeleteJobRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5348,61 +4556,6 @@ func (m *GetLatestRenderResponse) Size() (n int) {
 	if m.Frame != 0 {
 		n += 1 + sovJobs(uint64(m.Frame))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ControlWorkerRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.WorkerID)
-	if l > 0 {
-		n += 1 + l + sovJobs(uint64(l))
-	}
-	if m.Message != nil {
-		n += m.Message.Size()
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ControlWorkerRequest_Stop) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Stop != nil {
-		l = m.Stop.Size()
-		n += 1 + l + sovJobs(uint64(l))
-	}
-	return n
-}
-func (m *WorkerStop) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *ControlWorkerResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -6224,243 +5377,6 @@ func (m *QueueJobResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Worker) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Worker: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Worker: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Name = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Version = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CPUs", wireType)
-			}
-			m.CPUs = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.CPUs |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MemoryTotal", wireType)
-			}
-			m.MemoryTotal = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.MemoryTotal |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MemoryAvailable", wireType)
-			}
-			m.MemoryAvailable = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.MemoryAvailable |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GPUs", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.GPUs = append(m.GPUs, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 7:
-			if wireType != 1 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Load1", wireType)
-			}
-			var v uint64
-			if (iNdEx + 8) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
-			iNdEx += 8
-			m.Load1 = float64(math.Float64frombits(v))
-		case 8:
-			if wireType != 1 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Load5", wireType)
-			}
-			var v uint64
-			if (iNdEx + 8) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
-			iNdEx += 8
-			m.Load5 = float64(math.Float64frombits(v))
-		case 9:
-			if wireType != 1 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Load15", wireType)
-			}
-			var v uint64
-			if (iNdEx + 8) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
-			iNdEx += 8
-			m.Load15 = float64(math.Float64frombits(v))
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *Job) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -7059,7 +5975,7 @@ func (m *FrameJob) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Worker == nil {
-				m.Worker = &Worker{}
+				m.Worker = &v1.Worker{}
 			}
 			if err := m.Worker.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -7499,7 +6415,7 @@ func (m *SliceJob) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Worker == nil {
-				m.Worker = &Worker{}
+				m.Worker = &v1.Worker{}
 			}
 			if err := m.Worker.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -8360,142 +7276,6 @@ func (m *GetJobResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ListWorkersRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListWorkersRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListWorkersRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ListWorkersResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ListWorkersResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListWorkersResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Workers", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Workers = append(m.Workers, &Worker{})
-			if err := m.Workers[len(m.Workers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *DeleteJobRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -8794,226 +7574,6 @@ func (m *GetLatestRenderResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ControlWorkerRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ControlWorkerRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ControlWorkerRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field WorkerID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.WorkerID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Stop", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowJobs
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthJobs
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &WorkerStop{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Message = &ControlWorkerRequest_Stop{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *WorkerStop) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: WorkerStop: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: WorkerStop: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipJobs(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthJobs
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ControlWorkerResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowJobs
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ControlWorkerResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ControlWorkerResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipJobs(dAtA[iNdEx:])

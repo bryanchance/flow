@@ -1,7 +1,8 @@
 package worker
 
 import (
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
+	"git.underland.io/ehazlett/fynca/version"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
@@ -45,7 +46,7 @@ func (w *Worker) workerControlListener() {
 
 			switch v := r.Message.(type) {
 			case *api.ControlWorkerRequest_Stop:
-				logrus.Info("received stop control message")
+				logrus.Infof("received stop control message from %s", r.Requestor)
 				if err := kv.Purge(msg.Key()); err != nil {
 					logrus.WithError(err).Errorf("error deleting control message %s", msg.Key())
 				}
@@ -55,6 +56,21 @@ func (w *Worker) workerControlListener() {
 				if err := w.Stop(); err != nil {
 					logrus.WithError(err).Error("error stopping worker")
 					return
+				}
+			case *api.ControlWorkerRequest_Update:
+				logrus.Infof("received update message by %s to update from %s", r.Requestor, v.Update.URL)
+				if err := kv.Purge(msg.Key()); err != nil {
+					logrus.WithError(err).Errorf("error deleting control message %s", msg.Key())
+				}
+				if err := w.update(v.Update.URL); err != nil {
+					if err == ErrNoUpdateNeeded {
+						logrus.Infof("worker is at the latest version %s", version.Version)
+						continue
+					}
+					logrus.WithError(err).Error("error updating worker")
+				}
+				if err := w.Stop(); err != nil {
+					logrus.WithError(err).Error("error stopping worker")
 				}
 			default:
 				logrus.Warnf("unknown control message: %v", v)
