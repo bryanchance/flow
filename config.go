@@ -123,6 +123,8 @@ type Config struct {
 	TraceEndpoint string
 	// Environment is the environment the app is running in
 	Environment string
+	// AdminPassword is the password used when creating the initial admin account. If empty, a random one is generated.
+	AdminPassword string
 	// Authenticator is the auth configuration
 	Authenticator *AuthenticatorConfig
 

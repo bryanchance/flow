@@ -59,15 +59,18 @@ func (s *service) Requires() []services.Type {
 }
 
 func (s *service) Start() error {
-	// TODO: check for admin account and create if missing
+	// check for admin account and create if missing
 	ctx := context.Background()
 	if _, err := s.ds.GetAccount(ctx, "admin"); err != nil {
 		if err != datastore.ErrAccountDoesNotExist {
 			return err
 		}
-		// TODO: create
-		hash := sha256.Sum256([]byte(fmt.Sprintf("%s", time.Now())))
-		tmpPassword := hex.EncodeToString(hash[:10])
+		// create
+		tmpPassword := s.config.AdminPassword
+		if tmpPassword == "" {
+			hash := sha256.Sum256([]byte(fmt.Sprintf("%s", time.Now())))
+			tmpPassword = hex.EncodeToString(hash[:10])
+		}
 		logrus.Debugf("passwd: %s", tmpPassword)
 
 		adminAcct := &api.Account{

@@ -56,7 +56,7 @@ func New(cfg *fynca.Config) (services.Service, error) {
 	}
 
 	// nats
-	nc, err := nats.Connect(cfg.NATSURL)
+	nc, err := nats.Connect(cfg.NATSURL, nats.RetryOnFailedConnect(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error connecting to nats")
 	}
