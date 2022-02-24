@@ -66,7 +66,7 @@ func (s *service) Start() error {
 			return err
 		}
 		// create
-		tmpPassword := s.config.AdminPassword
+		tmpPassword := s.config.InitialAdminPassword
 		if tmpPassword == "" {
 			hash := sha256.Sum256([]byte(fmt.Sprintf("%s", time.Now())))
 			tmpPassword = hex.EncodeToString(hash[:10])
