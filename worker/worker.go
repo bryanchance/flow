@@ -53,6 +53,7 @@ type Worker struct {
 	maxJobs        int
 	jobLock        *sync.Mutex
 	failedJobCache *ttlcache.TTLCache
+	paused         bool
 }
 
 func NewWorker(id string, cfg *fynca.Config) (*Worker, error) {
@@ -102,6 +103,7 @@ func NewWorker(id string, cfg *fynca.Config) (*Worker, error) {
 		maxJobs:        workerConfig.MaxJobs,
 		jobLock:        &sync.Mutex{},
 		failedJobCache: failedJobCache,
+		paused:         false,
 	}
 
 	return w, nil
@@ -163,6 +165,13 @@ func (w *Worker) Run() error {
 				// if stop has been called the subscription will be drained and closed
 				// ignore the subscription error and exit
 				if m == nil {
+					continue
+				}
+
+				// check if paused
+				if w.paused {
+					logrus.Info("worker is paused; requeueing for another worker")
+					m.Nak()
 					continue
 				}
 
@@ -322,6 +331,7 @@ func (w *Worker) getWorkerInfo() (*workersapi.Worker, error) {
 		Load1:           loadStats.Load1,
 		Load5:           loadStats.Load5,
 		Load15:          loadStats.Load15,
+		Paused:          w.paused,
 	}, nil
 }
 

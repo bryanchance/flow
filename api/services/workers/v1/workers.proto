@@ -30,6 +30,8 @@ message ControlWorkerRequest {
         oneof message {
                 WorkerStop stop = 3;
                 WorkerUpdate update = 4;
+                WorkerPause pause = 5;
+                WorkerResume resume = 6;
         }
 }
 
@@ -38,6 +40,10 @@ message WorkerStop {}
 message WorkerUpdate {
         string url = 1 [(gogoproto.customname) = "URL"];
 }
+
+message WorkerPause {}
+
+message WorkerResume {}
 
 message ControlWorkerResponse {}
 
@@ -51,4 +57,5 @@ message Worker {
         double load1 = 7;
         double load5 = 8;
         double load15 = 9;
+        bool paused = 10;
 }

@@ -45,6 +45,16 @@ func (w *Worker) workerControlListener() {
 			logrus.Debugf("processing control worker request from (%s): %+v", msg.Created(), r.Message)
 
 			switch v := r.Message.(type) {
+			case *api.ControlWorkerRequest_Pause:
+				logrus.Infof("received pause control message from %s", r.Requestor)
+				w.jobLock.Lock()
+				w.paused = true
+				w.jobLock.Unlock()
+			case *api.ControlWorkerRequest_Resume:
+				logrus.Infof("received resume control message from %s", r.Requestor)
+				w.jobLock.Lock()
+				w.paused = false
+				w.jobLock.Unlock()
 			case *api.ControlWorkerRequest_Stop:
 				logrus.Infof("received stop control message from %s", r.Requestor)
 				if err := kv.Purge(msg.Key()); err != nil {
