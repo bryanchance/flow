@@ -16,7 +16,7 @@ package accounts
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
 )
 
 func (s *service) Authenticate(ctx context.Context, req *api.AuthenticateRequest) (*api.AuthenticateResponse, error) {

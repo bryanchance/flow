@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
-	"git.underland.io/ehazlett/fynca/datastore"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
+	"github.com/fynca/fynca/datastore"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

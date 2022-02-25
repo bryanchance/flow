@@ -1,4 +1,4 @@
-module git.underland.io/ehazlett/fynca
+module github.com/fynca/fynca
 
 go 1.16
 

@@ -18,7 +18,7 @@ import (
 	"path"
 	"time"
 
-	"git.underland.io/ehazlett/fynca/pkg/auth"
+	"github.com/fynca/fynca/pkg/auth"
 	"github.com/pkg/errors"
 )
 

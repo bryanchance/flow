@@ -18,7 +18,7 @@ import (
 	"sort"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
+	"github.com/fynca/fynca"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

@@ -16,11 +16,11 @@ package workers
 import (
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
-	"git.underland.io/ehazlett/fynca/datastore"
-	"git.underland.io/ehazlett/fynca/pkg/auth"
-	"git.underland.io/ehazlett/fynca/services"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/workers/v1"
+	"github.com/fynca/fynca/datastore"
+	"github.com/fynca/fynca/pkg/auth"
+	"github.com/fynca/fynca/services"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"

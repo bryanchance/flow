@@ -16,8 +16,8 @@ package main
 import (
 	"context"
 
-	"git.underland.io/ehazlett/fynca"
-	"git.underland.io/ehazlett/fynca/client"
+	"github.com/fynca/fynca"
+	"github.com/fynca/fynca/client"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/metadata"
 )

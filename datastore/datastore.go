@@ -16,7 +16,7 @@ package datastore
 import (
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
+	"github.com/fynca/fynca"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"

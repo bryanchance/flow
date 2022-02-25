@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
 	ptypes "github.com/gogo/protobuf/types"
 )
 

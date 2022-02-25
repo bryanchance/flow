@@ -14,7 +14,7 @@
 package services
 
 import (
-	"git.underland.io/ehazlett/fynca/pkg/auth"
+	"github.com/fynca/fynca/pkg/auth"
 	"google.golang.org/grpc"
 )
 

@@ -16,8 +16,8 @@ package render
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
-	"git.underland.io/ehazlett/fynca/version"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/fynca/fynca/version"
 )
 
 func (s *service) Version(ctx context.Context, req *api.VersionRequest) (*api.VersionResponse, error) {

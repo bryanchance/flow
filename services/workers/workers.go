@@ -16,8 +16,8 @@ package workers
 import (
 	"context"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/workers/v1"
 	"github.com/gogo/protobuf/proto"
 )
 

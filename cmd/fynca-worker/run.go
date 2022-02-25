@@ -20,10 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	"git.underland.io/ehazlett/fynca/pkg/tracing"
-	"git.underland.io/ehazlett/fynca/version"
-	"git.underland.io/ehazlett/fynca/worker"
+	"github.com/fynca/fynca"
+	"github.com/fynca/fynca/pkg/tracing"
+	"github.com/fynca/fynca/version"
+	"github.com/fynca/fynca/worker"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )

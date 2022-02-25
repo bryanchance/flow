@@ -19,7 +19,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
+	api "github.com/fynca/fynca/api/services/workers/v1"
 	"github.com/dustin/go-humanize"
 	cli "github.com/urfave/cli/v2"
 )
