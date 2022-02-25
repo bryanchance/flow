@@ -16,8 +16,8 @@ package accounts
 import (
 	"context"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
 )
 
 // GetAccount returns the requested account from the datastore

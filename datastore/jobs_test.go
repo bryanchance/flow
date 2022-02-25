@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
 )
 
 func getContext() context.Context {

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
 )
 
 func TestRenderJobTemplate(t *testing.T) {

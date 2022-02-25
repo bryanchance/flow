@@ -19,7 +19,7 @@ import (
 	"path"
 	"time"
 
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"

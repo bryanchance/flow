@@ -29,9 +29,9 @@ import (
 	"text/template"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
-	"git.underland.io/ehazlett/fynca/pkg/tracing"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/fynca/fynca/pkg/tracing"
 	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

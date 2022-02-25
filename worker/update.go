@@ -14,7 +14,7 @@
 package worker
 
 import (
-	"git.underland.io/ehazlett/fynca/version"
+	"github.com/fynca/fynca/version"
 	"github.com/pkg/errors"
 	"github.com/sanbornm/go-selfupdate/selfupdate"
 	"github.com/sirupsen/logrus"

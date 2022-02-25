@@ -23,8 +23,8 @@ import (
 	"strings"
 	"syscall"
 
-	accountsapi "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
-	renderapi "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	accountsapi "github.com/fynca/fynca/api/services/accounts/v1"
+	renderapi "github.com/fynca/fynca/api/services/jobs/v1"
 	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"

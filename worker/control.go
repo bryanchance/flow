@@ -14,8 +14,8 @@
 package worker
 
 import (
-	api "git.underland.io/ehazlett/fynca/api/services/workers/v1"
-	"git.underland.io/ehazlett/fynca/version"
+	api "github.com/fynca/fynca/api/services/workers/v1"
+	"github.com/fynca/fynca/version"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"

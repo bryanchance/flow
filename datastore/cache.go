@@ -20,7 +20,7 @@ import (
 	"path"
 	"time"
 
-	"git.underland.io/ehazlett/fynca/pkg/tracing"
+	"github.com/fynca/fynca/pkg/tracing"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

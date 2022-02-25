@@ -16,8 +16,8 @@ package render
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
-	"git.underland.io/ehazlett/fynca/pkg/tracing"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/fynca/fynca/pkg/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 

@@ -16,7 +16,7 @@ package render
 import (
 	"context"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
 )
 
 func (s *service) JobLog(ctx context.Context, r *api.JobLogRequest) (*api.JobLogResponse, error) {

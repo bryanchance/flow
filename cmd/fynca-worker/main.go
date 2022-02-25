@@ -17,7 +17,7 @@ import (
 	"log"
 	"os"
 
-	"git.underland.io/ehazlett/fynca/version"
+	"github.com/fynca/fynca/version"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )

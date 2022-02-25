@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
-	"git.underland.io/ehazlett/fynca/pkg/tracing"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/fynca/fynca/pkg/tracing"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"

@@ -17,7 +17,7 @@ import (
 	"context"
 	"strings"
 
-	api "git.underland.io/ehazlett/fynca/api/services/jobs/v1"
+	api "github.com/fynca/fynca/api/services/jobs/v1"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

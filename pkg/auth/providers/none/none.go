@@ -16,8 +16,8 @@ package none
 import (
 	"context"
 
-	"git.underland.io/ehazlett/fynca"
-	api "git.underland.io/ehazlett/fynca/api/services/accounts/v1"
+	"github.com/fynca/fynca"
+	api "github.com/fynca/fynca/api/services/accounts/v1"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 )
