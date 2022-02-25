@@ -7,7 +7,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import weak "google/protobuf/empty.proto";
 
-option go_package = "git.underland.io/ehazlett/fynca/api/services/accounts/v1;accounts";
+option go_package = "github.com/fynca/fynca/api/services/accounts/v1;accounts";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
