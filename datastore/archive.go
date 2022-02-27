@@ -34,6 +34,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	jobArchiveTTL = time.Second * 24 * 60 * 60
+)
+
 // CreateJobArchive creates a zip archive of the job and stores a signed url from the storage service
 func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	namespace := ctx.Value(fynca.CtxNamespaceKey).(string)
@@ -164,7 +168,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", job.ID))
 
 	// valid for 24 hours
-	presignedURL, err := d.storageClient.PresignedGetObject(ctx, d.config.S3Bucket, objectPath, time.Second*24*60*60, reqParams)
+	presignedURL, err := d.storageClient.PresignedGetObject(ctx, d.config.S3Bucket, objectPath, jobArchiveTTL, reqParams)
 	if err != nil {
 		return err
 	}
@@ -175,7 +179,7 @@ func (d *Datastore) CreateJobArchive(ctx context.Context, jobID string) error {
 	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, jobArchiveKey, jData, 0).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, jobArchiveKey, jData, jobArchiveTTL).Err(); err != nil {
 		return errors.Wrapf(err, "error saving job archive for %s in database", job.ID)
 	}
 
