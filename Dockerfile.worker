@@ -1,26 +1,27 @@
-FROM ubuntu:21.04 as build
-ENV BLENDER_VERSION=3.0
-ENV BLENDER_REVISION=0
-RUN apt-get update && apt-get install -y ca-certificates curl xz-utils
-RUN curl -sSL https://mirror.clarkson.edu/blender/release/Blender${BLENDER_VERSION}/blender-${BLENDER_VERSION}.${BLENDER_REVISION}-linux-x64.tar.xz -o /tmp/blender.tar.xz && \
-	cd /opt && tar xvf /tmp/blender.tar.xz && \
-	mv blender-${BLENDER_VERSION}.${BLENDER_REVISION}-linux-x64 blender
-
 FROM golang:1.17.5 as worker
 COPY . /app
 WORKDIR /app
 RUN make
 
-FROM ubuntu:20.04
-RUN apt-get update && apt-get install -y curl ca-certificates gnupg2
-RUN distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-    && curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add - \
-    && curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list
-RUN apt-get update && apt-get install -y nvidia-container-runtime nvidia-container-toolkit libx11-6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libglu1-mesa ffmpeg imagemagick
-RUN apt-get install -y unzip jq
-COPY --from=build /opt/blender /opt/blender
+FROM ubuntu:22.04
+RUN apt-get -o Acquire::Max-FutureTime=86400 update && apt-get -o Acquire::Max-FutureTime=86400 install -y curl ca-certificates gnupg2 software-properties-common
+RUN add-apt-repository -y ppa:savoury1/ffmpeg4 && \
+	add-apt-repository -y ppa:savoury1/blender && \
+	apt-get -o Acquire:Max-FutureTime=86400 update && apt-get -y dist-upgrade && apt-get install -o Acquire::Max-FutureTime=86400 -y blender
+#RUN distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+#    && curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add - \
+#    && curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list
+#RUN apt-get -o Acquire::Max-FutureTime=86400 update && apt-get install -o Acquire::Max-FutureTime=86400 -y \
+#	nvidia-container-runtime \
+#	nvidia-container-toolkit \
+#	libx11-6 \
+#	libxi6 \
+#	libxxf86vm1 \
+#	libxfixes3 \
+#	libxrender1 \
+#	libgl1 \
+#	libglu1-mesa \
+#	imagemagick
 COPY --from=worker /app/bin/fynca-worker /usr/local/bin/fynca-worker
-RUN ln -sf /opt/blender/blender /usr/local/bin/blender
-RUN echo "PATH=/opt/blender:$PATH" >> /etc/profile
 ENTRYPOINT ["/usr/local/bin/fynca-worker"]
 CMD ["-h"]
