@@ -3,8 +3,7 @@ type: kubernetes
 name: default
 
 workspace:
-  base: /go
-  path: src/github.com/fynca/fynca
+  path: /go/src/github.com/fynca/fynca
 
 steps:
 - name: test
