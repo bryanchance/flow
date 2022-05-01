@@ -9,7 +9,7 @@ steps:
 - name: test
   image: golang
   commands:
-  - go test -v ./...
+  - go -mod=mod test -v ./...
 
 - name: build
   image: golang
