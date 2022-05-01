@@ -7,6 +7,10 @@ platform:
 
 node_selector:
   kubernetes.io/arch: amd64
+tolerations:
+- key: diskType=ssd
+  operator: Exists
+  effect: NoSchedule
 
 workspace:
   path: /go/src/github.com/fynca/fynca
