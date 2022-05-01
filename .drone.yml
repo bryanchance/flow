@@ -1,6 +1,11 @@
 kind: pipeline
 type: kubernetes
 name: default
+workspace:
+  path: /go/src/github.com/fynca/fynca
+
+environment:
+  GOPATH: /go
 
 steps:
 - name: test
