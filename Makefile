@@ -1,7 +1,6 @@
 GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 COMMIT?=`git rev-parse --short HEAD`
-GOMODULE?=off
 APP=fynca
 DAEMON=fynca
 CGO_ENABLED=0
@@ -35,15 +34,15 @@ bindir:
 	@mkdir -p bin
 
 $(CLI): bindir
-	@>&2 echo " -> building $(CLI) ${COMMIT}${BUILD}"
+	@>&2 echo " -> building $(CLI) ${COMMIT}${BUILD} (${GOARCH})"
 	@cd cmd/$(CLI) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(CLI)$(EXT) .
 
 $(DAEMON): bindir
-	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD}"
+	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD} (${GOARCH})"
 	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Fynca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
 
 $(WORKER): bindir
-	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD}"
+	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD} (${GOARCH})"
 	@cd cmd/$(WORKER) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(WORKER)$(EXT) .
 	@mkdir -p bin/updates/fynca-worker/
 	@cp ./bin/$(WORKER)$(EXT) ./bin/updates/fynca-worker/$(GOOS)-$(GOARCH)

@@ -1,6 +1,12 @@
 kind: pipeline
 type: kubernetes
-name: default
+name: linux-amd64
+
+platform:
+  arch: amd64
+
+node_selector:
+  kubernetes.io/arch: amd64
 
 workspace:
   path: /go/src/github.com/fynca/fynca
@@ -9,9 +15,85 @@ steps:
 - name: test
   image: golang
   commands:
-  - go -mod=mod test -v ./...
+  - make test
 
 - name: build
   image: golang
   commands:
   - make
+
+- name: build-image-linux
+  image: plugins/docker
+  settings:
+    repo: fynca/fynca
+    auto_tag: true
+    auto_tag_suffix: linux-amd64
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+
+---
+kind: pipeline
+type: kubernetes
+name: linux-arm64
+
+platform:
+  arch: arm64
+
+node_selector:
+  kubernetes.io/arch: arm64
+
+workspace:
+  path: /go/src/github.com/fynca/fynca
+
+steps:
+- name: test
+  image: golang
+  commands:
+  - make test
+
+- name: build
+  image: golang
+  commands:
+  - make
+
+- name: build-image-linux
+  image: plugins/docker
+  settings:
+    repo: fynca/fynca
+    auto_tag: true
+    auto_tag_suffix: linux-arm64
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+
+---
+kind: pipeline
+type: kubernetes
+name: publish
+
+steps:
+- name: manifest
+  image: plugins/manifest
+  when:
+    branch:
+      - main
+      - release/*
+
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    target: fynca/fynca:latest
+    template: fynca/fynca:OS-ARCH
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    ignore_missing: true
+
+depends_on:
+  - linux-amd64
+  - linux-arm64
