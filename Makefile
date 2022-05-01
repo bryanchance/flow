@@ -1,6 +1,7 @@
 GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 COMMIT?=`git rev-parse --short HEAD`
+GOMODULE?=off
 APP=fynca
 DAEMON=fynca
 CGO_ENABLED=0
