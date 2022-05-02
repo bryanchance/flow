@@ -24,6 +24,10 @@ steps:
 
 - name: build-image-linux
   image: plugins/docker
+  when:
+    branch:
+      - main
+      - release/*
   settings:
     repo: fynca/fynca
     auto_tag: true
@@ -60,6 +64,10 @@ steps:
 
 - name: build-image-linux
   image: plugins/docker
+  when:
+    branch:
+      - main
+      - release/*
   settings:
     repo: fynca/fynca
     auto_tag: true
