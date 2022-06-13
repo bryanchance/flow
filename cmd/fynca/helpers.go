@@ -75,5 +75,8 @@ func defaultConfig(clix *cli.Context) (*fynca.Config, error) {
 	ip := getIP(clix)
 	defaultConfig := fynca.DefaultConfig()
 	defaultConfig.GRPCAddress = fmt.Sprintf("%s:%d", ip, 8080)
+	defaultConfig.Authenticator = &fynca.AuthenticatorConfig{
+		Name: "token",
+	}
 	return defaultConfig, nil
 }

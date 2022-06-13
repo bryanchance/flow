@@ -23,35 +23,35 @@ services:
       - 9000:9000
       - 9001:9001
 
-#  backend:
-#    build:
-#      dockerfile: Dockerfile
-#    ports:
-#      - 7080:7080
-#    command: ["-D", "server", "-c", "/etc/fynca.toml"]
-#    volumes:
-#      - ./fynca.toml:/etc/fynca.toml
-#    depends_on:
-#      - nats
-#      - minio
-#      - redis
-#
-#  manager:
-#    image: docker.io/fynca/fynca-manager:latest
-#    ports:
-#      - 9080:9080
-#    command: ["-a", "backend:7080", "-D", "-l", ":9080", "--api-cors-domain", '"*"', "--proxy"]
-#    depends_on:
-#      - backend
+  backend:
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - 7080:7080
+    command: ["-D", "server", "-c", "/etc/fynca.toml"]
+    volumes:
+      - ./fynca-dev.toml:/etc/fynca.toml
+    depends_on:
+      - nats
+      - minio
+      - redis
 
-#  worker:
-#    build:
-#      dockerfile: Dockerfile.worker
-#    command: ["-D", "-c", "/etc/fynca.toml"]
-#    volumes:
-#      - ./fynca.toml:/etc/fynca.toml
-#    depends_on:
-#      - nats
-#      - redis
-#      - minio
-#      - backend
+  manager:
+    image: docker.io/fynca/fynca-manager:latest
+    ports:
+      - 9080:9080
+    command: ["-a", "backend:7080", "-D", "-l", ":9080", "--api-cors-domain", '"*"']
+    depends_on:
+      - backend
+
+  worker:
+    build:
+      dockerfile: Dockerfile.worker
+    command: ["-D", "-c", "/etc/fynca.toml"]
+    volumes:
+      - ./fynca-dev.toml:/etc/fynca.toml
+    depends_on:
+      - nats
+      - redis
+      - minio
+      - backend

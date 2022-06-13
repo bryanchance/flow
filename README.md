@@ -2,9 +2,9 @@
 Fynca is a lightweight distributed render system for Blender.
 
 ```
-                   ┌─────────────────┐
-                   │  Fynca CLI / UI │
-                   └─────────────────┘
+                 ┌─────────────────┐
+                 │  Fynca CLI / UI │
+                 └─────────────────┘
                           │
                           │
                           ▼
@@ -82,10 +82,3 @@ and works very well with Fynca but any compatible S3 system should work.
 # Fynca Worker
 The Fynca worker is a small application that manages Blender to process jobs.  It accesses the NATS queue for
 jobs and stores the results in MinIO.
-
-# Render Slices
-For optimized rendering with very large resolutions or high cycle counts, render slicing can be enabled that will
-split the frame into regions to be rendered across the cluster.  When render slicing is enabled, an extra
-compositing task is used to composite each slice into a final render.  This is transparent to the user and the result
-is the same in Minio.  Job render times are improved dramatically depending on the number of nodes and their
-corresponding performance.

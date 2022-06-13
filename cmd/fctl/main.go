@@ -64,8 +64,8 @@ func main() {
 			Name:    "addr",
 			Aliases: []string{"a"},
 			Usage:   "fynca server address",
-			Value:   "127.0.0.1:8080",
-			EnvVars: []string{"FINCA_ADDR"},
+			Value:   "127.0.0.1:7080",
+			EnvVars: []string{"FYNCA_ADDR"},
 		},
 		&cli.StringFlag{
 			Name:    "cert",

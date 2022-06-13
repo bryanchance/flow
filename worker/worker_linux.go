@@ -31,6 +31,9 @@ func getGPUs() ([]*GPU, error) {
 	}
 	gpus := []*GPU{}
 	for _, card := range gpu.GraphicsCards {
+		if card.DeviceInfo == nil {
+			continue
+		}
 		vendor := strings.ToLower(card.DeviceInfo.Vendor.Name)
 		if strings.Contains(vendor, "nvidia") || strings.Contains(vendor, "amd") {
 			gpus = append(gpus, &GPU{
@@ -50,7 +53,7 @@ func gpuEnabled() (bool, error) {
 	}
 
 	for _, card := range gpu.GraphicsCards {
-		if strings.Index(strings.ToLower(strings.TrimSpace(card.DeviceInfo.Vendor.Name)), "nvidia") > -1 {
+		if card.DeviceInfo != nil && strings.Index(strings.ToLower(strings.TrimSpace(card.DeviceInfo.Vendor.Name)), "nvidia") > -1 {
 			return true, nil
 		}
 	}
