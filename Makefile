@@ -1,6 +1,7 @@
 GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 COMMIT?=`git rev-parse --short HEAD`
+REGISTRY?=docker.io/fynca
 APP=fynca
 DAEMON=fynca
 CGO_ENABLED=0
@@ -12,7 +13,7 @@ BUILD?=-d
 VERSION?=dev
 BUILD_ARGS?=
 PACKAGES=$(shell go list ./... | grep -v -e /vendor/)
-EXTENSIONS=$(wildcard extensions/*)
+WORKFLOWS=$(wildcard cmd/fynca-workflow-*)
 CYCLO_PACKAGES=$(shell go list ./... | grep -v /vendor/ | sed "s/github.com\/$(NAMESPACE)\/$(APP)\///g" | tail -n +2)
 VAB_ARGS?=
 CWD=$(PWD)
@@ -28,7 +29,15 @@ protos:
 	@>&2 echo " -> building protobufs for grpc"
 	@echo ${PACKAGES} | xargs protobuild -quiet
 
-binaries: $(DAEMON) $(CLI) $(WORKER)
+binaries: $(DAEMON) $(CLI) $(WORKER) $(WORKFLOWS)
+
+workflows: $(WORKFLOWS)
+
+daemon: $(DAEMON)
+
+worker: $(WORKER)
+
+cli: $(CLI)
 
 bindir:
 	@mkdir -p bin
@@ -47,6 +56,13 @@ $(WORKER): bindir
 	@mkdir -p bin/updates/fynca-worker/
 	@cp ./bin/$(WORKER)$(EXT) ./bin/updates/fynca-worker/$(GOOS)-$(GOARCH)
 
+$(WORKER)-image: bindir
+	@docker buildx build -t $(REGISTRY)/$(WORKER):${COMMIT} $(IMAGE_BUILD_EXTRA) -f Dockerfile.worker .
+
+$(WORKFLOWS): bindir
+	@echo " -> building $(shell basename $@) ${COMMIT}${BUILD} (${GOARCH})"
+	@cd "$@" && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(basename $$@)$(EXT) .
+
 vet:
 	@echo " -> $@"
 	@test -z "$$(go vet ${PACKAGES} 2>&1 | tee /dev/stderr)"
@@ -63,4 +79,4 @@ test:
 clean:
 	@rm -rf bin/
 
-.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKER) binaries
+.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKER) $(WORKFLOWS) binaries

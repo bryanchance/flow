@@ -27,6 +27,7 @@ import (
 	accountsservice "github.com/fynca/fynca/services/accounts"
 	jobsservice "github.com/fynca/fynca/services/jobs"
 	workersservice "github.com/fynca/fynca/services/workers"
+	workflowsservice "github.com/fynca/fynca/services/workflows"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
@@ -70,6 +71,7 @@ func serverAction(clix *cli.Context) error {
 	svcs := []func(cfg *fynca.Config) (services.Service, error){
 		jobsservice.New,
 		workersservice.New,
+		workflowsservice.New,
 	}
 
 	if cfg.Authenticator != nil && cfg.Authenticator.Name != "none" {

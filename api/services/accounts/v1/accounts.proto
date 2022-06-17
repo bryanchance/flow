@@ -22,6 +22,10 @@ service Accounts {
         rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
         rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
         rpc GetAccountProfile(GetAccountProfileRequest) returns (GetAccountProfileResponse);
+        rpc GenerateServiceToken(GenerateServiceTokenRequest) returns (GenerateServiceTokenResponse);
+        rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse);
+	rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
+        rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse);
 }
 
 message Account {
@@ -36,6 +40,8 @@ message Account {
         // and is hashed with bcrypt and then cleared and never stored
         string password = 8;
         bytes password_crypt = 9;
+        string current_namespace = 10;
+	repeated string namespaces = 11;
 }
 
 message ListAccountsRequest {}
@@ -82,3 +88,51 @@ message GetAccountProfileRequest {}
 message GetAccountProfileResponse {
         Account account = 1;
 }
+
+message ServiceToken {
+        string token = 1;
+        string description = 2;
+        google.protobuf.Timestamp created_at = 3 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp accessed_at = 4 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+}
+
+message GenerateServiceTokenRequest {
+        string description = 1;
+        google.protobuf.Duration ttl = 2 [(gogoproto.stdduration) = true, (gogoproto.nullable) = false, (gogoproto.customname) = "TTL"];
+}
+
+message GenerateServiceTokenResponse {
+        ServiceToken service_token = 1;
+}
+
+message CreateNamespaceRequest {
+	Namespace namespace = 1;
+}
+
+message CreateNamespaceResponse {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message ListNamespacesRequest {}
+
+message Namespace {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        google.protobuf.Timestamp created_at = 2 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+	string name = 3;
+	string description = 4;
+	string owner_id = 5 [(gogoproto.customname) = "OwnerID"];
+	repeated string members = 6;
+}
+
+message ListNamespacesResponse {
+	repeated Namespace namespaces = 1;
+}
+
+message GetNamespaceRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message GetNamespaceResponse {
+        Namespace namespace = 1;
+}
+

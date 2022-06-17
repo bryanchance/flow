@@ -1,4 +1,4 @@
-// Copyright 2022 Evan Hazlett
+// Copyright 2022 Axyon Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package client
 import (
 	"context"
 
+	"github.com/fynca/fynca"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -31,11 +32,25 @@ func newClientAuthenticator(cfg *ClientConfig) *clientAuthenticator {
 }
 
 func (a *clientAuthenticator) authUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	authCtx := metadata.AppendToOutgoingContext(ctx, "token", a.cfg.Token)
+	kvs := []string{}
+	if a.cfg.Token != "" {
+		kvs = append(kvs, fynca.CtxTokenKey, a.cfg.Token)
+	}
+	if a.cfg.ServiceToken != "" {
+		kvs = append(kvs, fynca.CtxServiceTokenKey, a.cfg.ServiceToken)
+	}
+	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return invoker(authCtx, method, req, reply, cc, opts...)
 }
 
 func (a *clientAuthenticator) authStreamInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	authCtx := metadata.AppendToOutgoingContext(ctx, "token", a.cfg.Token)
+	kvs := []string{}
+	if a.cfg.Token != "" {
+		kvs = append(kvs, fynca.CtxTokenKey, a.cfg.Token)
+	}
+	if a.cfg.ServiceToken != "" {
+		kvs = append(kvs, fynca.CtxServiceTokenKey, a.cfg.ServiceToken)
+	}
+	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return streamer(authCtx, desc, cc, method, opts...)
 }

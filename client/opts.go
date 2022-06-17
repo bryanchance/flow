@@ -22,9 +22,23 @@ func WithToken(token string) ClientOpt {
 	}
 }
 
+// WithServiceToken is an opt that sets the client service token
+func WithServiceToken(token string) ClientOpt {
+	return func(c *ClientConfig) {
+		c.ServiceToken = token
+	}
+}
+
 // WithUsername is an opt that sets the client username
 func WithUsername(username string) ClientOpt {
 	return func(c *ClientConfig) {
 		c.Username = username
+	}
+}
+
+// WithNamespace is an opt that sets the client namespace
+func WithNamespace(ns string) ClientOpt {
+	return func(c *ClientConfig) {
+		c.Namespace = ns
 	}
 }

@@ -22,6 +22,7 @@ import (
 	accountsapi "github.com/fynca/fynca/api/services/accounts/v1"
 	jobsapi "github.com/fynca/fynca/api/services/jobs/v1"
 	workersapi "github.com/fynca/fynca/api/services/workers/v1"
+	workflowsapi "github.com/fynca/fynca/api/services/workflows/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -34,13 +35,16 @@ type Client struct {
 	jobsapi.JobsClient
 	accountsapi.AccountsClient
 	workersapi.WorkersClient
+	workflowsapi.WorkflowsClient
 	config *fynca.Config
 	conn   *grpc.ClientConn
 }
 
 type ClientConfig struct {
-	Username string
-	Token    string
+	Username     string
+	Namespace    string
+	Token        string
+	ServiceToken string
 }
 
 func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
@@ -77,8 +81,6 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 	streamClientInterceptors = append(streamClientInterceptors, otelgrpc.StreamClientInterceptor())
 
 	opts = append(opts,
-		//grpc.WithUnaryInterceptor(authenticator.authUnaryInterceptor),
-		//grpc.WithStreamInterceptor(authenticator.authStreamInterceptor),
 		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(unaryClientInterceptors...)),
 		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(streamClientInterceptors...)),
 	)
@@ -95,6 +97,7 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 		jobsapi.NewJobsClient(c),
 		accountsapi.NewAccountsClient(c),
 		workersapi.NewWorkersClient(c),
+		workflowsapi.NewWorkflowsClient(c),
 		cfg,
 		c,
 	}

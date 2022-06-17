@@ -21,9 +21,10 @@ import (
 type Type string
 
 const (
-	AccountsService Type = "fynca.services.accounts.v1"
-	JobsService     Type = "fynca.services.jobs.v1"
-	WorkersService  Type = "fynca.services.workers.v1"
+	AccountsService  Type = "fynca.services.accounts.v1"
+	JobsService      Type = "fynca.services.jobs.v1"
+	WorkersService   Type = "fynca.services.workers.v1"
+	WorkflowsService Type = "fynca.services.workflows.v1"
 )
 
 // Service is the interface that all stellar services must implement

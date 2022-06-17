@@ -1,7 +1,9 @@
 FROM golang:1.18 as worker
+ARG VERSION
+ARG BUILD
 COPY . /app
 WORKDIR /app
-RUN make
+RUN make VERSION=$VERSION BUILD=$BUILD worker
 
 FROM ubuntu:22.04
 RUN if [ "$(uname -m)" != "x86_64" ]; then echo "ERR: only x86_64 is supported for container based workers"; exit 1; fi

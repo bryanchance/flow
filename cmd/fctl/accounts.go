@@ -32,6 +32,7 @@ var accountsCommand = &cli.Command{
 	Subcommands: []*cli.Command{
 		accountsCreateCommand,
 		accountsChangePasswordCommand,
+		accountsGenerateServiceTokenCommand,
 	},
 }
 
@@ -157,6 +158,47 @@ var accountsChangePasswordCommand = &cli.Command{
 		}
 
 		logrus.Infof("password changed for %s successfully", username)
+
+		return nil
+	},
+}
+
+var accountsGenerateServiceTokenCommand = &cli.Command{
+	Name:  "generate-service-token",
+	Usage: "create a new service token",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "description",
+			Usage: "token description",
+			Value: "",
+		},
+		&cli.DurationFlag{
+			Name:  "ttl",
+			Usage: "ttl for service token",
+			Value: 8760 * time.Hour, // 1 year
+		},
+	},
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.GenerateServiceToken(ctx, &accountsapi.GenerateServiceTokenRequest{
+			Description: clix.String("description"),
+			TTL:         clix.Duration("ttl"),
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(resp.ServiceToken.Token)
 
 		return nil
 	},

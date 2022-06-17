@@ -18,6 +18,7 @@ import (
 
 	"github.com/fynca/fynca"
 	"github.com/fynca/fynca/client"
+	"github.com/gogo/protobuf/jsonpb"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/metadata"
 )
@@ -45,4 +46,8 @@ func getContext() (context.Context, error) {
 	md := metadata.New(map[string]string{"token": config.Token})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	return ctx, nil
+}
+
+func marshaler() *jsonpb.Marshaler {
+	return &jsonpb.Marshaler{EmitDefaults: true}
 }

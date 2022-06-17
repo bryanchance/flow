@@ -33,6 +33,9 @@ const (
 	QueueSubjectJobPriorityAnimation = "animation"
 	QueueSubjectJobPriorityLow       = "low"
 
+	// THE FOLLOWING ARE DEPRECATED
+	// these are for the render job specifically and should be removed
+	// once the render job functionality is moved to a workflow
 	// S3ProjectPath is the project for project files
 	S3ProjectPath = "projects"
 	// S3RenderPath is the s3 bucket for final renders
@@ -43,6 +46,9 @@ const (
 	S3JobLogPath = "job.log"
 	// S3JobStatusContentType is the content type for job status objects
 	S3JobContentType = "application/json"
+
+	// S3WorkflowPath is the path in the s3 bucket for workflow content
+	S3WorkflowPath = "workflows"
 
 	// WorkerTTL is the TTL for the worker heartbeat
 	WorkerTTL = time.Second * 10
@@ -58,13 +64,14 @@ const (
 
 	// CtxTokenKey is the key stored in the context for the token
 	CtxTokenKey = "token"
+	// CtxServiceTokenKey is the service key stored in the context
+	CtxServiceTokenKey = "service-token"
 	// CtxTokenKey is the key stored in the context for the username
 	CtxUsernameKey = "username"
 	// CtxTokenKey is the key stored in the context if the user is an admin
 	CtxAdminKey = "isAdmin"
 	// CtxNamespaceKey is the key stored in the context for the namespace
 	CtxNamespaceKey = "namespace"
-
 	// CtxDefaultNamespace is the default key used when unauthenticated and no auth
 	CtxDefaultNamespace = "default"
 )
@@ -126,8 +133,8 @@ type Config struct {
 	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
 	DatabaseAddress string
-	// JobTimeout is the maximum amount of time a job can take
-	JobTimeout duration
+	// WorkflowTimeout is the max timeout for workers to process workflows
+	WorkflowTimeout duration
 	// Workers are worker specific configuration
 	Workers []*Worker
 	// ProfilerAddress enables the performance profiler on the specified address
@@ -142,6 +149,8 @@ type Config struct {
 	Authenticator *AuthenticatorConfig
 
 	// TODO: cleanup
+	// JobTimeout is the maximum amount of time a job can take
+	JobTimeout duration
 	// JobPrefix is the prefix for all queued jobs
 	JobPrefix string
 	// JobPriority is the priority for queued jobs
@@ -173,6 +182,10 @@ func (c *Config) GetJobTimeout() time.Duration {
 	return c.JobTimeout.Duration
 }
 
+func (c *Config) GetWorkflowTimeout() time.Duration {
+	return c.JobTimeout.Duration
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		GRPCAddress:               "127.0.0.1:8080",
@@ -182,6 +195,7 @@ func DefaultConfig() *Config {
 		NATSKVBucketWorkerControl: kvBucketWorkerControl,
 		DatabaseAddress:           "redis://127.0.0.1:6379/0",
 		JobTimeout:                duration{time.Second * 3600},
+		WorkflowTimeout:           duration{time.Hour * 8},
 		JobPriority:               50,
 		JobCPU:                    1000,
 		JobMemory:                 1024,

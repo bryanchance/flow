@@ -126,6 +126,11 @@ func (m *AdminRequired) getAccount(ctx context.Context) (*api.Account, error) {
 	if !ok {
 		return nil, status.Errorf(codes.PermissionDenied, "invalid or missing token")
 	}
+	// check for service token
+	if _, ok := metadata[fynca.CtxServiceTokenKey]; ok {
+		return nil, nil
+	}
+
 	// check for token
 	token, ok := metadata[fynca.CtxTokenKey]
 	if !ok {

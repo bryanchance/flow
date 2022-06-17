@@ -15,6 +15,7 @@ package none
 
 import (
 	"context"
+	"time"
 
 	"github.com/fynca/fynca"
 	api "github.com/fynca/fynca/api/services/accounts/v1"
@@ -38,6 +39,10 @@ func (a *NoneAuthenticator) Authenticate(ctx context.Context, username string, p
 }
 
 func (a *NoneAuthenticator) GetAccount(ctx context.Context, token string) (*api.Account, error) {
+	return nil, nil
+}
+
+func (a *NoneAuthenticator) GenerateServiceToken(ctx context.Context, description string, ttl time.Duration) (*api.ServiceToken, error) {
 	return nil, nil
 }
 

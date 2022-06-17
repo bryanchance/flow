@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package fynca.services.workflows.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import weak "google/protobuf/empty.proto";
+
+option go_package = "github.com/fynca/fynca/api/services/workflows/v1;workflows";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+
+service Workflows {
+        rpc QueueWorkflow(stream QueueWorkflowRequest) returns (QueueWorkflowResponse);
+        rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+        rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+        rpc DeleteWorkflow(DeleteWorkflowRequest) returns (google.protobuf.Empty);
+
+        rpc SubscribeWorkflowEvents(stream SubscribeWorkflowEventsRequest) returns (stream WorkflowEvent);
+        rpc UploadWorkflowArtifact(stream UploadWorkflowArtifactRequest) returns (UploadWorkflowArtifactResponse);
+        rpc UpdateWorkflowStatus(UpdateWorkflowStatusRequest) returns (google.protobuf.Empty);
+        rpc UpdateWorkflowOutput(UpdateWorkflowOutputRequest) returns (google.protobuf.Empty);
+}
+
+message ListWorkflowsRequest {}
+
+enum WorkflowStatus {
+        PENDING = 0;
+        WAITING = 1;
+        RUNNING = 2;
+        ERROR = 3;
+        COMPLETE = 4;
+}
+
+message WorkflowOutputLink {
+        string name = 1;
+        string target = 2;
+}
+
+message WorkflowOutputArtifactUpload {
+        string workfload_id = 1 [(gogoproto.customname) = "WorkflowID"];
+        string filename = 2;
+        string content_type = 3;
+}
+
+message WorkflowOutputArtifact {
+        string name = 1;
+        string content_type = 2;
+        string storage_path = 3;
+}
+
+message WorkflowOutputMetadata {
+        string thumbnail = 1;
+        repeated WorkflowOutputLink links = 2;
+}
+
+message WorkflowOutput {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string namespace = 2;
+        WorkflowOutputMetadata metadata = 3;
+        string log = 4;
+        map<string, string> info = 5;
+        repeated WorkflowOutputArtifact artifacts = 6;
+        google.protobuf.Timestamp started_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp finished_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Duration duration = 9 [(gogoproto.stdduration) = true, (gogoproto.nullable) = false];
+}
+
+message Workflow {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string type = 2;
+        string name = 3;
+        string namespace = 4;
+        map<string, string> parameters = 5;
+        string input_path = 6;
+        WorkflowStatus status = 7;
+        WorkflowOutput output = 8;
+        google.protobuf.Timestamp created_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        google.protobuf.Timestamp updated_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        uint64 sequence_id = 11 [(gogoproto.customname) = "SequenceID"];
+        WorkflowPriority priority = 12;
+}
+
+message ListWorkflowsResponse {
+        repeated Workflow workflows = 1;
+}
+
+message GetWorkflowRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message GetWorkflowResponse {
+        Workflow workflow = 1;
+}
+
+message WorkflowInputFile {
+        string filename = 1;
+        string content_type = 2;
+}
+
+message WorkflowInputWorkflows {
+        repeated string ids = 1 [(gogoproto.customname) = "IDs"];
+}
+
+enum WorkflowPriority {
+        NORMAL = 0;
+        LOW = 1;
+        URGENT = 2;
+}
+
+message WorkflowRequest {
+        string type = 1;
+        string name = 2;
+        map<string, string> parameters = 3;
+        WorkflowPriority priority = 4;
+        oneof input {
+                WorkflowInputWorkflows workflows = 5;
+                WorkflowInputFile file = 6;
+        }
+}
+
+message QueueWorkflowRequest {
+        oneof data {
+                WorkflowRequest request = 1;
+                bytes chunk_data = 2;
+        }
+}
+
+message QueueWorkflowResponse {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message DeleteWorkflowRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message SubscriberInfo {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string type = 2;
+        uint64 max_workflows = 3;
+}
+
+message SubscribeWorkflowEventsRequest {
+        oneof request {
+                SubscriberInfo info = 1;
+                WorkflowOutput output = 2;
+                bool close = 3;
+        }
+}
+
+message WorkflowEvent {
+        oneof event {
+                Workflow workflow = 1;
+                bool close = 2;
+        }
+}
+
+message UpdateWorkflowOutputRequest {
+        WorkflowOutput workflow_output = 1;
+}
+
+message UploadWorkflowArtifactRequest {
+        oneof data {
+                WorkflowOutputArtifactUpload artifact = 1;
+                bytes chunk_data = 2;
+        }
+}
+
+message UploadWorkflowArtifactResponse {
+        string storage_path = 1;
+}
+
+message UpdateWorkflowStatusRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        WorkflowStatus status = 2;
+}

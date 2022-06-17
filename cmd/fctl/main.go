@@ -52,6 +52,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		loginCommand,
 		accountsCommand,
+		workflowsCommand,
 		queueJobCommand,
 		workersCommand,
 	}
@@ -74,9 +75,10 @@ func main() {
 			Value:   "",
 		},
 		&cli.StringFlag{
-			Name:  "key, k",
-			Usage: "fynca client key",
-			Value: "",
+			Name:    "key",
+			Aliases: []string{"k"},
+			Usage:   "fynca client key",
+			Value:   "",
 		},
 		&cli.BoolFlag{
 			Name:  "skip-verify",
