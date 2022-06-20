@@ -14,7 +14,7 @@
 package services
 
 import (
-	"github.com/fynca/fynca/pkg/auth"
+	"github.com/ehazlett/flow/pkg/auth"
 	"google.golang.org/grpc"
 )
 

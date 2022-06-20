@@ -14,8 +14,8 @@
 package worker
 
 import (
-	api "github.com/fynca/fynca/api/services/workers/v1"
-	"github.com/fynca/fynca/version"
+	api "github.com/ehazlett/flow/api/services/workers/v1"
+	"github.com/ehazlett/flow/version"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"

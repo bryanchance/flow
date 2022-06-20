@@ -16,7 +16,7 @@ package render
 import (
 	"context"
 
-	api "github.com/fynca/fynca/api/services/jobs/v1"
+	api "github.com/ehazlett/flow/api/services/jobs/v1"
 )
 
 func (s *service) JobLog(ctx context.Context, r *api.JobLogRequest) (*api.JobLogResponse, error) {

@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
-	"github.com/fynca/fynca/pkg/auth"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
+	"github.com/ehazlett/flow/pkg/auth"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

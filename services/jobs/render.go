@@ -16,8 +16,8 @@ package render
 import (
 	"context"
 
-	api "github.com/fynca/fynca/api/services/jobs/v1"
-	"github.com/fynca/fynca/pkg/tracing"
+	api "github.com/ehazlett/flow/api/services/jobs/v1"
+	"github.com/ehazlett/flow/pkg/tracing"
 	"go.opentelemetry.io/otel/trace"
 )
 

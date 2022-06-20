@@ -16,8 +16,8 @@ package main
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	"github.com/fynca/fynca/client"
+	"github.com/ehazlett/flow"
+	"github.com/ehazlett/flow/client"
 	"github.com/gogo/protobuf/jsonpb"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/metadata"

@@ -24,7 +24,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/dustin/go-humanize"
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -41,6 +41,7 @@ var workflowsCommand = &cli.Command{
 		workflowsQueueCommand,
 		workflowsListCommand,
 		workflowsInfoCommand,
+		workflowsDeleteCommand,
 	},
 }
 
@@ -66,18 +67,19 @@ var workflowsListCommand = &cli.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
-		fmt.Fprintf(w, "ID\tNAME\tTYPE\tSTATUS\tCREATED\tDURATION\n")
+		fmt.Fprintf(w, "ID\tNAME\tTYPE\tSTATUS\tCREATED\tPRIORITY\tDURATION\n")
 		for _, wf := range resp.Workflows {
 			duration := ""
 			if wf.Output != nil {
 				duration = wf.Output.Duration.String()
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 				wf.ID,
 				wf.Name,
 				wf.Type,
 				wf.Status.String(),
 				humanize.Time(wf.CreatedAt),
+				wf.Priority,
 				duration,
 			)
 		}
@@ -106,8 +108,14 @@ var workflowsQueueCommand = &cli.Command{
 			Usage:   "file path to use as workflow input",
 		},
 		&cli.StringSliceFlag{
-			Name:  "input-workflow-id",
-			Usage: "output from another workflow to use as input (can be multiple)",
+			Name:    "input-workflow-id",
+			Aliases: []string{"w"},
+			Usage:   "output from another workflow to use as input (can be multiple)",
+		},
+		&cli.StringFlag{
+			Name:  "priority",
+			Usage: "workflow priority (low, normal, urgent)",
+			Value: "normal",
 		},
 		&cli.StringSliceFlag{
 			Name:    "parameter",
@@ -127,8 +135,8 @@ var workflowsQueueCommand = &cli.Command{
 		inputFilePath := clix.String("input-file")
 		inputWorkflowIDs := clix.StringSlice("input-workflow-id")
 		// validate input type; only file or workflow allowed -- not both
-		if inputFilePath == "" && len(inputWorkflowIDs) == 0 {
-			return fmt.Errorf("one of input-file or input-workflow-id required")
+		if inputFilePath != "" && len(inputWorkflowIDs) > 0 {
+			return fmt.Errorf("only one input file or workflow IDs can be specified")
 		}
 
 		ctx, err := getContext()
@@ -158,14 +166,16 @@ var workflowsQueueCommand = &cli.Command{
 			return err
 		}
 
+		priority, err := getWorkflowPriority(clix.String("priority"))
+		if err != nil {
+			return err
+		}
+
 		workflowRequest := &api.WorkflowRequest{
 			Name:       workflowName,
 			Type:       workflowType,
 			Parameters: params,
-		}
-
-		if inputFilePath != "" && len(inputWorkflowIDs) > 0 {
-			return fmt.Errorf("only one input file or workflow IDs can be specified")
+			Priority:   priority,
 		}
 
 		var inputFile *os.File
@@ -198,9 +208,15 @@ var workflowsQueueCommand = &cli.Command{
 		}
 
 		if len(inputWorkflowIDs) > 0 {
+			workflowInputs := []*api.WorkflowInputWorkflow{}
+			for _, inputID := range inputWorkflowIDs {
+				workflowInputs = append(workflowInputs, &api.WorkflowInputWorkflow{
+					ID: inputID,
+				})
+			}
 			workflowRequest.Input = &api.WorkflowRequest_Workflows{
 				Workflows: &api.WorkflowInputWorkflows{
-					IDs: inputWorkflowIDs,
+					WorkflowInputs: workflowInputs,
 				},
 			}
 		}
@@ -291,4 +307,50 @@ var workflowsInfoCommand = &cli.Command{
 
 		return nil
 	},
+}
+
+var workflowsDeleteCommand = &cli.Command{
+	Name:      "delete",
+	Usage:     "delete workflow",
+	ArgsUsage: "[ID]",
+	Flags:     []cli.Flag{},
+	Action: func(clix *cli.Context) error {
+		id := clix.Args().Get(0)
+		if id == "" {
+			cli.ShowSubcommandHelp(clix)
+			return fmt.Errorf("workflow ID must be specified")
+		}
+
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		if _, err := client.DeleteWorkflow(ctx, &api.DeleteWorkflowRequest{
+			ID: id,
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+func getWorkflowPriority(p string) (api.WorkflowPriority, error) {
+	switch strings.ToLower(p) {
+	case "low":
+		return api.WorkflowPriority_LOW, nil
+	case "normal":
+		return api.WorkflowPriority_NORMAL, nil
+	case "urgent":
+		return api.WorkflowPriority_URGENT, nil
+	}
+
+	return api.WorkflowPriority_UNKNOWN, fmt.Errorf("unknown priority specified: %s (use \"low\", \"normal\", or \"urgent\")", p)
 }

@@ -9,7 +9,7 @@ node_selector:
   kubernetes.io/arch: amd64
 
 workspace:
-  path: /go/src/github.com/fynca/fynca
+  path: /go/src/github.com/ehazlett/flow
 
 steps:
 - name: test
@@ -49,7 +49,7 @@ node_selector:
   kubernetes.io/arch: arm64
 
 workspace:
-  path: /go/src/github.com/fynca/fynca
+  path: /go/src/github.com/ehazlett/flow
 
 steps:
 - name: test

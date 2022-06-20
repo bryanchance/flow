@@ -16,8 +16,8 @@ package workers
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workers/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/workers/v1"
 	"github.com/gogo/protobuf/proto"
 )
 

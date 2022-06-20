@@ -17,7 +17,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"

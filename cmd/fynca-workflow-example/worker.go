@@ -14,29 +14,32 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/fynca/fynca"
-	"github.com/fynca/fynca/pkg/workflows"
+	"github.com/ehazlett/flow/pkg/workflows"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
 
 func workerAction(clix *cli.Context) error {
-	configPath := clix.String("config")
-	cfg, err := fynca.LoadConfig(configPath)
-	if err != nil {
-		return err
+	id := clix.String("id")
+	cfg := &workflows.Config{
+		ID:                    id,
+		Type:                  workflowType,
+		Address:               clix.String("address"),
+		TLSCertificate:        clix.String("tls-certificate"),
+		TLSKey:                clix.String("tls-key"),
+		TLSInsecureSkipVerify: clix.Bool("tls-skip-verify"),
+		MaxWorkflows:          clix.Uint64("max-workflows"),
+		ServiceToken:          clix.String("service-token"),
 	}
 
-	id := clix.String("id")
-	taskTimeout := clix.Duration("task-timeout")
-	maxTasks := clix.Int("max-tasks")
-
 	p := &Processor{}
-	handler, err := workflows.NewWorkflowHandler(id, workflowType, taskTimeout, maxTasks, cfg, p)
+
+	h, err := workflows.NewWorkflowHandler(cfg, p)
 	if err != nil {
 		return err
 	}
@@ -57,8 +60,7 @@ func workerAction(clix *cli.Context) error {
 			case sig := <-signals:
 				switch sig {
 				case syscall.SIGTERM, syscall.SIGINT:
-					logrus.Info("shutting down")
-					if err := handler.Stop(); err != nil {
+					if err := h.Stop(); err != nil {
 						logrus.Error(err)
 					}
 					doneCh <- true
@@ -71,7 +73,8 @@ func workerAction(clix *cli.Context) error {
 	}()
 
 	go func() {
-		if err := handler.Run(); err != nil {
+		ctx := context.Background()
+		if err := h.Run(ctx); err != nil {
 			errCh <- err
 			return
 		}
@@ -79,6 +82,8 @@ func workerAction(clix *cli.Context) error {
 	}()
 
 	<-doneCh
+
+	logrus.Info("shutting down")
 
 	return runErr
 }

@@ -15,10 +15,24 @@ package workflows
 
 import (
 	"context"
+	"time"
 
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 )
 
+type ProcessorConfig struct {
+	Workflow *api.Workflow
+	InputDir string
+}
+
+type ProcessorOutput struct {
+	FinishedAt time.Time
+	Duration   time.Duration
+	Parameters map[string]string
+	Log        string
+	OutputDir  string
+}
+
 type Processor interface {
-	Process(ctx context.Context, req *api.Workflow) (*api.WorkflowOutput, error)
+	Process(context.Context, *ProcessorConfig) (*ProcessorOutput, error)
 }

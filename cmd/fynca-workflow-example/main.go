@@ -15,7 +15,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -54,20 +53,33 @@ func main() {
 			Usage: "worker id",
 			Value: getHostname(),
 		},
-		&cli.DurationFlag{
-			Name:    "task-timeout",
-			Aliases: []string{"t"},
-			Value:   8 * time.Hour,
+		&cli.StringFlag{
+			Name:    "address",
+			Aliases: []string{"a"},
+			Usage:   "fynca server grpc address",
+			Value:   "127.0.0.1:7080",
 		},
 		&cli.StringFlag{
-			Name:    "config",
-			Aliases: []string{"c"},
-			Usage:   "fynca config path",
+			Name:  "tls-certificate",
+			Usage: "tls client certificate",
+		},
+		&cli.StringFlag{
+			Name:  "tls-key",
+			Usage: "tls client key",
+		},
+		&cli.BoolFlag{
+			Name:  "tls-skip-verify",
+			Usage: "tls skip verify",
+		},
+		&cli.StringFlag{
+			Name:    "service-token",
+			Aliases: []string{"t"},
+			Usage:   "fynca service token for access",
 		},
 		&cli.IntFlag{
-			Name:    "max-tasks",
+			Name:    "max-workflows",
 			Aliases: []string{"m"},
-			Usage:   "maximum number of tasks to process",
+			Usage:   "maximum number of workflows to process",
 			Value:   0,
 		},
 	}

@@ -16,8 +16,8 @@ package render
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/jobs/v1"
 	"github.com/sirupsen/logrus"
 )
 

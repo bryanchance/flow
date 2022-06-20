@@ -19,12 +19,11 @@ import (
 	"io"
 	"os"
 	"path"
-	"strings"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workflows/v1"
-	"github.com/gogo/protobuf/proto"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/ehazlett/flow/pkg/queue"
 	minio "github.com/minio/minio-go/v7"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -33,7 +32,7 @@ import (
 )
 
 func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error {
-	js, err := s.natsClient.JetStream()
+	workflowQueue, err := queue.NewQueue(s.config.QueueAddress)
 	if err != nil {
 		return err
 	}
@@ -74,7 +73,22 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	switch v := workflowReq.Input.(type) {
 	case *api.WorkflowRequest_Workflows:
 		// TODO: get input workflow id storage path
-		logrus.Debugf("using workflows %s for input", v.Workflows.IDs)
+		wi := []*api.WorkflowInputWorkflow{}
+		for _, i := range v.Workflows.WorkflowInputs {
+			// if no namespace is specified, use current
+			if i.Namespace == "" {
+				i.Namespace = namespace
+			}
+			wi = append(wi, &api.WorkflowInputWorkflow{
+				Namespace: i.Namespace,
+				ID:        i.ID,
+			})
+		}
+		workflow.Input = &api.Workflow_Workflows{
+			Workflows: &api.WorkflowInputWorkflows{
+				WorkflowInputs: wi,
+			},
+		}
 	case *api.WorkflowRequest_File:
 		logrus.Debug("using upload content for input")
 		// process user specified input data
@@ -104,48 +118,47 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 		}
 
 		// save to tmpfile to upload to s3
-		tmpJobFile, err := os.CreateTemp("", "fynca-workflow-")
+		tmpWorkflowFile, err := os.CreateTemp("", "fynca-workflow-")
 		if err != nil {
 			return err
 		}
-		if _, err := buf.WriteTo(tmpJobFile); err != nil {
+		if _, err := buf.WriteTo(tmpWorkflowFile); err != nil {
 			return err
 		}
-		tmpJobFile.Close()
+		tmpWorkflowFile.Close()
 
-		defer os.Remove(tmpJobFile.Name())
+		defer os.Remove(tmpWorkflowFile.Name())
 
 		// save to minio
 		inputFileName := getStorageWorkflowPath(namespace, workflowID, v.File.Filename)
 
 		logrus.Debugf("saving %s to storage", inputFileName)
-		inputStorageInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, inputFileName, tmpJobFile.Name(), minio.PutObjectOptions{ContentType: v.File.ContentType})
+		inputStorageInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, inputFileName, tmpWorkflowFile.Name(), minio.PutObjectOptions{ContentType: v.File.ContentType})
 		if err != nil {
 			return status.Errorf(codes.Internal, "error saving workflow to storage: %s", err)
 		}
 
 		logrus.Debugf("saved workflow %s to storage service (%d bytes)", workflowName, inputStorageInfo.Size)
-		workflow.InputPath = path.Dir(inputFileName)
+		workflow.Input = &api.Workflow_File{
+			File: &api.WorkflowInputFile{
+				Filename:    v.File.Filename,
+				ContentType: v.File.ContentType,
+				StoragePath: path.Dir(inputFileName),
+			},
+		}
 	}
 
 	// queue workflow
-	// TODO: get workflow priority
-	workflowSubject := getWorkflowSubject(workflow)
-	logrus.Debugf("using nats subject: %s", workflowSubject)
-	data, err := proto.Marshal(workflow)
-	if err != nil {
-		return err
-	}
-
 	logrus.Debugf("publishing workflow %s", workflow)
-	ack, err := js.Publish(workflowSubject, data)
+	priority, err := getWorkflowQueuePriority(workflow.Priority)
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("workflow sequence id: %d", ack.Sequence)
-	workflow.SequenceID = ack.Sequence
 
-	logrus.Debugf("workflow: %+v", workflow)
+	v := getWorkflowQueueValue(workflow)
+	if err := workflowQueue.Schedule(ctx, workflow.Type, v, priority); err != nil {
+		return err
+	}
 
 	// persist workflow to ds
 	logrus.Debugf("saving workflow %s to ds", workflow.ID)
@@ -163,16 +176,14 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	return nil
 }
 
-func getWorkflowSubject(w *api.Workflow) string {
-	priority := strings.ToLower(w.Priority.String())
-	// TODO: priority
-	return fmt.Sprintf("workflows.%s.%s", priority, w.Type)
-}
-
-func getStorageWorkflowPath(namespace, workflowID string, filename string) string {
-	return path.Join(getStoragePath(namespace, workflowID), filename)
-}
-
-func getStoragePath(namespace, workflowID string) string {
-	return path.Join(namespace, fynca.S3WorkflowPath, workflowID)
+func getWorkflowQueuePriority(p api.WorkflowPriority) (queue.Priority, error) {
+	switch p {
+	case api.WorkflowPriority_LOW:
+		return queue.LOW, nil
+	case api.WorkflowPriority_NORMAL:
+		return queue.NORMAL, nil
+	case api.WorkflowPriority_URGENT:
+		return queue.URGENT, nil
+	}
+	return queue.UNKNOWN, fmt.Errorf("unknown queue priority type %s", p)
 }

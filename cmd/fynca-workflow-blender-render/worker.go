@@ -19,28 +19,19 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fynca/fynca"
-	"github.com/fynca/fynca/cmd/fynca-workflow-blender-render/processor"
-	"github.com/fynca/fynca/pkg/workflows"
+	"github.com/ehazlett/flow/cmd/fynca-workflow-blender-render/processor"
+	"github.com/ehazlett/flow/pkg/workflows"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )
 
 func workerAction(clix *cli.Context) error {
-	configPath := clix.String("config")
-	cfg, err := fynca.LoadConfig(configPath)
-	if err != nil {
-		return err
-	}
-
 	id := clix.String("id")
-	maxWorkflows := clix.Int("max-workflows")
-	workflowTimeout := clix.Duration("workflow-timeout")
 	blenderPath := clix.String("blender-path")
 
 	logrus.Infof("starting %s: id=%s", workflowName, id)
 
-	p, err := processor.NewProcessor(blenderPath, cfg, &processor.Config{
+	cfg := &workflows.Config{
 		ID:                    clix.String("id"),
 		Type:                  workflowType,
 		Address:               clix.String("address"),
@@ -49,12 +40,15 @@ func workerAction(clix *cli.Context) error {
 		TLSInsecureSkipVerify: clix.Bool("tls-skip-verify"),
 		MaxWorkflows:          clix.Uint64("max-workflows"),
 		ServiceToken:          clix.String("service-token"),
-	})
+		WorkflowTimeout:       clix.Duration("workflow-timeout"),
+	}
+
+	p, err := processor.NewProcessor(blenderPath, cfg)
 	if err != nil {
 		return err
 	}
 
-	handler, err := workflows.NewWorkflowHandler(id, workflowType, workflowTimeout, maxWorkflows, cfg, p)
+	h, err := workflows.NewWorkflowHandler(cfg, p)
 	if err != nil {
 		return err
 	}
@@ -75,8 +69,7 @@ func workerAction(clix *cli.Context) error {
 			case sig := <-signals:
 				switch sig {
 				case syscall.SIGTERM, syscall.SIGINT:
-					logrus.Info("shutting down")
-					if err := handler.Stop(); err != nil {
+					if err := h.Stop(); err != nil {
 						logrus.Error(err)
 					}
 					doneCh <- true
@@ -90,20 +83,12 @@ func workerAction(clix *cli.Context) error {
 
 	go func() {
 		ctx := context.Background()
-		if err := p.Start(ctx); err != nil {
+		if err := h.Run(ctx); err != nil {
 			errCh <- err
 			return
 		}
 		doneCh <- true
 	}()
-
-	//go func() {
-	//	if err := handler.Run(); err != nil {
-	//		errCh <- err
-	//		return
-	//	}
-	//	doneCh <- true
-	//}()
 
 	<-doneCh
 

@@ -19,8 +19,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

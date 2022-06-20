@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/codes"

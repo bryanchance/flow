@@ -25,8 +25,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/jobs/v1"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/proto"
 	minio "github.com/minio/minio-go/v7"

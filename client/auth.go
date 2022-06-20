@@ -16,7 +16,7 @@ package client
 import (
 	"context"
 
-	"github.com/fynca/fynca"
+	"github.com/ehazlett/flow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

@@ -14,7 +14,7 @@
 package worker
 
 import (
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"github.com/pkg/errors"
 	"github.com/sanbornm/go-selfupdate/selfupdate"
 	"github.com/sirupsen/logrus"

@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
-	"github.com/fynca/fynca/datastore"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
+	"github.com/ehazlett/flow/datastore"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

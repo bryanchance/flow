@@ -17,7 +17,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"

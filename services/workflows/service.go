@@ -14,15 +14,18 @@
 package workflows
 
 import (
+	"fmt"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ehazlett/ttlcache"
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workflows/v1"
-	"github.com/fynca/fynca/datastore"
-	"github.com/fynca/fynca/pkg/auth"
-	"github.com/fynca/fynca/services"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/ehazlett/flow/datastore"
+	"github.com/ehazlett/flow/pkg/auth"
+	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
@@ -35,6 +38,8 @@ import (
 const (
 	// time to wait after a failed job to retry the workflow again
 	workflowFailedCacheDelay = time.Second * 60
+	// buffer size for streaming contents to clients
+	bufSize = 4096
 )
 
 var (
@@ -115,4 +120,25 @@ func (s *service) Start() error {
 
 func (s *service) Stop() error {
 	return nil
+}
+
+func getWorkflowQueueValue(w *api.Workflow) []byte {
+	return []byte(path.Join(w.Namespace, w.ID))
+}
+
+// parse queue value and return as <namespace>/<id>
+func parseWorkflowQueueValue(v []byte) (string, string, error) {
+	parts := strings.Split(string(v), "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid workflow queue value: %s", v)
+	}
+	return parts[0], parts[1], nil
+}
+
+func getStorageWorkflowPath(namespace, workflowID string, filename string) string {
+	return path.Join(getStoragePath(namespace, workflowID), filename)
+}
+
+func getStoragePath(namespace, workflowID string) string {
+	return path.Join(namespace, fynca.S3WorkflowPath, workflowID)
 }

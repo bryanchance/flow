@@ -15,6 +15,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -76,21 +77,21 @@ func main() {
 			Aliases: []string{"t"},
 			Usage:   "fynca service token for access",
 		},
-		&cli.StringFlag{
-			Name:    "config",
-			Aliases: []string{"c"},
-			Usage:   "DEPRECATED: fynca config path",
-		},
-		&cli.StringFlag{
-			Name:    "blender-path",
-			Aliases: []string{"b"},
-			Usage:   "path to blender executable (default: find in $PATH)",
+		&cli.DurationFlag{
+			Name:  "workflow-timeout",
+			Usage: "workflow processing timeout",
+			Value: 8 * time.Hour,
 		},
 		&cli.IntFlag{
 			Name:    "max-workflows",
 			Aliases: []string{"m"},
 			Usage:   "maximum number of workflows to process",
 			Value:   0,
+		},
+		&cli.StringFlag{
+			Name:    "blender-path",
+			Aliases: []string{"b"},
+			Usage:   "path to blender executable (default: find in $PATH)",
 		},
 	}
 

@@ -16,7 +16,7 @@ package workflows
 import (
 	"context"
 
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 )
 
 func (s *service) ListWorkflows(ctx context.Context, r *api.ListWorkflowsRequest) (*api.ListWorkflowsResponse, error) {

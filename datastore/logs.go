@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/jobs/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/jobs/v1"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

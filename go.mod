@@ -1,4 +1,4 @@
-module github.com/fynca/fynca
+module github.com/ehazlett/flow
 
 go 1.16
 

@@ -17,7 +17,7 @@ import (
 	"context"
 	"time"
 
-	api "github.com/fynca/fynca/api/services/accounts/v1"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
 	"google.golang.org/grpc"
 )
 

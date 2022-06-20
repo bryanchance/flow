@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	accountsapi "github.com/fynca/fynca/api/services/accounts/v1"
+	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 	"golang.org/x/term"

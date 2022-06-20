@@ -18,7 +18,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/fynca/fynca"
+	"github.com/ehazlett/flow"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 )

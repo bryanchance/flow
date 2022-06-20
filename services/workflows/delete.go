@@ -15,10 +15,12 @@ package workflows
 
 import (
 	"context"
-	"strings"
 
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/ehazlett/flow/pkg/queue"
 	ptypes "github.com/gogo/protobuf/types"
+	minio "github.com/minio/minio-go/v7"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *service) DeleteWorkflow(ctx context.Context, r *api.DeleteWorkflowRequest) (*ptypes.Empty, error) {
@@ -27,19 +29,44 @@ func (s *service) DeleteWorkflow(ctx context.Context, r *api.DeleteWorkflowReque
 		return nil, err
 	}
 
-	js, err := s.natsClient.JetStream()
+	logrus.Debugf("deleting workflow %s", workflow.ID)
+
+	// delete from queue
+	workflowQueue, err := queue.NewQueue(s.config.QueueAddress)
 	if err != nil {
-		return empty, err
+		return nil, err
 	}
 
-	if workflow.SequenceID != 0 {
-		subj := getWorkflowSubject(workflow)
-		if err := js.DeleteMsg(subj, workflow.SequenceID); err != nil {
-			// ignore missing
-			if !strings.Contains(err.Error(), "no message found") {
-				return empty, err
-			}
+	priority, err := getWorkflowQueuePriority(workflow.Priority)
+	if err != nil {
+		return nil, err
+	}
+
+	v := getWorkflowQueueValue(workflow)
+	if err := workflowQueue.Delete(ctx, workflow.Type, v, priority); err != nil {
+		return nil, err
+	}
+
+	// delete from storage
+	workflowStoragePath := getStoragePath(workflow.Namespace, workflow.ID)
+	objCh := s.storageClient.ListObjects(ctx, s.config.S3Bucket, minio.ListObjectsOptions{
+		Prefix:    workflowStoragePath,
+		Recursive: true,
+	})
+
+	for o := range objCh {
+		if o.Err != nil {
+			return nil, o.Err
 		}
+
+		if err := s.storageClient.RemoveObject(ctx, s.config.S3Bucket, o.Key, minio.RemoveObjectOptions{}); err != nil {
+			return nil, err
+		}
+	}
+
+	// delete from database
+	if err := s.ds.DeleteWorkflow(ctx, r.ID); err != nil {
+		return nil, err
 	}
 
 	return empty, nil

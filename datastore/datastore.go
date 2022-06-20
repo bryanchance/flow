@@ -16,7 +16,7 @@ package datastore
 import (
 	"time"
 
-	"github.com/fynca/fynca"
+	"github.com/ehazlett/flow"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"

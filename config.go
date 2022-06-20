@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package fynca
+package flow
 
 import (
 	"fmt"
@@ -133,6 +133,8 @@ type Config struct {
 	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
 	DatabaseAddress string
+	// QueueAddress is the address of the queue
+	QueueAddress string
 	// WorkflowTimeout is the max timeout for workers to process workflows
 	WorkflowTimeout duration
 	// Workers are worker specific configuration
@@ -194,6 +196,7 @@ func DefaultConfig() *Config {
 		NATSJobStatusStreamName:   queueJobStatusStreamName,
 		NATSKVBucketWorkerControl: kvBucketWorkerControl,
 		DatabaseAddress:           "redis://127.0.0.1:6379/0",
+		QueueAddress:              "redis://127.0.0.1:6379/0",
 		JobTimeout:                duration{time.Second * 3600},
 		WorkflowTimeout:           duration{time.Hour * 8},
 		JobPriority:               50,

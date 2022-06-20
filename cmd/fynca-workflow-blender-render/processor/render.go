@@ -28,7 +28,8 @@ import (
 	"text/template"
 	"time"
 
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/ehazlett/flow/pkg/workflows"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -85,13 +86,13 @@ type blenderConfig struct {
 	OutputDir       string
 }
 
-func (p *Processor) renderWorkflow(ctx context.Context, w *api.Workflow) (*api.WorkflowOutput, error) {
-	output := &api.WorkflowOutput{
-		ID:        w.ID,
-		Namespace: w.Namespace,
-		Info:      map[string]string{},
-		StartedAt: time.Now(),
+func (p *Processor) renderWorkflow(ctx context.Context, cfg *workflows.ProcessorConfig) (*workflows.ProcessorOutput, error) {
+	w := cfg.Workflow
+	output := &workflows.ProcessorOutput{
+		Parameters: map[string]string{},
 	}
+
+	startedAt := time.Now()
 
 	blenderCfg, err := parseParameters(w)
 	if err != nil {
@@ -99,13 +100,13 @@ func (p *Processor) renderWorkflow(ctx context.Context, w *api.Workflow) (*api.W
 	}
 
 	// workflow output info
-	output.Info["engine"] = blenderCfg.RenderEngine
-	output.Info["frame"] = fmt.Sprintf("%d", blenderCfg.RenderFrame)
-	output.Info["gpu"] = fmt.Sprintf("%v", blenderCfg.RenderUseGPU)
-	output.Info["samples"] = fmt.Sprintf("%d", blenderCfg.RenderSamples)
-	output.Info["x"] = fmt.Sprintf("%d", blenderCfg.ResolutionX)
-	output.Info["y"] = fmt.Sprintf("%d", blenderCfg.ResolutionY)
-	output.Info["scale"] = fmt.Sprintf("%d", blenderCfg.ResolutionScale)
+	output.Parameters["engine"] = blenderCfg.RenderEngine
+	output.Parameters["frame"] = fmt.Sprintf("%d", blenderCfg.RenderFrame)
+	output.Parameters["gpu"] = fmt.Sprintf("%v", blenderCfg.RenderUseGPU)
+	output.Parameters["samples"] = fmt.Sprintf("%d", blenderCfg.RenderSamples)
+	output.Parameters["x"] = fmt.Sprintf("%d", blenderCfg.ResolutionX)
+	output.Parameters["y"] = fmt.Sprintf("%d", blenderCfg.ResolutionY)
+	output.Parameters["scale"] = fmt.Sprintf("%d", blenderCfg.ResolutionScale)
 
 	// render with blender
 	tmpDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-%s", w.ID))
@@ -114,25 +115,16 @@ func (p *Processor) renderWorkflow(ctx context.Context, w *api.Workflow) (*api.W
 	}
 	defer os.RemoveAll(tmpDir)
 
-	logrus.Debugf("temp work dir: %s", tmpDir)
-
-	workflowDir := filepath.Join(tmpDir, "workflow")
-	if err := os.MkdirAll(workflowDir, 0755); err != nil {
+	// setup output dir
+	outputDir, err := os.MkdirTemp("", fmt.Sprintf("fynca-output-%s", w.ID))
+	if err != nil {
 		return nil, err
 	}
+	// set output dir for upload
+	output.OutputDir = outputDir
 
-	// unpack workflow input
-	if w.InputPath != "" {
-		if err := p.unpackWorkflowInput(ctx, w, workflowDir); err != nil {
-			return nil, err
-		}
-	}
+	workflowDir := cfg.InputDir
 
-	// setup render dir
-	outputDir := filepath.Join(tmpDir, "output")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, err
-	}
 	blenderOutputDir := getPythonOutputDir(filepath.Join(outputDir, w.Name))
 	blenderCfg.OutputDir = blenderOutputDir
 
@@ -225,7 +217,6 @@ func (p *Processor) renderWorkflow(ctx context.Context, w *api.Workflow) (*api.W
 		if len(projectFiles) > 1 {
 			logrus.Warnf("multiple blender (.blend) projects found; using first detected: %s", projectFilePath)
 		}
-	default:
 	}
 
 	logrus.Debugf("using blender config: %+v", blenderCfg)
@@ -269,15 +260,8 @@ func (p *Processor) renderWorkflow(ctx context.Context, w *api.Workflow) (*api.W
 		return nil, errors.Wrap(err, string(out))
 	}
 	output.FinishedAt = time.Now()
-	output.Duration = output.FinishedAt.Sub(output.StartedAt)
-	output.Log = fmt.Sprintf("render completed successfully for %s", filepath.Base(projectFile.Name()))
-
-	// TODO: handle artifacts
-	artifacts, err := p.uploadOutputDir(ctx, w, outputDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "error uploading output artifacts")
-	}
-	output.Artifacts = artifacts
+	output.Duration = output.FinishedAt.Sub(startedAt)
+	output.Log = string(out)
 
 	logrus.Debugf("workflow complete: %+v", output)
 

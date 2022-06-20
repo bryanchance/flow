@@ -18,8 +18,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -36,30 +35,22 @@ func (s *service) UploadWorkflowArtifact(stream api.Workflows_UploadWorkflowArti
 	var (
 		uploadArtifact      = req.GetArtifact()
 		buf                 = bytes.Buffer{}
-		workflowID          = uploadArtifact.GetWorkflowID()
+		workflowID          = uploadArtifact.GetID()
 		artifactFilename    = uploadArtifact.GetFilename()
+		artifactNamespace   = uploadArtifact.GetNamespace()
 		artifactContentType = uploadArtifact.GetContentType()
 		artifactSize        = 0
 	)
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	logrus.Debugf("upload using ns: %s", namespace)
-
 	logrus.Debugf("processing workflow upload  %+v", uploadArtifact)
+
 	// process user specified input data
 	for {
 		req, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return status.Errorf(codes.Unknown, "error receiving workflow upload: %s", err)
-		}
 		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return status.Errorf(codes.Unknown, "error receiving workflow upload: %s", err)
 		}
 		c := req.GetChunkData()
 		if err != nil {
@@ -88,15 +79,15 @@ func (s *service) UploadWorkflowArtifact(stream api.Workflows_UploadWorkflowArti
 	defer os.Remove(tmpUploadFile.Name())
 
 	// save to minio
-	uploadKey := getStorageWorkflowPath(namespace, workflowID, artifactFilename)
+	uploadKey := getStorageWorkflowPath(artifactNamespace, workflowID, artifactFilename)
 
 	logrus.Debugf("saving %s to storage", uploadKey)
-	uploadInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, artifactFilename, tmpUploadFile.Name(), minio.PutObjectOptions{ContentType: artifactContentType})
+	uploadInfo, err := s.storageClient.FPutObject(ctx, s.config.S3Bucket, uploadKey, tmpUploadFile.Name(), minio.PutObjectOptions{ContentType: artifactContentType})
 	if err != nil {
 		return status.Errorf(codes.Internal, "error saving workflow upload to storage: %s", err)
 	}
 
-	logrus.Debugf("saved workflow upload %s to storage service (%d bytes)", artifactFilename, uploadInfo.Size)
+	logrus.Debugf("saved workflow upload %s to storage service (%d bytes)", uploadKey, uploadInfo.Size)
 
 	// notify client of success
 	if err := stream.SendAndClose(&api.UploadWorkflowArtifactResponse{

@@ -11,11 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package fynca
+package flow
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"net/http"
+	"os"
 
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
@@ -33,4 +35,21 @@ func GetMinioClient(cfg *Config) (*minio.Client, error) {
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
 		Secure: cfg.S3UseSSL,
 	})
+}
+
+// GetContentType returns the content type of the specified file
+func GetContentType(f *os.File) (string, error) {
+	buffer := make([]byte, 512)
+	if _, err := f.Seek(0, 0); err != nil {
+		return "", err
+	}
+	_, err := f.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	contentType := http.DetectContentType(buffer)
+	if _, err := f.Seek(0, 0); err != nil {
+		return "", err
+	}
+	return contentType, nil
 }

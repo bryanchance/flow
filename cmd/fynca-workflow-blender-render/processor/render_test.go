@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"testing"
 
-	api "github.com/fynca/fynca/api/services/workflows/v1"
+	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/stretchr/testify/assert"
 )
 

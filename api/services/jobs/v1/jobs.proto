@@ -6,9 +6,9 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import weak "google/protobuf/empty.proto";
-import "github.com/fynca/fynca/api/services/workers/v1/workers.proto";
+import "github.com/ehazlett/flow/api/services/workers/v1/workers.proto";
 
-option go_package = "github.com/fynca/fynca/api/services/jobs/v1;jobs";
+option go_package = "github.com/ehazlett/flow/api/services/jobs/v1;jobs";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;

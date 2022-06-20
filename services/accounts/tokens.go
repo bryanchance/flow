@@ -16,7 +16,7 @@ package accounts
 import (
 	"context"
 
-	api "github.com/fynca/fynca/api/services/accounts/v1"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
 )
 
 func (s *service) GenerateServiceToken(ctx context.Context, req *api.GenerateServiceTokenRequest) (*api.GenerateServiceTokenResponse, error) {
