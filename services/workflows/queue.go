@@ -63,6 +63,7 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 		Name:       workflowReq.Name,
 		Type:       workflowReq.Type,
 		Parameters: workflowReq.Parameters,
+		Labels:     workflowReq.Labels,
 		// override request namespace with context passed
 		Namespace: namespace,
 		CreatedAt: time.Now(),

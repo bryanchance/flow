@@ -122,6 +122,11 @@ var workflowsQueueCommand = &cli.Command{
 			Aliases: []string{"p"},
 			Usage:   "specify workflow parameters (KEY=VAL)",
 		},
+		&cli.StringSliceFlag{
+			Name:    "label",
+			Aliases: []string{"l"},
+			Usage:   "workflow labels (KEY=VAL)",
+		},
 	},
 	Action: func(clix *cli.Context) error {
 		workflowName := clix.String("name")
@@ -150,15 +155,14 @@ var workflowsQueueCommand = &cli.Command{
 		}
 		defer client.Close()
 
-		params := map[string]string{}
+		params, err := parseKeyValues(clix.StringSlice("parameter"))
+		if err != nil {
+			return err
+		}
 
-		for _, p := range clix.StringSlice("parameter") {
-			parts := strings.SplitN(p, "=", 2)
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid format for parameter %s: expect KEY=VAL", p)
-			}
-			k, v := parts[0], parts[1]
-			params[k] = v
+		labels, err := parseKeyValues(clix.StringSlice("label"))
+		if err != nil {
+			return err
 		}
 
 		stream, err := client.QueueWorkflow(ctx)
@@ -175,6 +179,7 @@ var workflowsQueueCommand = &cli.Command{
 			Name:       workflowName,
 			Type:       workflowType,
 			Parameters: params,
+			Labels:     labels,
 			Priority:   priority,
 		}
 
@@ -353,4 +358,18 @@ func getWorkflowPriority(p string) (api.WorkflowPriority, error) {
 	}
 
 	return api.WorkflowPriority_UNKNOWN, fmt.Errorf("unknown priority specified: %s (use \"low\", \"normal\", or \"urgent\")", p)
+}
+
+func parseKeyValues(values []string) (map[string]string, error) {
+	vals := map[string]string{}
+	for _, p := range values {
+		parts := strings.SplitN(p, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid format for parameter %s: expect KEY=VAL", p)
+		}
+		k, v := parts[0], parts[1]
+		vals[k] = v
+	}
+
+	return vals, nil
 }

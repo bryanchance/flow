@@ -77,9 +77,10 @@ message Workflow {
         google.protobuf.Timestamp created_at = 9 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         google.protobuf.Timestamp updated_at = 10 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
         WorkflowPriority priority = 11;
+        map<string, string> labels = 12;
         oneof input {
-                WorkflowInputWorkflows workflows = 12;
-                WorkflowInputFile file = 13;
+                WorkflowInputWorkflows workflows = 13;
+                WorkflowInputFile file = 14;
         }
 }
 
@@ -122,9 +123,10 @@ message WorkflowRequest {
         string name = 2;
         map<string, string> parameters = 3;
         WorkflowPriority priority = 4;
+        map<string, string> labels = 5;
         oneof input {
-                WorkflowInputWorkflows workflows = 5;
-                WorkflowInputFile file = 6;
+                WorkflowInputWorkflows workflows = 6;
+                WorkflowInputFile file = 7;
         }
 }
 
