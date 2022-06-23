@@ -11,55 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package workers
+package info
 
 import (
-	"time"
-
 	"github.com/ehazlett/flow"
-	api "github.com/ehazlett/flow/api/services/workers/v1"
-	"github.com/ehazlett/flow/datastore"
+	api "github.com/ehazlett/flow/api/services/info/v1"
 	"github.com/ehazlett/flow/pkg/auth"
 	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
-	minio "github.com/minio/minio-go/v7"
-	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
 var (
-	// timeout for worker control messages to expire
-	workerControlMessageTTL = time.Second * 60
-	empty                   = &ptypes.Empty{}
+	empty = &ptypes.Empty{}
 )
 
 type service struct {
 	config        *flow.Config
-	storageClient *minio.Client
-	ds            *datastore.Datastore
 	authenticator auth.Authenticator
 }
 
 func New(cfg *flow.Config) (services.Service, error) {
-	// storage service
-	mc, err := minio.New(cfg.S3Endpoint, &minio.Options{
-		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
-		Secure: cfg.S3UseSSL,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error setting up storage service")
-	}
-
-	ds, err := datastore.NewDatastore(cfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "error setting up datastore")
-	}
-
 	return &service{
-		config:        cfg,
-		storageClient: mc,
-		ds:            ds,
+		config: cfg,
 	}, nil
 }
 
@@ -69,12 +43,12 @@ func (s *service) Configure(a auth.Authenticator) error {
 }
 
 func (s *service) Register(server *grpc.Server) error {
-	api.RegisterWorkersServer(server, s)
+	api.RegisterInfoServer(server, s)
 	return nil
 }
 
 func (s *service) Type() services.Type {
-	return services.WorkersService
+	return services.InfoService
 }
 
 func (s *service) Requires() []services.Type {

@@ -93,7 +93,7 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 			case *api.SubscribeWorkflowEventsRequest_Ack:
 				ack := v.Ack
 				logrus.Debugf("processor ACK'd workflow %s", ack.ID)
-				uCtx := context.WithValue(context.Background(), fynca.CtxNamespaceKey, ack.Namespace)
+				uCtx := context.WithValue(context.Background(), flow.CtxNamespaceKey, ack.Namespace)
 				workflow, err := s.ds.GetWorkflow(uCtx, ack.ID)
 				if err != nil {
 					errCh <- err
@@ -158,7 +158,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 		return err
 	}
 
-	uCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, ns)
+	uCtx := context.WithValue(ctx, flow.CtxNamespaceKey, ns)
 	workflow, err := s.ds.GetWorkflow(uCtx, id)
 	if err != nil {
 		return err
@@ -201,7 +201,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 
 func (s *service) updateWorkflowOutput(ctx context.Context, o *api.WorkflowOutput) error {
 	// set namespace to workflow for updating
-	uCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, o.Namespace)
+	uCtx := context.WithValue(ctx, flow.CtxNamespaceKey, o.Namespace)
 	w, err := s.ds.GetWorkflow(uCtx, o.ID)
 	if err != nil {
 		return err

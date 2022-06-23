@@ -7,7 +7,7 @@ services:
     environment:
       - "DOCKER_INFLUXDB_INIT_MODE=setup"
       - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
-      - "DOCKER_INFLUXDB_INIT_PASSWORD=fyncaadmin"
+      - "DOCKER_INFLUXDB_INIT_PASSWORD=flowadmin"
       - "DOCKER_INFLUXDB_INIT_ORG=system"
       - "DOCKER_INFLUXDB_INIT_BUCKET=default"
       - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=secret-token"

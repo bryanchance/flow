@@ -11,17 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package tracing
+package info
 
-import "testing"
+import (
+	"context"
 
-func TestNewProvider(t *testing.T) {
-	tp, err := NewProvider("", "test-service", "test-flow")
-	if err != nil {
-		t.Fatal(err)
-	}
+	api "github.com/ehazlett/flow/api/services/info/v1"
+	"github.com/ehazlett/flow/version"
+)
 
-	if tp == nil {
-		t.Fatal("expected provider; received nil")
-	}
+func (s *service) Version(ctx context.Context, r *api.VersionRequest) (*api.VersionResponse, error) {
+	return &api.VersionResponse{
+		Name:          version.Name,
+		Version:       version.Version,
+		Build:         version.Build,
+		Commit:        version.GitCommit,
+		Authenticator: s.authenticator.Name(),
+	}, nil
 }

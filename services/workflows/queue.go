@@ -51,7 +51,7 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 		workflowSize = 0
 		workflowID   = uuid.NewV4().String()
 	)
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
+	namespace, err := flow.GetNamespaceFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 		}
 
 		// save to tmpfile to upload to s3
-		tmpWorkflowFile, err := os.CreateTemp("", "fynca-workflow-")
+		tmpWorkflowFile, err := os.CreateTemp("", "flow-workflow-")
 		if err != nil {
 			return err
 		}

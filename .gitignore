@@ -2,4 +2,5 @@ bin
 updates
 *.swp
 config.toml
-fynca.toml
+flow.toml
+flow-dev.toml

@@ -63,7 +63,7 @@ func (h *WorkflowHandler) uploadOutputDir(ctx context.Context, w *api.Workflow, 
 			continue
 		}
 
-		contentType, err := fynca.GetContentType(rf)
+		contentType, err := flow.GetContentType(rf)
 		if err != nil {
 			return nil, err
 		}

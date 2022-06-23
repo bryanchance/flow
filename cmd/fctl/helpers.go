@@ -28,7 +28,7 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 	key := clix.String("key")
 	skipVerification := clix.Bool("skip-verify")
 
-	cfg := &fynca.Config{
+	cfg := &flow.Config{
 		GRPCAddress:           clix.String("addr"),
 		TLSClientCertificate:  cert,
 		TLSClientKey:          key,

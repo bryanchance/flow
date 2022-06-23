@@ -33,7 +33,7 @@ import (
 )
 
 func (s *service) ListWorkflowInputs(ctx context.Context, r *api.ListWorkflowInputsRequest) (*api.ListWorkflowInputsResponse, error) {
-	uCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, r.Namespace)
+	uCtx := context.WithValue(ctx, flow.CtxNamespaceKey, r.Namespace)
 	workflow, err := s.ds.GetWorkflow(uCtx, r.ID)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (s *service) GetWorkflowInputFile(r *api.GetWorkflowInputFileRequest, strea
 	ctx := stream.Context()
 
 	logrus.Debugf("getting workflow input from from storage: %s", r.StoragePath)
-	tmpInputFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("fynca-input-%s", getHash(r.StoragePath, time.Now().String())))
+	tmpInputFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("flow-input-%s", getHash(r.StoragePath, time.Now().String())))
 	defer os.Remove(tmpInputFilePath)
 
 	if err := s.storageClient.FGetObject(ctx, s.config.S3Bucket, r.StoragePath, tmpInputFilePath, minio.GetObjectOptions{}); err != nil {

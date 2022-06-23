@@ -24,7 +24,7 @@ import (
 	"syscall"
 
 	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
-	renderapi "github.com/ehazlett/flow/api/services/jobs/v1"
+	infoapi "github.com/ehazlett/flow/api/services/info/v1"
 	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -37,7 +37,7 @@ type tokenConfig struct {
 
 var loginCommand = &cli.Command{
 	Name:  "login",
-	Usage: "login to fynca server",
+	Usage: "login to flow server",
 	Action: func(clix *cli.Context) error {
 		ctx := context.Background()
 		client, err := getClient(clix)
@@ -46,7 +46,7 @@ var loginCommand = &cli.Command{
 		}
 		defer client.Close()
 
-		v, err := client.Version(ctx, &renderapi.VersionRequest{})
+		v, err := client.Version(ctx, &infoapi.VersionRequest{})
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func localConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".fynca", "config.json"), nil
+	return filepath.Join(homeDir, ".flow", "config.json"), nil
 }
 
 func getLocalConfig() (*tokenConfig, error) {

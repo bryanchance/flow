@@ -11,17 +11,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package tracing
-
-import "testing"
-
-func TestNewProvider(t *testing.T) {
-	tp, err := NewProvider("", "test-service", "test-flow")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if tp == nil {
-		t.Fatal("expected provider; received nil")
-	}
-}
+package info

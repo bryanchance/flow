@@ -47,7 +47,7 @@ var (
 )
 
 type service struct {
-	config              *fynca.Config
+	config              *flow.Config
 	natsClient          *nats.Conn
 	storageClient       *minio.Client
 	ds                  *datastore.Datastore
@@ -58,7 +58,7 @@ type service struct {
 	failedWorkflowCache *ttlcache.TTLCache
 }
 
-func New(cfg *fynca.Config) (services.Service, error) {
+func New(cfg *flow.Config) (services.Service, error) {
 	// storage service
 	mc, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
@@ -140,5 +140,5 @@ func getStorageWorkflowPath(namespace, workflowID string, filename string) strin
 }
 
 func getStoragePath(namespace, workflowID string) string {
-	return path.Join(namespace, fynca.S3WorkflowPath, workflowID)
+	return path.Join(namespace, flow.S3WorkflowPath, workflowID)
 }

@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>io.fynca.worker</string>
+	<string>io.flow.worker</string>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
 	<key>ProgramArguments</key>
 	<array>
-	  <string>/usr/local/bin/fynca-worker</string>
+	  <string>/usr/local/bin/flow-worker</string>
 	  <string>-D</string>
 	  <string>-c</string>
-	  <string>/usr/local/etc/fynca.toml</string>
+	  <string>/usr/local/etc/flow.toml</string>
 
 	</array>
 	<key>RunAtLoad</key>

@@ -25,8 +25,8 @@ import (
 
 func (s *service) UpdateAccount(ctx context.Context, req *api.UpdateAccountRequest) (*ptypes.Empty, error) {
 	// check if requesting username matches authenticated or admin
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
-	isAdmin := ctx.Value(fynca.CtxAdminKey).(bool)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
+	isAdmin := ctx.Value(flow.CtxAdminKey).(bool)
 	if username != req.Account.Username && !isAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "access denied")
 	}
@@ -58,8 +58,8 @@ func (s *service) ChangePassword(ctx context.Context, req *api.ChangePasswordReq
 	}
 
 	// check if requesting username matches authenticated or admin
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
-	isAdmin := ctx.Value(fynca.CtxAdminKey).(bool)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
+	isAdmin := ctx.Value(flow.CtxAdminKey).(bool)
 	if username != req.Username && !isAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "access denied")
 	}

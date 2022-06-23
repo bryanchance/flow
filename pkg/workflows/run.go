@@ -89,7 +89,7 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 	// process
 	status := api.WorkflowStatus_COMPLETE
 	// TODO: move to func to defer os.Remove this temp dir
-	workflowInputDir, err := os.MkdirTemp("", "fynca-workflow-")
+	workflowInputDir, err := os.MkdirTemp("", "flow-workflow-")
 	if err != nil {
 		return err
 	}

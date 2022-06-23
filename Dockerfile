@@ -7,6 +7,6 @@ WORKDIR /src
 RUN make VERSION=$VERSION BUILD=$BUILD daemon
 
 FROM alpine:3.15
-COPY --from=build /src/bin/fynca /usr/bin/fynca
-ENTRYPOINT ["/usr/bin/fynca"]
+COPY --from=build /src/bin/flow /usr/bin/flow
+ENTRYPOINT ["/usr/bin/flow"]
 CMD ["-h"]

@@ -1,11 +1,11 @@
 #!/bin/bash
 VERSION=${VERSION:-"dev"}
 BUILD=${BUILD:-"-d"}
-REGISTRY=${REGISTRY:-"docker.io/fynca"}
+REGISTRY=${REGISTRY:-"docker.io/ehazlett"}
 TAG=${TAG:-"dev"}
-DAEMON=fynca
-WORKER=fynca-worker
-WORKFLOWS=$(ls cmd/ | grep fynca-workflow)
+DAEMON=flow
+WORKER=flow-worker
+WORKFLOWS=$(ls cmd/ | grep flow-workflow)
 IMAGE_BUILD_EXTRA=""
 PUSH=${PUSH:-""}
 

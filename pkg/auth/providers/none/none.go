@@ -48,14 +48,14 @@ func (a *NoneAuthenticator) GenerateServiceToken(ctx context.Context, descriptio
 
 func (a *NoneAuthenticator) UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	// set default namespace
-	aCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, fynca.CtxDefaultNamespace)
+	aCtx := context.WithValue(ctx, flow.CtxNamespaceKey, flow.CtxDefaultNamespace)
 	return handler(aCtx, req)
 }
 
 func (a *NoneAuthenticator) StreamServerInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	ctx := stream.Context()
 	// set default namespace
-	aCtx := context.WithValue(ctx, fynca.CtxNamespaceKey, fynca.CtxDefaultNamespace)
+	aCtx := context.WithValue(ctx, flow.CtxNamespaceKey, flow.CtxDefaultNamespace)
 	s := grpc_middleware.WrapServerStream(stream)
 	s.WrappedContext = aCtx
 	return handler(srv, s)

@@ -127,12 +127,12 @@ func (m *AdminRequired) getAccount(ctx context.Context) (*api.Account, error) {
 		return nil, status.Errorf(codes.PermissionDenied, "invalid or missing token")
 	}
 	// check for service token
-	if _, ok := metadata[fynca.CtxServiceTokenKey]; ok {
+	if _, ok := metadata[flow.CtxServiceTokenKey]; ok {
 		return nil, nil
 	}
 
 	// check for token
-	token, ok := metadata[fynca.CtxTokenKey]
+	token, ok := metadata[flow.CtxTokenKey]
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 	}

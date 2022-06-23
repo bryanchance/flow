@@ -1,4 +1,4 @@
-// Copyright 2022 Axyon Project
+// Copyright 2022 Evan Hazlett
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,10 +34,10 @@ func newClientAuthenticator(cfg *ClientConfig) *clientAuthenticator {
 func (a *clientAuthenticator) authUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	kvs := []string{}
 	if a.cfg.Token != "" {
-		kvs = append(kvs, fynca.CtxTokenKey, a.cfg.Token)
+		kvs = append(kvs, flow.CtxTokenKey, a.cfg.Token)
 	}
 	if a.cfg.ServiceToken != "" {
-		kvs = append(kvs, fynca.CtxServiceTokenKey, a.cfg.ServiceToken)
+		kvs = append(kvs, flow.CtxServiceTokenKey, a.cfg.ServiceToken)
 	}
 	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return invoker(authCtx, method, req, reply, cc, opts...)
@@ -46,10 +46,10 @@ func (a *clientAuthenticator) authUnaryInterceptor(ctx context.Context, method s
 func (a *clientAuthenticator) authStreamInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 	kvs := []string{}
 	if a.cfg.Token != "" {
-		kvs = append(kvs, fynca.CtxTokenKey, a.cfg.Token)
+		kvs = append(kvs, flow.CtxTokenKey, a.cfg.Token)
 	}
 	if a.cfg.ServiceToken != "" {
-		kvs = append(kvs, fynca.CtxServiceTokenKey, a.cfg.ServiceToken)
+		kvs = append(kvs, flow.CtxServiceTokenKey, a.cfg.ServiceToken)
 	}
 	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return streamer(authCtx, desc, cc, method, opts...)

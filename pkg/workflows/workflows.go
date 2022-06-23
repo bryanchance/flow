@@ -51,7 +51,7 @@ func NewWorkflowHandler(cfg *Config, p Processor) (*WorkflowHandler, error) {
 }
 
 func (h *WorkflowHandler) getClient() (*client.Client, error) {
-	cfg := &fynca.Config{
+	cfg := &flow.Config{
 		GRPCAddress:           h.cfg.Address,
 		TLSClientCertificate:  h.cfg.TLSCertificate,
 		TLSClientKey:          h.cfg.TLSKey,

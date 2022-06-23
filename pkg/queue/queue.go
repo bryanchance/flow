@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	dbPrefix = "fynca"
+	dbPrefix = "flow"
 )
 
 type Task struct {

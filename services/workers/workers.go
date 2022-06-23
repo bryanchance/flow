@@ -18,7 +18,6 @@ import (
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workers/v1"
-	"github.com/gogo/protobuf/proto"
 )
 
 func (s *service) ListWorkers(ctx context.Context, r *api.ListWorkersRequest) (*api.ListWorkersResponse, error) {
@@ -34,28 +33,16 @@ func (s *service) ListWorkers(ctx context.Context, r *api.ListWorkersRequest) (*
 }
 
 func (s *service) ControlWorker(ctx context.Context, r *api.ControlWorkerRequest) (*api.ControlWorkerResponse, error) {
-	js, err := s.natsClient.JetStream()
-	if err != nil {
-		return nil, err
-	}
-
-	kv, err := js.KeyValue(s.config.NATSKVBucketWorkerControl)
-	if err != nil {
-		return nil, err
-	}
+	// TODO
 
 	// inject requestor
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
 	r.Requestor = username
 
-	data, err := proto.Marshal(r)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := kv.Put(r.WorkerID, data); err != nil {
-		return nil, err
-	}
+	//data, err := proto.Marshal(r)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return &api.ControlWorkerResponse{}, nil
 }

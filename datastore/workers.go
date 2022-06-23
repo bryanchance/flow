@@ -16,9 +16,7 @@ package datastore
 import (
 	"context"
 	"path"
-	"time"
 
-	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workers/v1"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -31,8 +29,7 @@ func (d *Datastore) UpdateWorkerInfo(ctx context.Context, w *api.Worker) error {
 	if err != nil {
 		return err
 	}
-	keyTTL := fynca.WorkerTTL + time.Second*1
-	if err := d.redisClient.Set(ctx, workerKey, data, keyTTL).Err(); err != nil {
+	if err := d.redisClient.Set(ctx, workerKey, data, -1).Err(); err != nil {
 		return errors.Wrapf(err, "error updating worker info for %s in database", w.Name)
 	}
 	return nil

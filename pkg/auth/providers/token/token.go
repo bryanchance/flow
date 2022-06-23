@@ -82,7 +82,7 @@ func (a *TokenAuthenticator) Authenticate(ctx context.Context, username string, 
 		return nil, errors.Wrap(err, "error comparing password hash")
 	}
 
-	token := fynca.GenerateToken(account.Username)
+	token := flow.GenerateToken(account.Username)
 	tokenKey := getTokenKey(token)
 	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, []byte(account.Username), tokenTTL); err != nil {
 		return nil, errors.Wrapf(err, "error saving token for %s", account.Username)
@@ -118,7 +118,7 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 	}
 
 	// check for auth token
-	token, ok := metadata[fynca.CtxTokenKey]
+	token, ok := metadata[flow.CtxTokenKey]
 	if ok {
 		var account *api.Account
 		for _, t := range token {
@@ -137,7 +137,7 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 		}
 		namespace := account.CurrentNamespace
 		// if namespace specified in context use it
-		ns, ok := metadata[fynca.CtxNamespaceKey]
+		ns, ok := metadata[flow.CtxNamespaceKey]
 		if ok {
 			if v := ns[0]; v != "" {
 				namespace = v
@@ -152,15 +152,15 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
 			return nil, status.Errorf(codes.PermissionDenied, "access denied")
 		}
-		tCtx := context.WithValue(ctx, fynca.CtxTokenKey, token)
-		uCtx := context.WithValue(tCtx, fynca.CtxUsernameKey, account.Username)
-		aCtx := context.WithValue(uCtx, fynca.CtxAdminKey, account.Admin)
-		fCtx := context.WithValue(aCtx, fynca.CtxNamespaceKey, namespace)
+		tCtx := context.WithValue(ctx, flow.CtxTokenKey, token)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
 		return handler(fCtx, req)
 	}
 
 	// service token
-	nt, ok := metadata[fynca.CtxServiceTokenKey]
+	nt, ok := metadata[flow.CtxServiceTokenKey]
 	if ok {
 		var serviceToken *api.ServiceToken
 		for _, t := range nt {
@@ -176,7 +176,7 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 		if serviceToken == nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 		}
-		tCtx := context.WithValue(ctx, fynca.CtxServiceTokenKey, serviceToken.Token)
+		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
 		return handler(tCtx, req)
 	}
 	logrus.Warnf("unauthenticated request from %s (missing token and service token)", peer.Addr)
@@ -204,7 +204,7 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 	}
 
 	// check for auth token
-	token, ok := metadata[fynca.CtxTokenKey]
+	token, ok := metadata[flow.CtxTokenKey]
 	if ok {
 		var account *api.Account
 		for _, t := range token {
@@ -223,7 +223,7 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 		}
 		namespace := account.CurrentNamespace
 		// if namespace specified in context use it
-		ns, ok := metadata[fynca.CtxNamespaceKey]
+		ns, ok := metadata[flow.CtxNamespaceKey]
 		if ok {
 			if v := ns[0]; v != "" {
 				namespace = v
@@ -238,16 +238,16 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
 			return status.Errorf(codes.PermissionDenied, "access denied")
 		}
-		tCtx := context.WithValue(ctx, fynca.CtxTokenKey, token)
-		uCtx := context.WithValue(tCtx, fynca.CtxUsernameKey, account.Username)
-		aCtx := context.WithValue(uCtx, fynca.CtxAdminKey, account.Admin)
-		fCtx := context.WithValue(aCtx, fynca.CtxNamespaceKey, namespace)
+		tCtx := context.WithValue(ctx, flow.CtxTokenKey, token)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
 		s.WrappedContext = fCtx
 		return handler(srv, s)
 	}
 
 	// service token
-	nt, ok := metadata[fynca.CtxServiceTokenKey]
+	nt, ok := metadata[flow.CtxServiceTokenKey]
 	if ok {
 		var serviceToken *api.ServiceToken
 		for _, t := range nt {
@@ -263,7 +263,7 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 		if serviceToken == nil {
 			return status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 		}
-		tCtx := context.WithValue(ctx, fynca.CtxServiceTokenKey, serviceToken.Token)
+		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
 		s.WrappedContext = tCtx
 		return handler(srv, s)
 	}
@@ -278,7 +278,7 @@ func (a *TokenAuthenticator) GetAccount(ctx context.Context, token string) (*api
 
 func (a *TokenAuthenticator) GenerateServiceToken(ctx context.Context, description string, ttl time.Duration) (*api.ServiceToken, error) {
 	// generate service token
-	token := fynca.GenerateToken(time.Now().String())
+	token := flow.GenerateToken(time.Now().String())
 	serviceToken, err := a.CreateServiceToken(ctx, token, description, ttl)
 	if err != nil {
 		return nil, err

@@ -19,48 +19,18 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/nats-io/nats.go"
 )
 
 const (
-	// ServerQueueGroupName is the name for the server queue group
-	ServerQueueGroupName = "fynca-servers"
-	// WorkerQueueGroupName is the name for the worker queue group
-	WorkerQueueGroupName = "fynca-workers"
-
-	QueueSubjectJobPriorityNormal    = "normal"
-	QueueSubjectJobPriorityUrgent    = "urgent"
-	QueueSubjectJobPriorityAnimation = "animation"
-	QueueSubjectJobPriorityLow       = "low"
-
-	// THE FOLLOWING ARE DEPRECATED
-	// these are for the render job specifically and should be removed
-	// once the render job functionality is moved to a workflow
-	// S3ProjectPath is the project for project files
-	S3ProjectPath = "projects"
-	// S3RenderPath is the s3 bucket for final renders
-	S3RenderPath = "render"
-	// S3JobPath is the path to the render job config
-	S3JobPath = "job.json"
-	// S3JobLogPath is the path to the job log
-	S3JobLogPath = "job.log"
-	// S3JobStatusContentType is the content type for job status objects
-	S3JobContentType = "application/json"
+	// QueueSubjectJobPriorityNormal is normal priority for workflows
+	QueueSubjectJobPriorityNormal = "normal"
+	// QueueSubjectJobPriorityUrgent is urgent priority for workflows (processed first)
+	QueueSubjectJobPriorityUrgent = "urgent"
+	// QueueSubjectJobPriorityLow is low priority for workflows (processed last)
+	QueueSubjectJobPriorityLow = "low"
 
 	// S3WorkflowPath is the path in the s3 bucket for workflow content
 	S3WorkflowPath = "workflows"
-
-	// WorkerTTL is the TTL for the worker heartbeat
-	WorkerTTL = time.Second * 10
-
-	// queueJobStreamName is the stream for queued messages
-	queueJobStreamName = "JOBS"
-	// queueJobStatusStreamName is the stream for job status updates
-	queueJobStatusStreamName = "STATUS"
-	// kvBucketWorkerControl is the name of the kv store in the queue for issuing worker control messages
-	kvBucketWorkerControl = "fynca-worker-control"
-	// objectStoreName is the name of the object store for the system
-	objectStoreName = "fynca"
 
 	// CtxTokenKey is the key stored in the context for the token
 	CtxTokenKey = "token"
@@ -190,19 +160,9 @@ func (c *Config) GetWorkflowTimeout() time.Duration {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCAddress:               "127.0.0.1:8080",
-		NATSURL:                   nats.DefaultURL,
-		NATSJobStreamName:         queueJobStreamName,
-		NATSJobStatusStreamName:   queueJobStatusStreamName,
-		NATSKVBucketWorkerControl: kvBucketWorkerControl,
-		DatabaseAddress:           "redis://127.0.0.1:6379/0",
-		QueueAddress:              "redis://127.0.0.1:6379/0",
-		JobTimeout:                duration{time.Second * 3600},
-		WorkflowTimeout:           duration{time.Hour * 8},
-		JobPriority:               50,
-		JobCPU:                    1000,
-		JobMemory:                 1024,
-		ProfilerAddress:           "",
+		GRPCAddress:     "127.0.0.1:8080",
+		DatabaseAddress: "redis://127.0.0.1:6379/0",
+		ProfilerAddress: "",
 	}
 }
 
@@ -223,12 +183,12 @@ func (c *Config) GetWorkerConfig(name string) *Worker {
 	return worker
 }
 
-// LoadConfig returns a Fynca config from the specified file path
+// LoadConfig returns a Flow config from the specified file path
 func LoadConfig(configPath string) (*Config, error) {
 	var cfg *Config
 	if _, err := toml.DecodeFile(configPath, &cfg); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("A config file must be specified.  Generate a new one with the \"fynca config\" command.")
+			return nil, fmt.Errorf("A config file must be specified.  Generate a new one with the \"flow config\" command.")
 		}
 		return nil, err
 	}

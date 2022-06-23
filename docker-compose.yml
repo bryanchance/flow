@@ -1,12 +1,5 @@
 version: "3.9"
 services:
-  nats:
-    image: docker.io/library/nats:2.7.2
-    command: ["-js", "-m", "8222"]
-    ports:
-      - 4222:4222
-      - 8222:8222
-
   redis:
     image: docker.io/library/redis:latest
     ports:
@@ -15,7 +8,7 @@ services:
   minio:
     image: docker.io/minio/minio:latest
     entrypoint: "/bin/bash"
-    command: -c "mkdir -p /data/fynca && minio server --console-address :9001 /data"
+    command: -c "mkdir -p /data/flow && minio server --console-address :9001 /data"
     environment:
       - "MINIO_ROOT_USER=minioadmin"
       - "MINIO_ROOT_PASSWORD=minioadmin"
@@ -28,30 +21,18 @@ services:
       dockerfile: Dockerfile
     ports:
       - 7080:7080
-    command: ["-D", "server", "-c", "/etc/fynca.toml"]
+    command: ["-D", "server", "-c", "/etc/flow.toml"]
     volumes:
-      - ./fynca-dev.toml:/etc/fynca.toml
+      - ./flow-dev.toml:/etc/flow.toml
     depends_on:
-      - nats
       - minio
       - redis
 
   manager:
-    image: docker.io/fynca/fynca-manager:latest
+    image: docker.io/ehazlett/flow-manager:latest
     ports:
       - 9080:9080
     command: ["-a", "backend:7080", "-D", "-l", ":9080", "--api-cors-domain", '"*"']
     depends_on:
       - backend
 
-  worker:
-    build:
-      dockerfile: Dockerfile.worker
-    command: ["-D", "-c", "/etc/fynca.toml"]
-    volumes:
-      - ./fynca-dev.toml:/etc/fynca.toml
-    depends_on:
-      - nats
-      - redis
-      - minio
-      - backend

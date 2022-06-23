@@ -33,7 +33,7 @@ func (s *service) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*
 
 // GetAccountProfile returns the account for the current user in the context
 func (s *service) GetAccountProfile(ctx context.Context, req *api.GetAccountProfileRequest) (*api.GetAccountProfileResponse, error) {
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
 	account, err := s.ds.GetAccount(ctx, username)
 	if err != nil {
 		return nil, err

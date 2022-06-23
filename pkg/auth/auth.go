@@ -23,13 +23,13 @@ import (
 
 const (
 	// AuthenticateMethod is the GRPC method that is used for client authentication
-	AuthenticateMethod = "/fynca.services.accounts.v1.Accounts/Authenticate"
+	AuthenticateMethod = "/flow.services.accounts.v1.Accounts/Authenticate"
 )
 
 type Authenticator interface {
 	// Name returns the name of the authenticator
 	Name() string
-	// GetAccount gets a Fynca account from the authenticator
+	// GetAccount gets a Flow account from the authenticator
 	GetAccount(ctx context.Context, username string) (*api.Account, error)
 	// Authenticate authenticates the specified user and returns a byte array from the provider
 	Authenticate(ctx context.Context, username string, password []byte) ([]byte, error)

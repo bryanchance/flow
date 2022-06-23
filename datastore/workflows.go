@@ -33,7 +33,7 @@ func (s ByWorkflowCreatedAt) Less(i, j int) bool { return s[i].CreatedAt.After(s
 func (s ByWorkflowCreatedAt) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func (d *Datastore) GetWorkflows(ctx context.Context) ([]*api.Workflow, error) {
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
+	namespace, err := flow.GetNamespaceFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (d *Datastore) GetWorkflows(ctx context.Context) ([]*api.Workflow, error) {
 }
 
 func (d *Datastore) GetWorkflow(ctx context.Context, id string) (*api.Workflow, error) {
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
+	namespace, err := flow.GetNamespaceFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (d *Datastore) GetWorkflow(ctx context.Context, id string) (*api.Workflow, 
 }
 
 func (d *Datastore) UpdateWorkflow(ctx context.Context, workflow *api.Workflow) error {
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
+	namespace, err := flow.GetNamespaceFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (d *Datastore) DeleteWorkflow(ctx context.Context, id string) error {
 	if _, err := d.GetWorkflow(ctx, id); err != nil {
 		return err
 	}
-	namespace, err := fynca.GetNamespaceFromContext(ctx)
+	namespace, err := flow.GetNamespaceFromContext(ctx)
 	if err != nil {
 		return err
 	}

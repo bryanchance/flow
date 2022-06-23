@@ -38,7 +38,7 @@ var accountsCommand = &cli.Command{
 
 var accountsCreateCommand = &cli.Command{
 	Name:  "create",
-	Usage: "create a new fynca account",
+	Usage: "create a new flow account",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
@@ -105,7 +105,7 @@ var accountsCreateCommand = &cli.Command{
 
 var accountsChangePasswordCommand = &cli.Command{
 	Name:  "change-password",
-	Usage: "change fynca account password",
+	Usage: "change flow account password",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",

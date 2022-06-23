@@ -67,7 +67,7 @@ func (s *service) UploadWorkflowArtifact(stream api.Workflows_UploadWorkflowArti
 	}
 
 	// save to tmpfile to upload to s3
-	tmpUploadFile, err := os.CreateTemp("", "fynca-workflow-upload-")
+	tmpUploadFile, err := os.CreateTemp("", "flow-workflow-upload-")
 	if err != nil {
 		return err
 	}

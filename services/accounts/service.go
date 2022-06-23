@@ -36,12 +36,12 @@ var (
 )
 
 type service struct {
-	config        *fynca.Config
+	config        *flow.Config
 	authenticator auth.Authenticator
 	ds            *datastore.Datastore
 }
 
-func New(cfg *fynca.Config) (services.Service, error) {
+func New(cfg *flow.Config) (services.Service, error) {
 	ds, err := datastore.NewDatastore(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
@@ -88,7 +88,7 @@ func (s *service) Start() error {
 
 		adminAcct := &api.Account{
 			Username:  "admin",
-			FirstName: "Fynca",
+			FirstName: "Flow",
 			LastName:  "Admin",
 			Admin:     true,
 			Password:  tmpPassword,

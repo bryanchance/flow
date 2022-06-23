@@ -29,7 +29,7 @@ func GenerateHash(v string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// GetMinioClient returns a MinIO client using the specified fynca.Config
+// GetMinioClient returns a MinIO client using the specified flow.Config
 func GetMinioClient(cfg *Config) (*minio.Client, error) {
 	return minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
