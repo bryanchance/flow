@@ -21,7 +21,6 @@ import (
 	"github.com/ehazlett/flow"
 	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	infoapi "github.com/ehazlett/flow/api/services/info/v1"
-	workersapi "github.com/ehazlett/flow/api/services/workers/v1"
 	workflowsapi "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -34,7 +33,6 @@ import (
 type Client struct {
 	accountsapi.AccountsClient
 	infoapi.InfoClient
-	workersapi.WorkersClient
 	workflowsapi.WorkflowsClient
 	config *flow.Config
 	conn   *grpc.ClientConn
@@ -96,7 +94,6 @@ func NewClient(cfg *flow.Config, clientOpts ...ClientOpt) (*Client, error) {
 	client := &Client{
 		accountsapi.NewAccountsClient(c),
 		infoapi.NewInfoClient(c),
-		workersapi.NewWorkersClient(c),
 		workflowsapi.NewWorkflowsClient(c),
 		cfg,
 		c,

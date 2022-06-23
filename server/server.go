@@ -14,6 +14,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -22,6 +23,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ehazlett/flow"
 	"github.com/ehazlett/flow/datastore"
@@ -30,6 +32,7 @@ import (
 	authtoken "github.com/ehazlett/flow/pkg/auth/providers/token"
 	"github.com/ehazlett/flow/pkg/middleware"
 	"github.com/ehazlett/flow/pkg/middleware/admin"
+	"github.com/ehazlett/flow/pkg/tracing"
 	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -74,6 +77,16 @@ type Server struct {
 
 func NewServer(cfg *flow.Config) (*Server, error) {
 	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting flow server")
+
+	// enable tracing if specified
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tp, err := tracing.NewProvider(cfg.TraceEndpoint, "flow", cfg.Environment)
+	if err != nil {
+		return nil, err
+	}
+	defer tp.Shutdown(ctx)
 
 	grpcOpts := []grpc.ServerOption{
 		grpc.MaxMsgSize(10 * 1024 * 1024),

@@ -54,7 +54,6 @@ func main() {
 		accountsCommand,
 		infoCommand,
 		workflowsCommand,
-		workersCommand,
 	}
 	app.Flags = []cli.Flag{
 		&cli.BoolFlag{

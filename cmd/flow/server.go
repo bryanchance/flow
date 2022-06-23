@@ -14,19 +14,15 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/ehazlett/flow"
-	"github.com/ehazlett/flow/pkg/tracing"
 	"github.com/ehazlett/flow/server"
 	"github.com/ehazlett/flow/services"
 	accountsservice "github.com/ehazlett/flow/services/accounts"
 	infoservice "github.com/ehazlett/flow/services/info"
-	workersservice "github.com/ehazlett/flow/services/workers"
 	workflowsservice "github.com/ehazlett/flow/services/workflows"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -52,12 +48,6 @@ func serverAction(clix *cli.Context) error {
 		return err
 	}
 
-	// enable tracing if specified
-	tp, err := tracing.NewProvider(cfg.TraceEndpoint, "flow", cfg.Environment)
-	if err != nil {
-		return err
-	}
-
 	// check for profiler
 	if v := clix.String("profiler-address"); v != "" {
 		cfg.ProfilerAddress = v
@@ -70,7 +60,6 @@ func serverAction(clix *cli.Context) error {
 
 	svcs := []func(cfg *flow.Config) (services.Service, error){
 		infoservice.New,
-		workersservice.New,
 		workflowsservice.New,
 	}
 
@@ -119,8 +108,6 @@ func serverAction(clix *cli.Context) error {
 	}()
 
 	<-doneCh
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	return tp.Shutdown(ctx)
+	return nil
 }
