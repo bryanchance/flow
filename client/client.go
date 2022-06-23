@@ -18,10 +18,11 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/fynca/fynca"
-	accountsapi "github.com/fynca/fynca/api/services/accounts/v1"
-	jobsapi "github.com/fynca/fynca/api/services/jobs/v1"
-	workersapi "github.com/fynca/fynca/api/services/workers/v1"
+	"github.com/ehazlett/flow"
+	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
+	infoapi "github.com/ehazlett/flow/api/services/info/v1"
+	workersapi "github.com/ehazlett/flow/api/services/workers/v1"
+	workflowsapi "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -31,19 +32,22 @@ import (
 )
 
 type Client struct {
-	jobsapi.JobsClient
 	accountsapi.AccountsClient
+	infoapi.InfoClient
 	workersapi.WorkersClient
-	config *fynca.Config
+	workflowsapi.WorkflowsClient
+	config *flow.Config
 	conn   *grpc.ClientConn
 }
 
 type ClientConfig struct {
-	Username string
-	Token    string
+	Username     string
+	Namespace    string
+	Token        string
+	ServiceToken string
 }
 
-func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
+func NewClient(cfg *flow.Config, clientOpts ...ClientOpt) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
@@ -77,8 +81,6 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 	streamClientInterceptors = append(streamClientInterceptors, otelgrpc.StreamClientInterceptor())
 
 	opts = append(opts,
-		//grpc.WithUnaryInterceptor(authenticator.authUnaryInterceptor),
-		//grpc.WithStreamInterceptor(authenticator.authStreamInterceptor),
 		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(unaryClientInterceptors...)),
 		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(streamClientInterceptors...)),
 	)
@@ -92,9 +94,10 @@ func NewClient(cfg *fynca.Config, clientOpts ...ClientOpt) (*Client, error) {
 	}
 
 	client := &Client{
-		jobsapi.NewJobsClient(c),
 		accountsapi.NewAccountsClient(c),
+		infoapi.NewInfoClient(c),
 		workersapi.NewWorkersClient(c),
+		workflowsapi.NewWorkflowsClient(c),
 		cfg,
 		c,
 	}
@@ -107,7 +110,7 @@ func (c *Client) Close() error {
 }
 
 // DialOptionsFromConfig returns dial options configured from a Carbon config
-func DialOptionsFromConfig(cfg *fynca.Config) ([]grpc.DialOption, error) {
+func DialOptionsFromConfig(cfg *flow.Config) ([]grpc.DialOption, error) {
 	opts := []grpc.DialOption{}
 	if cfg.TLSClientCertificate != "" {
 		logrus.WithField("cert", cfg.TLSClientCertificate)

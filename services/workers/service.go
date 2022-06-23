@@ -16,15 +16,14 @@ package workers
 import (
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/workers/v1"
-	"github.com/fynca/fynca/datastore"
-	"github.com/fynca/fynca/pkg/auth"
-	"github.com/fynca/fynca/services"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/workers/v1"
+	"github.com/ehazlett/flow/datastore"
+	"github.com/ehazlett/flow/pkg/auth"
+	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
-	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -36,14 +35,13 @@ var (
 )
 
 type service struct {
-	config        *fynca.Config
-	natsClient    *nats.Conn
+	config        *flow.Config
 	storageClient *minio.Client
 	ds            *datastore.Datastore
 	authenticator auth.Authenticator
 }
 
-func New(cfg *fynca.Config) (services.Service, error) {
+func New(cfg *flow.Config) (services.Service, error) {
 	// storage service
 	mc, err := minio.New(cfg.S3Endpoint, &minio.Options{
 		Creds:  miniocreds.NewStaticV4(cfg.S3AccessID, cfg.S3AccessKey, ""),
@@ -53,12 +51,6 @@ func New(cfg *fynca.Config) (services.Service, error) {
 		return nil, errors.Wrap(err, "error setting up storage service")
 	}
 
-	// nats
-	nc, err := nats.Connect(cfg.NATSURL, nats.RetryOnFailedConnect(true))
-	if err != nil {
-		return nil, errors.Wrap(err, "error connecting to nats")
-	}
-
 	ds, err := datastore.NewDatastore(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
@@ -66,7 +58,6 @@ func New(cfg *fynca.Config) (services.Service, error) {
 
 	return &service{
 		config:        cfg,
-		natsClient:    nc,
 		storageClient: mc,
 		ds:            ds,
 	}, nil
@@ -91,19 +82,6 @@ func (s *service) Requires() []services.Type {
 }
 
 func (s *service) Start() error {
-	js, err := s.natsClient.JetStream()
-	if err != nil {
-		return errors.Wrap(err, "error getting nats jetstream context")
-	}
-
-	// kv for worker control
-	if _, err := js.CreateKeyValue(&nats.KeyValueConfig{
-		Bucket: s.config.NATSKVBucketWorkerControl,
-		TTL:    workerControlMessageTTL,
-	}); err != nil {
-		return errors.Wrapf(err, "error creating kv bucket %s", s.config.NATSKVBucketWorkerControl)
-	}
-
 	return nil
 }
 

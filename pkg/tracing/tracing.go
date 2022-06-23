@@ -17,7 +17,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -96,7 +96,7 @@ func StartSpan(ctx context.Context, opName string, opts ...trace.SpanStartOption
 	if parent := trace.SpanFromContext(ctx); parent != nil && parent.SpanContext().IsValid() {
 		return parent.TracerProvider().Tracer("").Start(ctx, opName, opts...)
 	}
-	return otel.Tracer("fynca").Start(ctx, opName, opts...)
+	return otel.Tracer("flow").Start(ctx, opName, opts...)
 }
 
 // StopSpan ends the span specified

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fynca/fynca/version"
+	"github.com/ehazlett/flow/version"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/codes"
@@ -42,7 +42,7 @@ func (s *SimpleFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "fctl"
-	app.Usage = "fynca rendering system cli"
+	app.Usage = "flow workflow system cli"
 	app.Version = version.Version
 	app.Authors = []*cli.Author{
 		{
@@ -52,7 +52,8 @@ func main() {
 	app.Commands = []*cli.Command{
 		loginCommand,
 		accountsCommand,
-		queueJobCommand,
+		infoCommand,
+		workflowsCommand,
 		workersCommand,
 	}
 	app.Flags = []cli.Flag{
@@ -63,20 +64,21 @@ func main() {
 		&cli.StringFlag{
 			Name:    "addr",
 			Aliases: []string{"a"},
-			Usage:   "fynca server address",
+			Usage:   "flow server address",
 			Value:   "127.0.0.1:7080",
-			EnvVars: []string{"FYNCA_ADDR"},
+			EnvVars: []string{"FLOW_ADDR"},
 		},
 		&cli.StringFlag{
 			Name:    "cert",
 			Aliases: []string{"c"},
-			Usage:   "fynca client certificate",
+			Usage:   "flow client certificate",
 			Value:   "",
 		},
 		&cli.StringFlag{
-			Name:  "key, k",
-			Usage: "fynca client key",
-			Value: "",
+			Name:    "key",
+			Aliases: []string{"k"},
+			Usage:   "flow client key",
+			Value:   "",
 		},
 		&cli.BoolFlag{
 			Name:  "skip-verify",

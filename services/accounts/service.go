@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
-	"github.com/fynca/fynca/datastore"
-	"github.com/fynca/fynca/pkg/auth"
-	"github.com/fynca/fynca/services"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
+	"github.com/ehazlett/flow/datastore"
+	"github.com/ehazlett/flow/pkg/auth"
+	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -36,12 +36,12 @@ var (
 )
 
 type service struct {
-	config        *fynca.Config
+	config        *flow.Config
 	authenticator auth.Authenticator
 	ds            *datastore.Datastore
 }
 
-func New(cfg *fynca.Config) (services.Service, error) {
+func New(cfg *flow.Config) (services.Service, error) {
 	ds, err := datastore.NewDatastore(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
@@ -88,7 +88,7 @@ func (s *service) Start() error {
 
 		adminAcct := &api.Account{
 			Username:  "admin",
-			FirstName: "Fynca",
+			FirstName: "Flow",
 			LastName:  "Admin",
 			Admin:     true,
 			Password:  tmpPassword,

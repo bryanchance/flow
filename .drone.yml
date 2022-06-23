@@ -9,7 +9,7 @@ node_selector:
   kubernetes.io/arch: amd64
 
 workspace:
-  path: /go/src/github.com/fynca/fynca
+  path: /go/src/github.com/ehazlett/flow
 
 steps:
 - name: test
@@ -29,7 +29,7 @@ steps:
       - main
       - release/*
   settings:
-    repo: fynca/fynca
+    repo: flow/flow
     auto_tag: true
     auto_tag_suffix: linux-amd64
     username:
@@ -49,7 +49,7 @@ node_selector:
   kubernetes.io/arch: arm64
 
 workspace:
-  path: /go/src/github.com/fynca/fynca
+  path: /go/src/github.com/ehazlett/flow
 
 steps:
 - name: test
@@ -69,7 +69,7 @@ steps:
       - main
       - release/*
   settings:
-    repo: fynca/fynca
+    repo: flow/flow
     auto_tag: true
     auto_tag_suffix: linux-arm64
     username:
@@ -95,8 +95,8 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
-    target: fynca/fynca:latest
-    template: fynca/fynca:OS-ARCH
+    target: flow/flow:latest
+    template: flow/flow:OS-ARCH
     platforms:
       - linux/amd64
       - linux/arm64

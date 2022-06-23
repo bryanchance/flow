@@ -17,13 +17,13 @@ import "runtime"
 
 var (
 	// Name is the name of the application
-	Name = "fynca"
+	Name = "flow"
 
 	// Version defines the application version
 	Version = "0.1.0.0003"
 
 	// Description is the application description
-	Description = "fynca render management"
+	Description = "flow render management"
 
 	// Build will be overwritten automatically by the build system
 	Build = "-dev"

@@ -16,7 +16,7 @@ package tracing
 import "testing"
 
 func TestNewProvider(t *testing.T) {
-	tp, err := NewProvider("", "test-service", "test-fynca")
+	tp, err := NewProvider("", "test-service", "test-flow")
 	if err != nil {
 		t.Fatal(err)
 	}

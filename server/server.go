@@ -23,14 +23,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fynca/fynca"
-	"github.com/fynca/fynca/datastore"
-	"github.com/fynca/fynca/pkg/auth"
-	authnone "github.com/fynca/fynca/pkg/auth/providers/none"
-	authtoken "github.com/fynca/fynca/pkg/auth/providers/token"
-	"github.com/fynca/fynca/pkg/middleware"
-	"github.com/fynca/fynca/pkg/middleware/admin"
-	"github.com/fynca/fynca/services"
+	"github.com/ehazlett/flow"
+	"github.com/ehazlett/flow/datastore"
+	"github.com/ehazlett/flow/pkg/auth"
+	authnone "github.com/ehazlett/flow/pkg/auth/providers/none"
+	authtoken "github.com/ehazlett/flow/pkg/auth/providers/token"
+	"github.com/ehazlett/flow/pkg/middleware"
+	"github.com/ehazlett/flow/pkg/middleware/admin"
+	"github.com/ehazlett/flow/services"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -57,13 +57,13 @@ var (
 	}
 
 	publicRoutes = []string{
-		"Jobs/Version",
+		"Info/Version",
 		"Accounts/Authenticate",
 	}
 )
 
 type Server struct {
-	config           *fynca.Config
+	config           *flow.Config
 	mu               *sync.Mutex
 	grpcServer       *grpc.Server
 	services         []services.Service
@@ -72,8 +72,8 @@ type Server struct {
 	serverShutdownCh chan bool
 }
 
-func NewServer(cfg *fynca.Config) (*Server, error) {
-	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting fynca server")
+func NewServer(cfg *flow.Config) (*Server, error) {
+	logrus.WithFields(logrus.Fields{"address": cfg.GRPCAddress}).Info("starting flow server")
 
 	grpcOpts := []grpc.ServerOption{
 		grpc.MaxMsgSize(10 * 1024 * 1024),
@@ -99,7 +99,7 @@ func NewServer(cfg *fynca.Config) (*Server, error) {
 
 	// setup default authenticator
 	if cfg.Authenticator == nil {
-		cfg.Authenticator = &fynca.AuthenticatorConfig{Name: "none"}
+		cfg.Authenticator = &flow.AuthenticatorConfig{Name: "none"}
 	}
 
 	// interceptors
@@ -157,7 +157,7 @@ func NewServer(cfg *fynca.Config) (*Server, error) {
 	return srv, nil
 }
 
-func (s *Server) Register(svcs []func(*fynca.Config) (services.Service, error)) error {
+func (s *Server) Register(svcs []func(*flow.Config) (services.Service, error)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -239,7 +239,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) GenerateProfile() (string, error) {
-	tmpfile, err := ioutil.TempFile("", "fynca-profile-")
+	tmpfile, err := ioutil.TempFile("", "flow-profile-")
 	if err != nil {
 		return "", err
 	}

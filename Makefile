@@ -1,22 +1,21 @@
 GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 COMMIT?=`git rev-parse --short HEAD`
-APP=fynca
-DAEMON=fynca
+REGISTRY?=docker.io/ehazlett
+APP=flow
+DAEMON=flow
 CGO_ENABLED=0
 CLI=fctl
-WORKER=fynca-worker
-REPO?=git.underland.io/ehazlett/$(APP)
+REPO?=github.com/ehazlett/$(APP)
 TAG?=dev
 BUILD?=-d
 VERSION?=dev
 BUILD_ARGS?=
 PACKAGES=$(shell go list ./... | grep -v -e /vendor/)
-EXTENSIONS=$(wildcard extensions/*)
+WORKFLOWS=$(wildcard cmd/flow-workflow-*)
 CYCLO_PACKAGES=$(shell go list ./... | grep -v /vendor/ | sed "s/github.com\/$(NAMESPACE)\/$(APP)\///g" | tail -n +2)
 VAB_ARGS?=
 CWD=$(PWD)
-WORKER_IMAGE?=r.underland.io/apps/fynca:latest
 
 ifeq ($(GOOS), windows)
 	EXT=.exe
@@ -28,7 +27,13 @@ protos:
 	@>&2 echo " -> building protobufs for grpc"
 	@echo ${PACKAGES} | xargs protobuild -quiet
 
-binaries: $(DAEMON) $(CLI) $(WORKER)
+binaries: $(DAEMON) $(CLI) $(WORKFLOWS)
+
+workflows: $(WORKFLOWS)
+
+daemon: $(DAEMON)
+
+cli: $(CLI)
 
 bindir:
 	@mkdir -p bin
@@ -39,13 +44,11 @@ $(CLI): bindir
 
 $(DAEMON): bindir
 	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD} (${GOARCH})"
-	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Fynca server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
+	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Flow server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
 
-$(WORKER): bindir
-	@>&2 echo " -> building $(WORKER) ${COMMIT}${BUILD} (${GOARCH})"
-	@cd cmd/$(WORKER) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(WORKER)$(EXT) .
-	@mkdir -p bin/updates/fynca-worker/
-	@cp ./bin/$(WORKER)$(EXT) ./bin/updates/fynca-worker/$(GOOS)-$(GOARCH)
+$(WORKFLOWS): bindir
+	@echo " -> building $(shell basename $@) ${COMMIT}${BUILD} (${GOARCH})"
+	@cd "$@" && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(basename $$@)$(EXT) .
 
 vet:
 	@echo " -> $@"
@@ -63,4 +66,4 @@ test:
 clean:
 	@rm -rf bin/
 
-.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKER) binaries
+.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKFLOWS) binaries

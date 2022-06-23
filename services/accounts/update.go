@@ -16,8 +16,8 @@ package accounts
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
 	ptypes "github.com/gogo/protobuf/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,8 +25,8 @@ import (
 
 func (s *service) UpdateAccount(ctx context.Context, req *api.UpdateAccountRequest) (*ptypes.Empty, error) {
 	// check if requesting username matches authenticated or admin
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
-	isAdmin := ctx.Value(fynca.CtxAdminKey).(bool)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
+	isAdmin := ctx.Value(flow.CtxAdminKey).(bool)
 	if username != req.Account.Username && !isAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "access denied")
 	}
@@ -58,8 +58,8 @@ func (s *service) ChangePassword(ctx context.Context, req *api.ChangePasswordReq
 	}
 
 	// check if requesting username matches authenticated or admin
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
-	isAdmin := ctx.Value(fynca.CtxAdminKey).(bool)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
+	isAdmin := ctx.Value(flow.CtxAdminKey).(bool)
 	if username != req.Username && !isAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "access denied")
 	}

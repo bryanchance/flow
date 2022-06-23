@@ -20,7 +20,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/fynca/fynca/pkg/tracing"
+	"github.com/ehazlett/flow/pkg/tracing"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

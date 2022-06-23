@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package flow.services.info.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import weak "google/protobuf/empty.proto";
+
+option go_package = "github.com/ehazlett/flow/api/services/info/v1;info";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+
+
+service Info {
+        rpc Version(VersionRequest) returns (VersionResponse);
+}
+
+message VersionRequest {}
+
+message VersionResponse {
+        string name = 1;
+        string version = 2;
+        string build = 3;
+        string commit = 4;
+        string authenticator = 5;
+}

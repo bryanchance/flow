@@ -15,17 +15,14 @@ package token
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"path"
 	"strings"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
-	"github.com/fynca/fynca/datastore"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
+	"github.com/ehazlett/flow/datastore"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -46,7 +43,8 @@ var (
 )
 
 type Config struct {
-	Token string `json:"token,omitempty"`
+	Token     string `json:"token,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // TokenAuthenticator is an authenticator that performs no authentication at all
@@ -79,20 +77,20 @@ func (a *TokenAuthenticator) Authenticate(ctx context.Context, username string, 
 	if err := bcrypt.CompareHashAndPassword(account.PasswordCrypt, password); err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
 			logrus.Warnf("invalid username or password for %s", username)
-			//return nil, ErrInvalidUsernamePassword
 			return nil, status.Errorf(codes.Unauthenticated, "invalid username or password")
 		}
 		return nil, errors.Wrap(err, "error comparing password hash")
 	}
 
-	token := generateToken(account.Username)
+	token := flow.GenerateToken(account.Username)
 	tokenKey := getTokenKey(token)
 	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, []byte(account.Username), tokenTTL); err != nil {
 		return nil, errors.Wrapf(err, "error saving token for %s", account.Username)
 	}
 
 	config := &Config{
-		Token: token,
+		Token:     token,
+		Namespace: account.CurrentNamespace,
 	}
 	data, err := json.Marshal(config)
 	if err != nil {
@@ -115,37 +113,74 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 
 	metadata, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
+		logrus.Warnf("missing metadata in context from %s", peer.Addr)
 		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 	}
-	// check for token
-	token, ok := metadata[fynca.CtxTokenKey]
-	if !ok {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
-		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
-	}
-	var account *api.Account
-	for _, t := range token {
-		acct, err := a.validateToken(ctx, t)
-		if err != nil {
-			logrus.Warnf("unauthenticated request from %s using token %s", peer.Addr, t)
+
+	// check for auth token
+	token, ok := metadata[flow.CtxTokenKey]
+	if ok {
+		var account *api.Account
+		for _, t := range token {
+			acct, err := a.validateToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using token %s", peer.Addr, t)
+				return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
+			}
+
+			account = acct
+			break
+		}
+		if account == nil {
+			logrus.Warnf("unauthenticated request from %s", peer.Addr)
 			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 		}
+		namespace := account.CurrentNamespace
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
+		// verify user is a member of specified namespace
+		validNS, err := a.validateUsernameNamespace(ctx, account, namespace)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error validating user namespace %s", namespace)
+		}
+		if !validNS {
+			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
+			return nil, status.Errorf(codes.PermissionDenied, "access denied")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxTokenKey, token)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
+		return handler(fCtx, req)
+	}
 
-		account = acct
-		break
+	// service token
+	nt, ok := metadata[flow.CtxServiceTokenKey]
+	if ok {
+		var serviceToken *api.ServiceToken
+		for _, t := range nt {
+			nToken, err := a.validateServiceToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using service token %s", peer.Addr, t)
+				return nil, status.Errorf(codes.Unauthenticated, "invalid or missing service token")
+			}
+
+			serviceToken = nToken
+			break
+		}
+		if serviceToken == nil {
+			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing service token")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
+		return handler(tCtx, req)
 	}
-	if account == nil {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
-		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
-	}
-	// TODO: support organizations
-	namespace := account.ID
-	tCtx := context.WithValue(ctx, fynca.CtxTokenKey, token)
-	uCtx := context.WithValue(tCtx, fynca.CtxUsernameKey, account.Username)
-	aCtx := context.WithValue(uCtx, fynca.CtxAdminKey, account.Admin)
-	fCtx := context.WithValue(aCtx, fynca.CtxNamespaceKey, namespace)
-	return handler(fCtx, req)
+	logrus.Warnf("unauthenticated request from %s (missing token and service token)", peer.Addr)
+	return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 }
 
 func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
@@ -164,43 +199,113 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 
 	metadata, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
+		logrus.Warnf("missing metadata in context from %s", peer.Addr)
 		return status.Errorf(codes.Unauthenticated, "invalid or missing token")
 	}
-	// check for token
-	token, ok := metadata[fynca.CtxTokenKey]
-	if !ok {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
-		return status.Errorf(codes.Unauthenticated, "invalid or missing token")
-	}
-	var account *api.Account
-	for _, t := range token {
-		acct, err := a.validateToken(ctx, t)
-		if err != nil {
-			logrus.Warnf("unauthenticated request from %s using token %s", peer.Addr, t)
+
+	// check for auth token
+	token, ok := metadata[flow.CtxTokenKey]
+	if ok {
+		var account *api.Account
+		for _, t := range token {
+			acct, err := a.validateToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using token %s", peer.Addr, t)
+				return status.Errorf(codes.Unauthenticated, "invalid or missing token")
+			}
+
+			account = acct
+			break
+		}
+		if account == nil {
+			logrus.Warnf("unauthenticated request from %s", peer.Addr)
 			return status.Errorf(codes.Unauthenticated, "invalid or missing token")
 		}
+		namespace := account.CurrentNamespace
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
+		// verify user is a member of specified namespace
+		validNS, err := a.validateUsernameNamespace(ctx, account, namespace)
+		if err != nil {
+			return errors.Wrapf(err, "error validating user namespace %s", namespace)
+		}
+		if !validNS {
+			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
+			return status.Errorf(codes.PermissionDenied, "access denied")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxTokenKey, token)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
+		s.WrappedContext = fCtx
+		return handler(srv, s)
+	}
 
-		account = acct
-		break
+	// service token
+	nt, ok := metadata[flow.CtxServiceTokenKey]
+	if ok {
+		var serviceToken *api.ServiceToken
+		for _, t := range nt {
+			nToken, err := a.validateServiceToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using service token %s", peer.Addr, t)
+				return status.Errorf(codes.Unauthenticated, "invalid or missing service token")
+			}
+
+			serviceToken = nToken
+			break
+		}
+		if serviceToken == nil {
+			return status.Errorf(codes.Unauthenticated, "invalid or missing service token")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
+		s.WrappedContext = tCtx
+		return handler(srv, s)
 	}
-	if account == nil {
-		logrus.Warnf("unauthenticated request from %s", peer.Addr)
-		return status.Errorf(codes.Unauthenticated, "invalid or missing token")
-	}
-	// TODO: support organizations
-	namespace := account.ID
-	tCtx := context.WithValue(ctx, fynca.CtxTokenKey, token)
-	uCtx := context.WithValue(tCtx, fynca.CtxUsernameKey, account.Username)
-	aCtx := context.WithValue(uCtx, fynca.CtxAdminKey, account.Admin)
-	fCtx := context.WithValue(aCtx, fynca.CtxNamespaceKey, namespace)
-	s.WrappedContext = fCtx
-	return handler(srv, s)
+
+	logrus.Warnf("unauthenticated request from %s (missing token and service token)", peer.Addr)
+	return status.Errorf(codes.Unauthenticated, "invalid or missing token and service token")
 }
 
 func (a *TokenAuthenticator) GetAccount(ctx context.Context, token string) (*api.Account, error) {
 	return a.validateToken(ctx, token)
+}
 
+func (a *TokenAuthenticator) GenerateServiceToken(ctx context.Context, description string, ttl time.Duration) (*api.ServiceToken, error) {
+	// generate service token
+	token := flow.GenerateToken(time.Now().String())
+	serviceToken, err := a.CreateServiceToken(ctx, token, description, ttl)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceToken, nil
+}
+
+func (a *TokenAuthenticator) CreateServiceToken(ctx context.Context, token string, description string, ttl time.Duration) (*api.ServiceToken, error) {
+	tokenKey := getServiceTokenKey(token)
+
+	serviceToken := &api.ServiceToken{
+		Token:       token,
+		Description: description,
+		CreatedAt:   time.Now(),
+	}
+
+	data, err := json.Marshal(serviceToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, data, ttl); err != nil {
+		return nil, errors.Wrap(err, "error saving service token")
+	}
+
+	return serviceToken, nil
 }
 
 func (a *TokenAuthenticator) isPublicRoute(method string) bool {
@@ -226,11 +331,53 @@ func (a *TokenAuthenticator) validateToken(ctx context.Context, token string) (*
 	return a.ds.GetAccount(ctx, string(data))
 }
 
+func (a *TokenAuthenticator) validateServiceToken(ctx context.Context, token string) (*api.ServiceToken, error) {
+	tokenKey := getServiceTokenKey(token)
+	data, err := a.ds.GetAuthenticatorKey(ctx, a, tokenKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error getting service token %s from datastore", token)
+	}
+
+	var serviceToken *api.ServiceToken
+	if err := json.Unmarshal(data, &serviceToken); err != nil {
+		return nil, err
+	}
+
+	// update accessedAt
+	serviceToken.AccessedAt = time.Now()
+	uData, err := json.Marshal(serviceToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, uData, 0); err != nil {
+		return nil, errors.Wrapf(err, "error saving service token %s", token)
+	}
+
+	return serviceToken, nil
+}
+
+func (a *TokenAuthenticator) validateUsernameNamespace(ctx context.Context, acct *api.Account, nsID string) (bool, error) {
+	ns, err := a.ds.GetNamespace(ctx, nsID)
+	if err != nil {
+		return false, err
+	}
+	if ns.OwnerID == acct.ID {
+		return true, nil
+	}
+
+	for _, id := range ns.Members {
+		if id == acct.ID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func getTokenKey(token string) string {
 	return path.Join("tokens", token)
 }
 
-func generateToken(username string) string {
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%s:%s", username, time.Now())))
-	return hex.EncodeToString(hash[:])
+func getServiceTokenKey(token string) string {
+	return path.Join("servicetokens", token)
 }

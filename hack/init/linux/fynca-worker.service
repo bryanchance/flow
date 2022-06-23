@@ -1,10 +1,10 @@
 [Unit]
-Description=fynca worker
-Documentation=https://fynca.io
+Description=flow worker
+Documentation=https://flow.io
 After=network.target local-fs.target
 
 [Service]
-ExecStart=/usr/local/bin/fynca-worker -D -c /etc/fynca.toml
+ExecStart=/usr/local/bin/flow-worker -D -c /etc/flow.toml
 Restart=always
 RestartSec=5
 LimitNPROC=infinity

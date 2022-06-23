@@ -16,8 +16,9 @@ package main
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	"github.com/fynca/fynca/client"
+	"github.com/ehazlett/flow"
+	"github.com/ehazlett/flow/client"
+	"github.com/gogo/protobuf/jsonpb"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/metadata"
 )
@@ -27,7 +28,7 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 	key := clix.String("key")
 	skipVerification := clix.Bool("skip-verify")
 
-	cfg := &fynca.Config{
+	cfg := &flow.Config{
 		GRPCAddress:           clix.String("addr"),
 		TLSClientCertificate:  cert,
 		TLSClientKey:          key,
@@ -45,4 +46,8 @@ func getContext() (context.Context, error) {
 	md := metadata.New(map[string]string{"token": config.Token})
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	return ctx, nil
+}
+
+func marshaler() *jsonpb.Marshaler {
+	return &jsonpb.Marshaler{EmitDefaults: true}
 }

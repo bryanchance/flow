@@ -16,8 +16,8 @@ package accounts
 import (
 	"context"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
 )
 
 // GetAccount returns the requested account from the datastore
@@ -33,7 +33,7 @@ func (s *service) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*
 
 // GetAccountProfile returns the account for the current user in the context
 func (s *service) GetAccountProfile(ctx context.Context, req *api.GetAccountProfileRequest) (*api.GetAccountProfileResponse, error) {
-	username := ctx.Value(fynca.CtxUsernameKey).(string)
+	username := ctx.Value(flow.CtxUsernameKey).(string)
 	account, err := s.ds.GetAccount(ctx, username)
 	if err != nil {
 		return nil, err

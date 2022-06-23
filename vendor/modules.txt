@@ -9,6 +9,8 @@ github.com/cenkalti/backoff/v4
 github.com/cespare/xxhash/v2
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 github.com/dgryski/go-rendezvous
 # github.com/dustin/go-humanize v1.0.0
@@ -139,9 +141,14 @@ github.com/nats-io/nats.go/util
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 github.com/nats-io/nuid
+# github.com/olebedev/emitter v0.0.0-20190110104742-e8d1457e6aee
+## explicit
+github.com/olebedev/emitter
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c
 github.com/power-devops/perfstat
 # github.com/rs/xid v1.2.1
@@ -167,6 +174,9 @@ github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.7.2
+## explicit
+github.com/stretchr/testify/assert
 # github.com/tklauser/go-sysconf v0.3.9
 github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.3.0
@@ -344,6 +354,8 @@ gopkg.in/inconshreveable/go-update.v0/download
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.1
+gopkg.in/yaml.v3
 # howett.net/plist v0.0.0-20181124034731-591f970eefbb
 howett.net/plist
 # k8s.io/apimachinery v0.23.1

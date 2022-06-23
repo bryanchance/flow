@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fynca/fynca"
-	api "github.com/fynca/fynca/api/services/accounts/v1"
-	"github.com/fynca/fynca/pkg/auth"
+	"github.com/ehazlett/flow"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
+	"github.com/ehazlett/flow/pkg/auth"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -126,8 +126,13 @@ func (m *AdminRequired) getAccount(ctx context.Context) (*api.Account, error) {
 	if !ok {
 		return nil, status.Errorf(codes.PermissionDenied, "invalid or missing token")
 	}
+	// check for service token
+	if _, ok := metadata[flow.CtxServiceTokenKey]; ok {
+		return nil, nil
+	}
+
 	// check for token
-	token, ok := metadata[fynca.CtxTokenKey]
+	token, ok := metadata[flow.CtxTokenKey]
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 	}

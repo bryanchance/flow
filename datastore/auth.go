@@ -18,7 +18,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/fynca/fynca/pkg/auth"
+	"github.com/ehazlett/flow/pkg/auth"
 	"github.com/pkg/errors"
 )
 

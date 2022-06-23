@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	accountsapi "github.com/fynca/fynca/api/services/accounts/v1"
+	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 	"golang.org/x/term"
@@ -32,12 +32,13 @@ var accountsCommand = &cli.Command{
 	Subcommands: []*cli.Command{
 		accountsCreateCommand,
 		accountsChangePasswordCommand,
+		accountsGenerateServiceTokenCommand,
 	},
 }
 
 var accountsCreateCommand = &cli.Command{
 	Name:  "create",
-	Usage: "create a new fynca account",
+	Usage: "create a new flow account",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
@@ -104,7 +105,7 @@ var accountsCreateCommand = &cli.Command{
 
 var accountsChangePasswordCommand = &cli.Command{
 	Name:  "change-password",
-	Usage: "change fynca account password",
+	Usage: "change flow account password",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "username",
@@ -157,6 +158,47 @@ var accountsChangePasswordCommand = &cli.Command{
 		}
 
 		logrus.Infof("password changed for %s successfully", username)
+
+		return nil
+	},
+}
+
+var accountsGenerateServiceTokenCommand = &cli.Command{
+	Name:  "generate-service-token",
+	Usage: "create a new service token",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "description",
+			Usage: "token description",
+			Value: "",
+		},
+		&cli.DurationFlag{
+			Name:  "ttl",
+			Usage: "ttl for service token",
+			Value: 8760 * time.Hour, // 1 year
+		},
+	},
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.GenerateServiceToken(ctx, &accountsapi.GenerateServiceTokenRequest{
+			Description: clix.String("description"),
+			TTL:         clix.Duration("ttl"),
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(resp.ServiceToken.Token)
 
 		return nil
 	},

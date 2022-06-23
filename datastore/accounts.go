@@ -19,7 +19,7 @@ import (
 	"path"
 	"time"
 
-	api "github.com/fynca/fynca/api/services/accounts/v1"
+	api "github.com/ehazlett/flow/api/services/accounts/v1"
 	"github.com/go-redis/redis/v8"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -29,6 +29,8 @@ import (
 )
 
 var (
+	// ErrAccountExists is returned if an account already exists
+	ErrAccountExists = errors.New("an account with that username already exists")
 	// ErrAccountDoesNotExist is returned when an account cannot be found
 	ErrAccountDoesNotExist = errors.New("account does not exist")
 )
@@ -77,6 +79,11 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 		return fmt.Errorf("username cannot be blank")
 	}
 
+	// check for existing account
+	if _, err := d.GetAccount(ctx, account.Username); err == nil {
+		return ErrAccountExists
+	}
+
 	if account.Password == "" {
 		return fmt.Errorf("password cannot be blank")
 	}
@@ -97,6 +104,17 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 	defer clearPassword(passwd)
 
 	account.PasswordCrypt = passwordCrypt
+
+	// create default user namespace
+	nsID, err := d.CreateNamespace(ctx, &api.Namespace{
+		Name:    account.Username,
+		OwnerID: account.ID,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "error creating default namespace for %s in datastore", account.Username)
+	}
+	account.CurrentNamespace = nsID
+	account.Namespaces = []string{nsID}
 
 	data, err := proto.Marshal(account)
 	if err != nil {
