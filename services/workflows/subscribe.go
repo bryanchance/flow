@@ -36,7 +36,6 @@ type subscriber struct {
 }
 
 func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflowEventsServer) error {
-	// TODO
 	doneCh := make(chan bool)
 	stopCh := make(chan bool)
 	errCh := make(chan error)
@@ -68,12 +67,30 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 			case *api.SubscribeWorkflowEventsRequest_Info:
 				info := v.Info
 				logrus.Debugf("received workflow subscriber request: %+v", info)
+
+				if err := s.registerProcessor(info); err != nil {
+					if err := stream.Send(&api.WorkflowEvent{
+						Event: &api.WorkflowEvent_Close{
+							Close: &api.WorkflowCloseEvent{
+								Error: &api.WorkflowError{
+									Error: err.Error(),
+								},
+							},
+						},
+					}); err != nil {
+						logrus.WithError(err).Errorf("error registering process %s", info.ID)
+					}
+					doneCh <- true
+					return
+				}
+
 				maxWorkflows = info.MaxWorkflows
 
 				logrus.Debugf("worker max workflows: %d", info.MaxWorkflows)
 
 				go func() {
 					defer func() {
+						s.unRegisterProcessor(info)
 						doneCh <- true
 					}()
 
@@ -117,9 +134,7 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 				if maxWorkflows != 0 && workflowsProcessed >= maxWorkflows {
 					logrus.Infof("worker reached max workflows (%d), exiting", maxWorkflows)
 					if err := stream.Send(&api.WorkflowEvent{
-						Event: &api.WorkflowEvent_Close{
-							Close: true,
-						},
+						Event: &api.WorkflowEvent_Close{},
 					}); err != nil {
 						logrus.WithError(err).Errorf("error sending close to", v.Output.ID)
 					}
@@ -144,7 +159,7 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 	return nil
 }
 
-func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *api.SubscriberInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
+func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
 	task, err := q.Pull(ctx, info.Type)
 	if err != nil {
 		return err
@@ -197,6 +212,32 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 	}
 
 	return nil
+}
+
+func (s *service) registerProcessor(p *api.ProcessorInfo) error {
+	s.processorLock.Lock()
+	defer s.processorLock.Unlock()
+
+	processorID := flow.GenerateHash(p.ID, p.Type)
+	if v, ok := s.processors[processorID]; ok {
+		return fmt.Errorf("processor with that ID already registered for that type: %s", v.ID)
+	}
+
+	logrus.Debugf("adding %s (%s) to processors", p.ID, p.Type)
+	p.StartedAt = time.Now()
+	s.processors[processorID] = p
+	return nil
+}
+
+func (s *service) unRegisterProcessor(p *api.ProcessorInfo) {
+	s.processorLock.Lock()
+	defer s.processorLock.Unlock()
+
+	processorID := flow.GenerateHash(p.ID, p.Type)
+	if p, ok := s.processors[processorID]; ok {
+		logrus.Debugf("removing %s (%s) from processors", p.ID, p.Type)
+		delete(s.processors, processorID)
+	}
 }
 
 func (s *service) updateWorkflowOutput(ctx context.Context, o *api.WorkflowOutput) error {

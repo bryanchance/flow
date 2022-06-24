@@ -24,9 +24,12 @@ import (
 )
 
 // GenerateHash generates a sha256 hash of the string
-func GenerateHash(v string) string {
-	hash := sha256.Sum256([]byte(v))
-	return hex.EncodeToString(hash[:])
+func GenerateHash(v ...string) string {
+	hash := sha256.New()
+	for _, x := range v {
+		hash.Write([]byte(x))
+	}
+	return hex.EncodeToString(hash.Sum(nil)[:])
 }
 
 // GetMinioClient returns a MinIO client using the specified flow.Config

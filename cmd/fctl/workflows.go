@@ -39,6 +39,7 @@ var workflowsCommand = &cli.Command{
 	Usage: "manage workflows",
 	Subcommands: []*cli.Command{
 		workflowsQueueCommand,
+		workflowsProcessorsCommand,
 		workflowsListCommand,
 		workflowsInfoCommand,
 		workflowsDeleteCommand,
@@ -81,6 +82,40 @@ var workflowsListCommand = &cli.Command{
 				humanize.Time(wf.CreatedAt),
 				wf.Priority,
 				duration,
+			)
+		}
+		w.Flush()
+		return nil
+	},
+}
+
+var workflowsProcessorsCommand = &cli.Command{
+	Name:  "processors",
+	Usage: "list available workflow processors",
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.ListWorkflowProcessors(ctx, &api.ListWorkflowProcessorsRequest{})
+		if err != nil {
+			return err
+		}
+
+		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
+		fmt.Fprintf(w, "TYPE\tID\tSTARTED\n")
+		for _, p := range resp.Processors {
+			fmt.Fprintf(w, "%s\t%s\t%s\n",
+				p.Type,
+				p.ID,
+				humanize.Time(p.StartedAt),
 			)
 		}
 		w.Flush()

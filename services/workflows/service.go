@@ -20,12 +20,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ehazlett/ttlcache"
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/ehazlett/flow/datastore"
 	"github.com/ehazlett/flow/pkg/auth"
 	"github.com/ehazlett/flow/services"
+	"github.com/ehazlett/ttlcache"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
@@ -53,8 +53,8 @@ type service struct {
 	ds                  *datastore.Datastore
 	authenticator       auth.Authenticator
 	events              *emitter.Emitter
-	subscribers         map[string]struct{}
-	subscriberLock      *sync.Mutex
+	processors          map[string]*api.ProcessorInfo
+	processorLock       *sync.Mutex
 	failedWorkflowCache *ttlcache.TTLCache
 }
 
@@ -90,8 +90,8 @@ func New(cfg *flow.Config) (services.Service, error) {
 		storageClient:       mc,
 		ds:                  ds,
 		events:              &emitter.Emitter{},
-		subscribers:         make(map[string]struct{}),
-		subscriberLock:      &sync.Mutex{},
+		processors:          make(map[string]*api.ProcessorInfo),
+		processorLock:       &sync.Mutex{},
 		failedWorkflowCache: failedWorkflowCache,
 	}, nil
 }

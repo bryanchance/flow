@@ -39,6 +39,7 @@ func workerAction(clix *cli.Context) error {
 
 	p := &Processor{}
 
+	logrus.Infof("flow processor %s running on %s", workflowType, id)
 	h, err := workflows.NewWorkflowHandler(cfg, p)
 	if err != nil {
 		return err
@@ -60,6 +61,7 @@ func workerAction(clix *cli.Context) error {
 			case sig := <-signals:
 				switch sig {
 				case syscall.SIGTERM, syscall.SIGINT:
+					logrus.Debug("stopping workflow handler")
 					if err := h.Stop(); err != nil {
 						logrus.Error(err)
 					}
@@ -73,6 +75,7 @@ func workerAction(clix *cli.Context) error {
 	}()
 
 	go func() {
+		logrus.Debugf("starting workflow handler")
 		ctx := context.Background()
 		if err := h.Run(ctx); err != nil {
 			errCh <- err
@@ -83,7 +86,7 @@ func workerAction(clix *cli.Context) error {
 
 	<-doneCh
 
-	logrus.Info("shutting down")
+	logrus.Info("processor shutting down")
 
 	return runErr
 }

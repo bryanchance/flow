@@ -19,9 +19,12 @@ import (
 	"os"
 	"time"
 
+	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (h *WorkflowHandler) Run(ctx context.Context) error {
@@ -31,6 +34,19 @@ func (h *WorkflowHandler) Run(ctx context.Context) error {
 	}
 	defer c.Close()
 
+	// check if requestor is authenticated
+	if _, err := c.Authenticated(ctx, &accountsapi.AuthenticatedRequest{}); err != nil {
+		if e, ok := status.FromError(err); ok {
+			switch e.Code() {
+			case codes.Unauthenticated:
+				return errors.New("Invalid or expired authentication.  Please check your service token.")
+			case codes.PermissionDenied:
+				return errors.New("Access denied")
+			}
+		}
+		return err
+	}
+
 	stream, err := c.SubscribeWorkflowEvents(ctx)
 	if err != nil {
 		return err
@@ -38,7 +54,7 @@ func (h *WorkflowHandler) Run(ctx context.Context) error {
 
 	if err := stream.Send(&api.SubscribeWorkflowEventsRequest{
 		Request: &api.SubscribeWorkflowEventsRequest_Info{
-			Info: &api.SubscriberInfo{
+			Info: &api.ProcessorInfo{
 				ID:           h.cfg.ID,
 				Type:         h.cfg.Type,
 				MaxWorkflows: h.cfg.MaxWorkflows,
@@ -64,7 +80,11 @@ func (h *WorkflowHandler) Run(ctx context.Context) error {
 				continue
 			}
 		case *api.WorkflowEvent_Close:
-			logrus.Debug("close event received from server")
+			if err := v.Close.Error; err != nil {
+				logrus.Error(err)
+			} else {
+				logrus.Debug("close event received from server")
+			}
 			break
 		}
 	}

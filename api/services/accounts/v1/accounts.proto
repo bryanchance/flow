@@ -26,7 +26,10 @@ service Accounts {
         rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse);
 	rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
         rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse);
+        rpc Authenticated(AuthenticatedRequest) returns (google.protobuf.Empty);
 }
+
+message AuthenticatedRequest {}
 
 message Account {
         string id = 1 [(gogoproto.customname) = "ID"];

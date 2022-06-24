@@ -25,6 +25,8 @@ service Workflows {
         rpc UploadWorkflowArtifact(stream UploadWorkflowArtifactRequest) returns (UploadWorkflowArtifactResponse);
         rpc UpdateWorkflowStatus(UpdateWorkflowStatusRequest) returns (google.protobuf.Empty);
         rpc UpdateWorkflowOutput(UpdateWorkflowOutputRequest) returns (google.protobuf.Empty);
+
+        rpc ListWorkflowProcessors(ListWorkflowProcessorsRequest) returns (ListWorkflowProcessorsResponse);
 }
 
 message ListWorkflowsRequest {}
@@ -145,10 +147,11 @@ message DeleteWorkflowRequest {
         string id = 1 [(gogoproto.customname) = "ID"];
 }
 
-message SubscriberInfo {
+message ProcessorInfo {
         string id = 1 [(gogoproto.customname) = "ID"];
         string type = 2;
         uint64 max_workflows = 3;
+        google.protobuf.Timestamp started_at = 4 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
 }
 
 message WorkflowAck {
@@ -159,16 +162,24 @@ message WorkflowAck {
 
 message SubscribeWorkflowEventsRequest {
         oneof request {
-                SubscriberInfo info = 1;
+                ProcessorInfo info = 1;
                 WorkflowOutput output = 2;
                 WorkflowAck ack = 3;
         }
 }
 
+message WorkflowError {
+        string error = 1;
+}
+
+message WorkflowCloseEvent {
+        WorkflowError error = 1;
+}
+
 message WorkflowEvent {
         oneof event {
                 Workflow workflow = 1;
-                bool close = 2;
+                WorkflowCloseEvent close = 2;
         }
 }
 
@@ -214,4 +225,10 @@ message GetWorkflowInputFileRequest {
 
 message WorkflowInputFileContents {
         bytes chunk_data = 1;
+}
+
+message ListWorkflowProcessorsRequest {}
+
+message ListWorkflowProcessorsResponse {
+        repeated ProcessorInfo processors = 1;
 }
