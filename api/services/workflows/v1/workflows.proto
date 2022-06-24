@@ -152,6 +152,13 @@ message ProcessorInfo {
         string type = 2;
         uint64 max_workflows = 3;
         google.protobuf.Timestamp started_at = 4 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+        uint32 cpus = 5 [(gogoproto.customname) = "CPUs"];
+        int64 memory_total = 6;
+        int64 memory_available = 7;
+        repeated string gpus = 8 [(gogoproto.customname) = "GPUs"];
+        double load1 = 9;
+        double load5 = 10;
+        double load15 = 11;
 }
 
 message WorkflowAck {

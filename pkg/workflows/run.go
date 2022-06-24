@@ -52,13 +52,14 @@ func (h *WorkflowHandler) Run(ctx context.Context) error {
 		return err
 	}
 
+	processorInfo, err := h.getProcessorInfo()
+	if err != nil {
+		return err
+	}
+
 	if err := stream.Send(&api.SubscribeWorkflowEventsRequest{
 		Request: &api.SubscribeWorkflowEventsRequest_Info{
-			Info: &api.ProcessorInfo{
-				ID:           h.cfg.ID,
-				Type:         h.cfg.Type,
-				MaxWorkflows: h.cfg.MaxWorkflows,
-			},
+			Info: processorInfo,
 		},
 	}); err != nil {
 		return err

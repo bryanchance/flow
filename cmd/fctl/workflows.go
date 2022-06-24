@@ -110,12 +110,15 @@ var workflowsProcessorsCommand = &cli.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
-		fmt.Fprintf(w, "TYPE\tID\tSTARTED\n")
+		fmt.Fprintf(w, "TYPE\tID\tSTARTED\tCPUS\tMEMORY\tGPUS\n")
 		for _, p := range resp.Processors {
-			fmt.Fprintf(w, "%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%s\n",
 				p.Type,
 				p.ID,
 				humanize.Time(p.StartedAt),
+				p.CPUs,
+				humanize.Bytes(uint64(p.MemoryTotal)),
+				strings.Join(p.GPUs, ","),
 			)
 		}
 		w.Flush()
