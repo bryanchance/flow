@@ -93,22 +93,10 @@ type Config struct {
 	S3Bucket string
 	// S3UseSSL enables SSL for the S3 service
 	S3UseSSL bool
-	// NATSUrl is the URL for the NATS server
-	NATSURL string
-	// NATSJobStreamName is the queue subject for the workers
-	NATSJobStreamName string
-	// NATSJobStatusStreamName is the queue subject for the servers
-	NATSJobStatusStreamName string
-	// NATSKVBucketWorkerControl is the name of the kv store in the for worker control
-	NATSKVBucketWorkerControl string
 	// DatabaseAddress is the address of the database
 	DatabaseAddress string
 	// QueueAddress is the address of the queue
 	QueueAddress string
-	// WorkflowTimeout is the max timeout for workers to process workflows
-	WorkflowTimeout duration
-	// Workers are worker specific configuration
-	Workers []*Worker
 	// ProfilerAddress enables the performance profiler on the specified address
 	ProfilerAddress string
 	// TraceEndpoint is the endpoint of the telemetry tracer
@@ -119,43 +107,6 @@ type Config struct {
 	InitialAdminPassword string
 	// Authenticator is the auth configuration
 	Authenticator *AuthenticatorConfig
-
-	// TODO: cleanup
-	// JobTimeout is the maximum amount of time a job can take
-	JobTimeout duration
-	// JobPrefix is the prefix for all queued jobs
-	JobPrefix string
-	// JobPriority is the priority for queued jobs
-	JobPriority int
-	// JobCPU is the amount of CPU (in Mhz) that will be configured for each job
-	JobCPU int
-	// JobMemory is the amount of memory (in MB) that will be configured for each job
-	JobMemory int
-}
-
-type Worker struct {
-	// Name is the name of the worker to apply the configuration
-	// leave blank for all
-	Name string
-	// MaxJobs is the maximum number of jobs this worker will perform and then exit
-	MaxJobs int
-	// RenderEngines is a list of enabled render engines for the worker
-	RenderEngines []*RenderEngine
-}
-
-type RenderEngine struct {
-	// Name is the name of the render engine
-	Name string
-	// Path is the path to the render engine executable
-	Path string
-}
-
-func (c *Config) GetJobTimeout() time.Duration {
-	return c.JobTimeout.Duration
-}
-
-func (c *Config) GetWorkflowTimeout() time.Duration {
-	return c.JobTimeout.Duration
 }
 
 func DefaultConfig() *Config {
@@ -164,23 +115,6 @@ func DefaultConfig() *Config {
 		DatabaseAddress: "redis://127.0.0.1:6379/0",
 		ProfilerAddress: "",
 	}
-}
-
-// GetWorkerConfig returns the node specific configuration or default if not found
-func (c *Config) GetWorkerConfig(name string) *Worker {
-	worker := &Worker{
-		MaxJobs: 0,
-	}
-	for _, w := range c.Workers {
-		if w.Name == name {
-			return w
-		}
-		if w.Name == "" {
-			worker = w
-		}
-	}
-	// if no specific configuration found return default
-	return worker
 }
 
 // LoadConfig returns a Flow config from the specified file path

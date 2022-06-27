@@ -42,7 +42,7 @@ message Account {
         // password is only used in account creation and password resets
         // and is hashed with bcrypt and then cleared and never stored
         string password = 8;
-        bytes password_crypt = 9;
+        bytes password_crypt = 9 [(gogoproto.jsontag) = "-"];
         string current_namespace = 10;
 	repeated string namespaces = 11;
 }

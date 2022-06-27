@@ -15,26 +15,44 @@ package queue
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-redis/redis/v8"
 )
 
-func (q *Queue) Pull(ctx context.Context, queueName string) (*Task, error) {
+func (q *Queue) Pull(ctx context.Context, namespace, queueName string) (*Task, error) {
 	// pull based upon priority
+	global := false
+	switch strings.ToLower(namespace) {
+	case "", "global":
+		global = true
+	}
 	for _, p := range []Priority{URGENT, NORMAL, LOW} {
-		k := getQueueName(queueName, p)
-		data, err := q.redisClient.LPop(ctx, k).Bytes()
-		if err != nil {
-			if err != redis.Nil {
+		k := getQueueName(namespace, queueName, p)
+		nsKeys := []string{k}
+		// if a global pull request get all queueName keys from all namespaces
+		if global {
+			gk := getQueueName("*", queueName, p)
+			keys, err := q.redisClient.Keys(ctx, gk).Result()
+			if err != nil {
 				return nil, err
 			}
-			continue
+			nsKeys = keys
 		}
-		if data != nil {
-			return &Task{
-				Priority: p,
-				Data:     data,
-			}, nil
+		for _, k := range nsKeys {
+			data, err := q.redisClient.LPop(ctx, k).Bytes()
+			if err != nil {
+				if err != redis.Nil {
+					return nil, err
+				}
+				continue
+			}
+			if data != nil {
+				return &Task{
+					Priority: p,
+					Data:     data,
+				}, nil
+			}
 		}
 	}
 	return nil, nil

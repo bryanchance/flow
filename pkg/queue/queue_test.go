@@ -14,13 +14,15 @@
 package queue
 
 import (
-	"context"
+	"fmt"
+	"testing"
 )
 
-func (q *Queue) Schedule(ctx context.Context, namespace, queueName string, data []byte, priority Priority) error {
-	k := getQueueName(namespace, queueName, priority)
-	if err := q.redisClient.RPush(ctx, k, data).Err(); err != nil {
-		return err
+func TestGetQueueName(t *testing.T) {
+	ns := "testns"
+	name := "test"
+	expected := fmt.Sprintf("%s/queue/%s/%s.normal", dbPrefix, ns, name)
+	if v := getQueueName(ns, name, NORMAL); v != expected {
+		t.Fatalf("expected %q; received %q", expected, v)
 	}
-	return nil
 }

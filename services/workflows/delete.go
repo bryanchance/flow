@@ -43,7 +43,7 @@ func (s *service) DeleteWorkflow(ctx context.Context, r *api.DeleteWorkflowReque
 	}
 
 	v := getWorkflowQueueValue(workflow)
-	if err := workflowQueue.Delete(ctx, workflow.Type, v, priority); err != nil {
+	if err := workflowQueue.Delete(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
 		return nil, err
 	}
 

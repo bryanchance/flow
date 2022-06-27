@@ -157,7 +157,7 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	}
 
 	v := getWorkflowQueueValue(workflow)
-	if err := workflowQueue.Schedule(ctx, workflow.Type, v, priority); err != nil {
+	if err := workflowQueue.Schedule(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
 		return err
 	}
 

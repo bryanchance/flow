@@ -35,6 +35,7 @@ func workerAction(clix *cli.Context) error {
 		TLSInsecureSkipVerify: clix.Bool("tls-skip-verify"),
 		MaxWorkflows:          clix.Uint64("max-workflows"),
 		ServiceToken:          clix.String("service-token"),
+		Namespace:             clix.String("namespace"),
 	}
 
 	p := &Processor{}

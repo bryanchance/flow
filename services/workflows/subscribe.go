@@ -160,7 +160,15 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 }
 
 func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
-	task, err := q.Pull(ctx, info.Type)
+	// TODO: parse scope and determine namespace
+	ns := ""
+	switch v := info.Scope.Scope.(type) {
+	case *api.ProcessorScope_Global:
+		ns = "global"
+	case *api.ProcessorScope_Namespace:
+		ns = v.Namespace
+	}
+	task, err := q.Pull(ctx, ns, info.Type)
 	if err != nil {
 		return err
 	}
@@ -186,7 +194,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 		// TODO: store fail count in datastore to determine max number of failures for a single workflow
 		// requeue
 		v := getWorkflowQueueValue(workflow)
-		if err := q.Schedule(ctx, info.Type, v, task.Priority); err != nil {
+		if err := q.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
 			return err
 		}
 		return fmt.Errorf("workflow %s is in failed cache; requeueing for another worker", workflow.ID)
@@ -195,8 +203,6 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 	// TODO: check if workflow depends on another workflow output and wait until it is complete
 
 	// user context for updating workflow to original
-	logrus.Debugf("processing workflow with timeout %s", s.config.GetWorkflowTimeout())
-
 	logrus.Debugf("sending workflow to subscriber %s", info.ID)
 	if err := stream.Send(&api.WorkflowEvent{
 		Event: &api.WorkflowEvent_Workflow{
@@ -205,7 +211,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 	}); err != nil {
 		// requeue
 		v := getWorkflowQueueValue(workflow)
-		if err := q.Schedule(ctx, info.Type, v, task.Priority); err != nil {
+		if err := q.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
 			return err
 		}
 		return errors.Wrapf(err, "error sending workflow to processor %s", info.Type)

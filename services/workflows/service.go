@@ -29,7 +29,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	miniocreds "github.com/minio/minio-go/v7/pkg/credentials"
-	nats "github.com/nats-io/nats.go"
 	"github.com/olebedev/emitter"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -48,7 +47,6 @@ var (
 
 type service struct {
 	config              *flow.Config
-	natsClient          *nats.Conn
 	storageClient       *minio.Client
 	ds                  *datastore.Datastore
 	authenticator       auth.Authenticator
@@ -68,12 +66,6 @@ func New(cfg *flow.Config) (services.Service, error) {
 		return nil, errors.Wrap(err, "error setting up storage service")
 	}
 
-	// nats
-	nc, err := nats.Connect(cfg.NATSURL, nats.RetryOnFailedConnect(true))
-	if err != nil {
-		return nil, errors.Wrap(err, "error connecting to nats")
-	}
-
 	ds, err := datastore.NewDatastore(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
@@ -86,7 +78,6 @@ func New(cfg *flow.Config) (services.Service, error) {
 
 	return &service{
 		config:              cfg,
-		natsClient:          nc,
 		storageClient:       mc,
 		ds:                  ds,
 		events:              &emitter.Emitter{},

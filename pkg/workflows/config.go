@@ -25,4 +25,5 @@ type Config struct {
 	MaxWorkflows          uint64
 	ServiceToken          string
 	WorkflowTimeout       time.Duration
+	Namespace             string
 }

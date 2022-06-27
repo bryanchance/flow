@@ -147,6 +147,13 @@ message DeleteWorkflowRequest {
         string id = 1 [(gogoproto.customname) = "ID"];
 }
 
+message ProcessorScope {
+        oneof scope {
+                bool global = 1;
+                string namespace = 2;
+        }
+}
+
 message ProcessorInfo {
         string id = 1 [(gogoproto.customname) = "ID"];
         string type = 2;
@@ -159,6 +166,7 @@ message ProcessorInfo {
         double load1 = 9;
         double load5 = 10;
         double load15 = 11;
+        ProcessorScope scope = 12;
 }
 
 message WorkflowAck {

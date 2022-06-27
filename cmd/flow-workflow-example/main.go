@@ -82,6 +82,10 @@ func main() {
 			Usage:   "maximum number of workflows to process",
 			Value:   0,
 		},
+		&cli.StringFlag{
+			Name:  "namespace",
+			Usage: "namespace for processor (default: global)",
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {

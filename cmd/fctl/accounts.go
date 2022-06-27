@@ -16,7 +16,9 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
 	"syscall"
 	"time"
 
@@ -31,6 +33,7 @@ var accountsCommand = &cli.Command{
 	Usage: "account management",
 	Subcommands: []*cli.Command{
 		accountsCreateCommand,
+		accountsProfileCommand,
 		accountsChangePasswordCommand,
 		accountsGenerateServiceTokenCommand,
 	},
@@ -98,6 +101,35 @@ var accountsCreateCommand = &cli.Command{
 
 		logrus.Infof("initial password: %s", tmpPassword)
 		logrus.Infof("created account %s successfully", acct.Username)
+
+		return nil
+	},
+}
+
+var accountsProfileCommand = &cli.Command{
+	Name:  "profile",
+	Usage: "view account profile",
+	Flags: []cli.Flag{},
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.GetAccountProfile(ctx, &accountsapi.GetAccountProfileRequest{})
+		if err != nil {
+			return err
+		}
+
+		if err := json.NewEncoder(os.Stdout).Encode(resp.Account); err != nil {
+			return err
+		}
 
 		return nil
 	},

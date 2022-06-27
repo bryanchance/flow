@@ -17,8 +17,8 @@ import (
 	"context"
 )
 
-func (q *Queue) Delete(ctx context.Context, queueName string, data []byte, priority Priority) error {
-	k := getQueueName(queueName, priority)
+func (q *Queue) Delete(ctx context.Context, namespace, queueName string, data []byte, priority Priority) error {
+	k := getQueueName(namespace, queueName, priority)
 	if err := q.redisClient.LRem(ctx, k, int64(1), data).Err(); err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@ package workflows
 
 import (
 	"fmt"
+	"strings"
 
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -53,6 +54,19 @@ func (h *WorkflowHandler) getProcessorInfo() (*api.ProcessorInfo, error) {
 		return nil, err
 	}
 
+	// set processor scope
+	scope := &api.ProcessorScope{}
+	switch strings.ToLower(h.cfg.Namespace) {
+	case "", "global":
+		scope.Scope = &api.ProcessorScope_Global{
+			Global: true,
+		}
+	default:
+		scope.Scope = &api.ProcessorScope_Namespace{
+			Namespace: h.cfg.Namespace,
+		}
+	}
+
 	return &api.ProcessorInfo{
 		ID:              h.cfg.ID,
 		Type:            h.cfg.Type,
@@ -64,5 +78,6 @@ func (h *WorkflowHandler) getProcessorInfo() (*api.ProcessorInfo, error) {
 		Load1:           loadStats.Load1,
 		Load5:           loadStats.Load5,
 		Load15:          loadStats.Load15,
+		Scope:           scope,
 	}, nil
 }
