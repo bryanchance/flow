@@ -57,6 +57,7 @@ var (
 		// TODO: add RegisterAccount gRPC method to allow user signup
 		"Accounts/CreateAccount",
 		"Accounts/DeleteAccount",
+		"Accounts/GenerateServiceToken",
 	}
 
 	publicRoutes = []string{

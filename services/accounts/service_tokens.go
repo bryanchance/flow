@@ -28,3 +28,13 @@ func (s *service) GenerateServiceToken(ctx context.Context, req *api.GenerateSer
 		ServiceToken: st,
 	}, nil
 }
+
+func (s *service) ListServiceTokens(ctx context.Context, req *api.ListServiceTokensRequest) (*api.ListServiceTokensResponse, error) {
+	tokens, err := s.authenticator.ListServiceTokens(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &api.ListServiceTokensResponse{
+		ServiceTokens: tokens,
+	}, nil
+}

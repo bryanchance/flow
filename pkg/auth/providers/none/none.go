@@ -42,7 +42,19 @@ func (a *NoneAuthenticator) GetAccount(ctx context.Context, token string) (*api.
 	return nil, nil
 }
 
+func (a *NoneAuthenticator) GenerateAPIToken(ctx context.Context, description string) (*api.APIToken, error) {
+	return nil, nil
+}
+
 func (a *NoneAuthenticator) GenerateServiceToken(ctx context.Context, description string, ttl time.Duration) (*api.ServiceToken, error) {
+	return nil, nil
+}
+
+func (a *NoneAuthenticator) ListServiceTokens(ctx context.Context) ([]*api.ServiceToken, error) {
+	return nil, nil
+}
+
+func (a *NoneAuthenticator) ValidateAPIToken(ctx context.Context, token string) (*api.Account, error) {
 	return nil, nil
 }
 

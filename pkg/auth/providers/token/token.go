@@ -159,6 +159,48 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 		return handler(fCtx, req)
 	}
 
+	// api token
+	apiToken, ok := metadata[flow.CtxAPITokenKey]
+	if ok {
+		var account *api.Account
+		for _, t := range apiToken {
+			acct, err := a.ValidateAPIToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using api token %s", peer.Addr, t)
+				return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
+			}
+
+			account = acct
+			break
+		}
+		if account == nil {
+			logrus.Warnf("unauthenticated request from %s", peer.Addr)
+			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
+		}
+		namespace := account.CurrentNamespace
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
+		// verify user is a member of specified namespace
+		validNS, err := a.validateUsernameNamespace(ctx, account, namespace)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error validating user namespace %s", namespace)
+		}
+		if !validNS {
+			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
+			return nil, status.Errorf(codes.PermissionDenied, "access denied")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxTokenKey, token)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
+		return handler(fCtx, req)
+	}
+
 	// service token
 	nt, ok := metadata[flow.CtxServiceTokenKey]
 	if ok {
@@ -246,6 +288,49 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 		return handler(srv, s)
 	}
 
+	// api token
+	apiToken, ok := metadata[flow.CtxAPITokenKey]
+	if ok {
+		var account *api.Account
+		for _, t := range apiToken {
+			acct, err := a.ValidateAPIToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using api token %s", peer.Addr, t)
+				return status.Errorf(codes.Unauthenticated, "invalid or missing token")
+			}
+
+			account = acct
+			break
+		}
+		if account == nil {
+			logrus.Warnf("unauthenticated request from %s", peer.Addr)
+			return status.Errorf(codes.Unauthenticated, "invalid or missing token")
+		}
+		namespace := account.CurrentNamespace
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
+		// verify user is a member of specified namespace
+		validNS, err := a.validateUsernameNamespace(ctx, account, namespace)
+		if err != nil {
+			return errors.Wrapf(err, "error validating user namespace %s", namespace)
+		}
+		if !validNS {
+			logrus.Warnf("unauthorized request from %s to namespace %s", peer.Addr, namespace)
+			return status.Errorf(codes.PermissionDenied, "access denied")
+		}
+		tCtx := context.WithValue(ctx, flow.CtxAPITokenKey, apiToken)
+		uCtx := context.WithValue(tCtx, flow.CtxUsernameKey, account.Username)
+		aCtx := context.WithValue(uCtx, flow.CtxAdminKey, account.Admin)
+		fCtx := context.WithValue(aCtx, flow.CtxNamespaceKey, namespace)
+		s.WrappedContext = fCtx
+		return handler(srv, s)
+	}
+
 	// service token
 	nt, ok := metadata[flow.CtxServiceTokenKey]
 	if ok {
@@ -279,7 +364,7 @@ func (a *TokenAuthenticator) GetAccount(ctx context.Context, token string) (*api
 func (a *TokenAuthenticator) GenerateServiceToken(ctx context.Context, description string, ttl time.Duration) (*api.ServiceToken, error) {
 	// generate service token
 	token := flow.GenerateToken(time.Now().String())
-	serviceToken, err := a.CreateServiceToken(ctx, token, description, ttl)
+	serviceToken, err := a.createServiceToken(ctx, token, description, ttl)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +372,36 @@ func (a *TokenAuthenticator) GenerateServiceToken(ctx context.Context, descripti
 	return serviceToken, nil
 }
 
-func (a *TokenAuthenticator) CreateServiceToken(ctx context.Context, token string, description string, ttl time.Duration) (*api.ServiceToken, error) {
+func (a *TokenAuthenticator) ListServiceTokens(ctx context.Context) ([]*api.ServiceToken, error) {
+	prefix := getServiceTokenKey("*")
+	tokenData, err := a.ds.GetAuthenticatorKeys(ctx, a, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceTokens := []*api.ServiceToken{}
+	for _, data := range tokenData {
+		var st *api.ServiceToken
+		if err := json.Unmarshal(data, &st); err != nil {
+			return nil, err
+		}
+		serviceTokens = append(serviceTokens, st)
+	}
+
+	return serviceTokens, nil
+}
+
+func (a *TokenAuthenticator) GenerateAPIToken(ctx context.Context, description string) (*api.APIToken, error) {
+	token := flow.GenerateToken(time.Now().String())
+	apiToken, err := a.createAPIToken(ctx, token, description)
+	if err != nil {
+		return nil, err
+	}
+
+	return apiToken, nil
+}
+
+func (a *TokenAuthenticator) createServiceToken(ctx context.Context, token string, description string, ttl time.Duration) (*api.ServiceToken, error) {
 	tokenKey := getServiceTokenKey(token)
 
 	serviceToken := &api.ServiceToken{
@@ -306,6 +420,38 @@ func (a *TokenAuthenticator) CreateServiceToken(ctx context.Context, token strin
 	}
 
 	return serviceToken, nil
+}
+
+func (a *TokenAuthenticator) createAPIToken(ctx context.Context, token string, description string) (*api.APIToken, error) {
+	// lookup requesting user to assign token
+	userToken, err := flow.GetTokenFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	acct, err := a.validateToken(ctx, userToken)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenKey := getAPITokenKey(token)
+
+	apiToken := &api.APIToken{
+		ID:          acct.ID,
+		Token:       token,
+		Description: description,
+		CreatedAt:   time.Now(),
+	}
+
+	data, err := json.Marshal(apiToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, data, -1); err != nil {
+		return nil, errors.Wrap(err, "error saving api token")
+	}
+
+	return apiToken, nil
 }
 
 func (a *TokenAuthenticator) isPublicRoute(method string) bool {
@@ -329,6 +475,26 @@ func (a *TokenAuthenticator) validateToken(ctx context.Context, token string) (*
 
 	// token valid; lookup user
 	return a.ds.GetAccount(ctx, string(data))
+}
+
+func (a *TokenAuthenticator) ValidateAPIToken(ctx context.Context, token string) (*api.Account, error) {
+	tokenKey := getAPITokenKey(token)
+	data, err := a.ds.GetAuthenticatorKey(ctx, a, tokenKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error getting token %s from datastore", token)
+	}
+
+	var apiToken *api.APIToken
+	if err := json.Unmarshal(data, &apiToken); err != nil {
+		return nil, err
+	}
+
+	acct, err := a.ds.GetAccountByID(ctx, apiToken.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return acct, err
 }
 
 func (a *TokenAuthenticator) validateServiceToken(ctx context.Context, token string) (*api.ServiceToken, error) {
@@ -380,4 +546,8 @@ func getTokenKey(token string) string {
 
 func getServiceTokenKey(token string) string {
 	return path.Join("servicetokens", token)
+}
+
+func getAPITokenKey(token string) string {
+	return path.Join("apitokens", token)
 }

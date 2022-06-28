@@ -199,6 +199,171 @@ func (m *Account) GetNamespaces() []string {
 	return nil
 }
 
+type APIToken struct {
+	ID                   string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Token                string    `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Description          string    `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	CreatedAt            time.Time `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3,stdtime" json:"created_at"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *APIToken) Reset()         { *m = APIToken{} }
+func (m *APIToken) String() string { return proto.CompactTextString(m) }
+func (*APIToken) ProtoMessage()    {}
+func (*APIToken) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2023f2a4e07057c4, []int{2}
+}
+func (m *APIToken) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *APIToken) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_APIToken.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *APIToken) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_APIToken.Merge(m, src)
+}
+func (m *APIToken) XXX_Size() int {
+	return m.Size()
+}
+func (m *APIToken) XXX_DiscardUnknown() {
+	xxx_messageInfo_APIToken.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_APIToken proto.InternalMessageInfo
+
+func (m *APIToken) GetID() string {
+	if m != nil {
+		return m.ID
+	}
+	return ""
+}
+
+func (m *APIToken) GetToken() string {
+	if m != nil {
+		return m.Token
+	}
+	return ""
+}
+
+func (m *APIToken) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+func (m *APIToken) GetCreatedAt() time.Time {
+	if m != nil {
+		return m.CreatedAt
+	}
+	return time.Time{}
+}
+
+type GenerateAPITokenRequest struct {
+	Description          string   `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GenerateAPITokenRequest) Reset()         { *m = GenerateAPITokenRequest{} }
+func (m *GenerateAPITokenRequest) String() string { return proto.CompactTextString(m) }
+func (*GenerateAPITokenRequest) ProtoMessage()    {}
+func (*GenerateAPITokenRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2023f2a4e07057c4, []int{3}
+}
+func (m *GenerateAPITokenRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenerateAPITokenRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenerateAPITokenRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenerateAPITokenRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenerateAPITokenRequest.Merge(m, src)
+}
+func (m *GenerateAPITokenRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenerateAPITokenRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenerateAPITokenRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenerateAPITokenRequest proto.InternalMessageInfo
+
+func (m *GenerateAPITokenRequest) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+type GenerateAPITokenResponse struct {
+	APIToken             *APIToken `protobuf:"bytes,1,opt,name=api_token,json=apiToken,proto3" json:"api_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *GenerateAPITokenResponse) Reset()         { *m = GenerateAPITokenResponse{} }
+func (m *GenerateAPITokenResponse) String() string { return proto.CompactTextString(m) }
+func (*GenerateAPITokenResponse) ProtoMessage()    {}
+func (*GenerateAPITokenResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2023f2a4e07057c4, []int{4}
+}
+func (m *GenerateAPITokenResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenerateAPITokenResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenerateAPITokenResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenerateAPITokenResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenerateAPITokenResponse.Merge(m, src)
+}
+func (m *GenerateAPITokenResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenerateAPITokenResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenerateAPITokenResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenerateAPITokenResponse proto.InternalMessageInfo
+
+func (m *GenerateAPITokenResponse) GetAPIToken() *APIToken {
+	if m != nil {
+		return m.APIToken
+	}
+	return nil
+}
+
 type ListAccountsRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -209,7 +374,7 @@ func (m *ListAccountsRequest) Reset()         { *m = ListAccountsRequest{} }
 func (m *ListAccountsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsRequest) ProtoMessage()    {}
 func (*ListAccountsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{2}
+	return fileDescriptor_2023f2a4e07057c4, []int{5}
 }
 func (m *ListAccountsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -248,7 +413,7 @@ func (m *ListAccountsResponse) Reset()         { *m = ListAccountsResponse{} }
 func (m *ListAccountsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsResponse) ProtoMessage()    {}
 func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{3}
+	return fileDescriptor_2023f2a4e07057c4, []int{6}
 }
 func (m *ListAccountsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -288,7 +453,7 @@ func (m *CreateAccountRequest) Reset()         { *m = CreateAccountRequest{} }
 func (m *CreateAccountRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateAccountRequest) ProtoMessage()    {}
 func (*CreateAccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{4}
+	return fileDescriptor_2023f2a4e07057c4, []int{7}
 }
 func (m *CreateAccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -335,7 +500,7 @@ func (m *GetAccountRequest) Reset()         { *m = GetAccountRequest{} }
 func (m *GetAccountRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAccountRequest) ProtoMessage()    {}
 func (*GetAccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{5}
+	return fileDescriptor_2023f2a4e07057c4, []int{8}
 }
 func (m *GetAccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -382,7 +547,7 @@ func (m *GetAccountResponse) Reset()         { *m = GetAccountResponse{} }
 func (m *GetAccountResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAccountResponse) ProtoMessage()    {}
 func (*GetAccountResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{6}
+	return fileDescriptor_2023f2a4e07057c4, []int{9}
 }
 func (m *GetAccountResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -429,7 +594,7 @@ func (m *UpdateAccountRequest) Reset()         { *m = UpdateAccountRequest{} }
 func (m *UpdateAccountRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateAccountRequest) ProtoMessage()    {}
 func (*UpdateAccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{7}
+	return fileDescriptor_2023f2a4e07057c4, []int{10}
 }
 func (m *UpdateAccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -476,7 +641,7 @@ func (m *DeleteAccountRequest) Reset()         { *m = DeleteAccountRequest{} }
 func (m *DeleteAccountRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteAccountRequest) ProtoMessage()    {}
 func (*DeleteAccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{8}
+	return fileDescriptor_2023f2a4e07057c4, []int{11}
 }
 func (m *DeleteAccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -524,7 +689,7 @@ func (m *AuthenticateRequest) Reset()         { *m = AuthenticateRequest{} }
 func (m *AuthenticateRequest) String() string { return proto.CompactTextString(m) }
 func (*AuthenticateRequest) ProtoMessage()    {}
 func (*AuthenticateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{9}
+	return fileDescriptor_2023f2a4e07057c4, []int{12}
 }
 func (m *AuthenticateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -579,7 +744,7 @@ func (m *AuthenticateResponse) Reset()         { *m = AuthenticateResponse{} }
 func (m *AuthenticateResponse) String() string { return proto.CompactTextString(m) }
 func (*AuthenticateResponse) ProtoMessage()    {}
 func (*AuthenticateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{10}
+	return fileDescriptor_2023f2a4e07057c4, []int{13}
 }
 func (m *AuthenticateResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -634,7 +799,7 @@ func (m *ChangePasswordRequest) Reset()         { *m = ChangePasswordRequest{} }
 func (m *ChangePasswordRequest) String() string { return proto.CompactTextString(m) }
 func (*ChangePasswordRequest) ProtoMessage()    {}
 func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{11}
+	return fileDescriptor_2023f2a4e07057c4, []int{14}
 }
 func (m *ChangePasswordRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -687,7 +852,7 @@ func (m *GetAccountProfileRequest) Reset()         { *m = GetAccountProfileReque
 func (m *GetAccountProfileRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAccountProfileRequest) ProtoMessage()    {}
 func (*GetAccountProfileRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{12}
+	return fileDescriptor_2023f2a4e07057c4, []int{15}
 }
 func (m *GetAccountProfileRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -727,7 +892,7 @@ func (m *GetAccountProfileResponse) Reset()         { *m = GetAccountProfileResp
 func (m *GetAccountProfileResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAccountProfileResponse) ProtoMessage()    {}
 func (*GetAccountProfileResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{13}
+	return fileDescriptor_2023f2a4e07057c4, []int{16}
 }
 func (m *GetAccountProfileResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -777,7 +942,7 @@ func (m *ServiceToken) Reset()         { *m = ServiceToken{} }
 func (m *ServiceToken) String() string { return proto.CompactTextString(m) }
 func (*ServiceToken) ProtoMessage()    {}
 func (*ServiceToken) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{14}
+	return fileDescriptor_2023f2a4e07057c4, []int{17}
 }
 func (m *ServiceToken) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -846,7 +1011,7 @@ func (m *GenerateServiceTokenRequest) Reset()         { *m = GenerateServiceToke
 func (m *GenerateServiceTokenRequest) String() string { return proto.CompactTextString(m) }
 func (*GenerateServiceTokenRequest) ProtoMessage()    {}
 func (*GenerateServiceTokenRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{15}
+	return fileDescriptor_2023f2a4e07057c4, []int{18}
 }
 func (m *GenerateServiceTokenRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -900,7 +1065,7 @@ func (m *GenerateServiceTokenResponse) Reset()         { *m = GenerateServiceTok
 func (m *GenerateServiceTokenResponse) String() string { return proto.CompactTextString(m) }
 func (*GenerateServiceTokenResponse) ProtoMessage()    {}
 func (*GenerateServiceTokenResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{16}
+	return fileDescriptor_2023f2a4e07057c4, []int{19}
 }
 func (m *GenerateServiceTokenResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -936,6 +1101,92 @@ func (m *GenerateServiceTokenResponse) GetServiceToken() *ServiceToken {
 	return nil
 }
 
+type ListServiceTokensRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListServiceTokensRequest) Reset()         { *m = ListServiceTokensRequest{} }
+func (m *ListServiceTokensRequest) String() string { return proto.CompactTextString(m) }
+func (*ListServiceTokensRequest) ProtoMessage()    {}
+func (*ListServiceTokensRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2023f2a4e07057c4, []int{20}
+}
+func (m *ListServiceTokensRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListServiceTokensRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListServiceTokensRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListServiceTokensRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListServiceTokensRequest.Merge(m, src)
+}
+func (m *ListServiceTokensRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *ListServiceTokensRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListServiceTokensRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListServiceTokensRequest proto.InternalMessageInfo
+
+type ListServiceTokensResponse struct {
+	ServiceTokens        []*ServiceToken `protobuf:"bytes,1,rep,name=service_tokens,json=serviceTokens,proto3" json:"service_tokens,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *ListServiceTokensResponse) Reset()         { *m = ListServiceTokensResponse{} }
+func (m *ListServiceTokensResponse) String() string { return proto.CompactTextString(m) }
+func (*ListServiceTokensResponse) ProtoMessage()    {}
+func (*ListServiceTokensResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2023f2a4e07057c4, []int{21}
+}
+func (m *ListServiceTokensResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListServiceTokensResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListServiceTokensResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListServiceTokensResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListServiceTokensResponse.Merge(m, src)
+}
+func (m *ListServiceTokensResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ListServiceTokensResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListServiceTokensResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListServiceTokensResponse proto.InternalMessageInfo
+
+func (m *ListServiceTokensResponse) GetServiceTokens() []*ServiceToken {
+	if m != nil {
+		return m.ServiceTokens
+	}
+	return nil
+}
+
 type CreateNamespaceRequest struct {
 	Namespace            *Namespace `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
@@ -947,7 +1198,7 @@ func (m *CreateNamespaceRequest) Reset()         { *m = CreateNamespaceRequest{}
 func (m *CreateNamespaceRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateNamespaceRequest) ProtoMessage()    {}
 func (*CreateNamespaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{17}
+	return fileDescriptor_2023f2a4e07057c4, []int{22}
 }
 func (m *CreateNamespaceRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -994,7 +1245,7 @@ func (m *CreateNamespaceResponse) Reset()         { *m = CreateNamespaceResponse
 func (m *CreateNamespaceResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateNamespaceResponse) ProtoMessage()    {}
 func (*CreateNamespaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{18}
+	return fileDescriptor_2023f2a4e07057c4, []int{23}
 }
 func (m *CreateNamespaceResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1040,7 +1291,7 @@ func (m *ListNamespacesRequest) Reset()         { *m = ListNamespacesRequest{} }
 func (m *ListNamespacesRequest) String() string { return proto.CompactTextString(m) }
 func (*ListNamespacesRequest) ProtoMessage()    {}
 func (*ListNamespacesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{19}
+	return fileDescriptor_2023f2a4e07057c4, []int{24}
 }
 func (m *ListNamespacesRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1085,7 +1336,7 @@ func (m *Namespace) Reset()         { *m = Namespace{} }
 func (m *Namespace) String() string { return proto.CompactTextString(m) }
 func (*Namespace) ProtoMessage()    {}
 func (*Namespace) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{20}
+	return fileDescriptor_2023f2a4e07057c4, []int{25}
 }
 func (m *Namespace) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1167,7 +1418,7 @@ func (m *ListNamespacesResponse) Reset()         { *m = ListNamespacesResponse{}
 func (m *ListNamespacesResponse) String() string { return proto.CompactTextString(m) }
 func (*ListNamespacesResponse) ProtoMessage()    {}
 func (*ListNamespacesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{21}
+	return fileDescriptor_2023f2a4e07057c4, []int{26}
 }
 func (m *ListNamespacesResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1214,7 +1465,7 @@ func (m *GetNamespaceRequest) Reset()         { *m = GetNamespaceRequest{} }
 func (m *GetNamespaceRequest) String() string { return proto.CompactTextString(m) }
 func (*GetNamespaceRequest) ProtoMessage()    {}
 func (*GetNamespaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{22}
+	return fileDescriptor_2023f2a4e07057c4, []int{27}
 }
 func (m *GetNamespaceRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1261,7 +1512,7 @@ func (m *GetNamespaceResponse) Reset()         { *m = GetNamespaceResponse{} }
 func (m *GetNamespaceResponse) String() string { return proto.CompactTextString(m) }
 func (*GetNamespaceResponse) ProtoMessage()    {}
 func (*GetNamespaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2023f2a4e07057c4, []int{23}
+	return fileDescriptor_2023f2a4e07057c4, []int{28}
 }
 func (m *GetNamespaceResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1300,6 +1551,9 @@ func (m *GetNamespaceResponse) GetNamespace() *Namespace {
 func init() {
 	proto.RegisterType((*AuthenticatedRequest)(nil), "flow.services.accounts.v1.AuthenticatedRequest")
 	proto.RegisterType((*Account)(nil), "flow.services.accounts.v1.Account")
+	proto.RegisterType((*APIToken)(nil), "flow.services.accounts.v1.APIToken")
+	proto.RegisterType((*GenerateAPITokenRequest)(nil), "flow.services.accounts.v1.GenerateAPITokenRequest")
+	proto.RegisterType((*GenerateAPITokenResponse)(nil), "flow.services.accounts.v1.GenerateAPITokenResponse")
 	proto.RegisterType((*ListAccountsRequest)(nil), "flow.services.accounts.v1.ListAccountsRequest")
 	proto.RegisterType((*ListAccountsResponse)(nil), "flow.services.accounts.v1.ListAccountsResponse")
 	proto.RegisterType((*CreateAccountRequest)(nil), "flow.services.accounts.v1.CreateAccountRequest")
@@ -1315,6 +1569,8 @@ func init() {
 	proto.RegisterType((*ServiceToken)(nil), "flow.services.accounts.v1.ServiceToken")
 	proto.RegisterType((*GenerateServiceTokenRequest)(nil), "flow.services.accounts.v1.GenerateServiceTokenRequest")
 	proto.RegisterType((*GenerateServiceTokenResponse)(nil), "flow.services.accounts.v1.GenerateServiceTokenResponse")
+	proto.RegisterType((*ListServiceTokensRequest)(nil), "flow.services.accounts.v1.ListServiceTokensRequest")
+	proto.RegisterType((*ListServiceTokensResponse)(nil), "flow.services.accounts.v1.ListServiceTokensResponse")
 	proto.RegisterType((*CreateNamespaceRequest)(nil), "flow.services.accounts.v1.CreateNamespaceRequest")
 	proto.RegisterType((*CreateNamespaceResponse)(nil), "flow.services.accounts.v1.CreateNamespaceResponse")
 	proto.RegisterType((*ListNamespacesRequest)(nil), "flow.services.accounts.v1.ListNamespacesRequest")
@@ -1329,77 +1585,85 @@ func init() {
 }
 
 var fileDescriptor_2023f2a4e07057c4 = []byte{
-	// 1112 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0x5d, 0x6f, 0xdb, 0xd4,
-	0x1b, 0xff, 0xbb, 0x69, 0xf3, 0xf2, 0x24, 0xe9, 0xfe, 0x3b, 0x4d, 0x33, 0xd7, 0x85, 0x24, 0xb2,
-	0x10, 0x44, 0x62, 0xb5, 0x49, 0x86, 0x40, 0x82, 0x5d, 0xd0, 0x34, 0x53, 0xa9, 0x54, 0xb6, 0xc9,
-	0x04, 0xa9, 0x54, 0x88, 0xc8, 0xb5, 0x4f, 0x52, 0x0b, 0xc7, 0x36, 0x3e, 0x27, 0x2d, 0x43, 0x02,
-	0x89, 0xab, 0xdd, 0x72, 0xc9, 0x47, 0xda, 0x25, 0xe2, 0x03, 0x84, 0x29, 0x97, 0x7c, 0x0a, 0x64,
-	0xfb, 0x38, 0xb1, 0x13, 0xc7, 0x4b, 0xa0, 0xdc, 0x9d, 0xe7, 0x3c, 0xef, 0xe7, 0x79, 0xf9, 0xd9,
-	0xf0, 0xd9, 0xd0, 0xa0, 0xd7, 0xe3, 0x2b, 0x49, 0xb3, 0x47, 0x32, 0xbe, 0x56, 0x7f, 0x34, 0x31,
-	0xa5, 0xf2, 0xc0, 0xb4, 0x6f, 0x65, 0xd5, 0x31, 0x64, 0x82, 0xdd, 0x1b, 0x43, 0xc3, 0x44, 0x56,
-	0x35, 0xcd, 0x1e, 0x5b, 0x94, 0xc8, 0x37, 0xad, 0xd9, 0x59, 0x72, 0x5c, 0x9b, 0xda, 0xe8, 0xc0,
-	0x93, 0x96, 0x42, 0x49, 0x69, 0xc6, 0xbd, 0x69, 0x09, 0x95, 0xa1, 0x3d, 0xb4, 0x7d, 0x29, 0xd9,
-	0x3b, 0x05, 0x0a, 0x42, 0x6d, 0x68, 0xdb, 0x43, 0x13, 0xcb, 0x3e, 0x75, 0x35, 0x1e, 0xc8, 0xfa,
-	0xd8, 0x55, 0xa9, 0x61, 0x5b, 0x8c, 0x5f, 0x5f, 0xe4, 0x53, 0x63, 0x84, 0x09, 0x55, 0x47, 0x0e,
-	0x13, 0x38, 0x5c, 0x14, 0xc0, 0x23, 0x87, 0xbe, 0x08, 0x98, 0x62, 0x15, 0x2a, 0xc7, 0x63, 0x7a,
-	0x8d, 0x2d, 0x6a, 0x68, 0x2a, 0xc5, 0xba, 0x82, 0xbf, 0x1f, 0x63, 0x42, 0xc5, 0x5f, 0x32, 0x90,
-	0x3b, 0x0e, 0x62, 0x43, 0x55, 0xd8, 0x32, 0x74, 0x9e, 0x6b, 0x70, 0xcd, 0x42, 0x27, 0x3b, 0x9d,
-	0xd4, 0xb7, 0xce, 0xba, 0xca, 0x96, 0xa1, 0xa3, 0x13, 0x00, 0xcd, 0xc5, 0x9e, 0x56, 0x5f, 0xa5,
-	0xfc, 0x56, 0x83, 0x6b, 0x16, 0xdb, 0x82, 0x14, 0x78, 0x93, 0x42, 0x6f, 0x52, 0x2f, 0x0c, 0xa7,
-	0x93, 0x7f, 0x35, 0xa9, 0xff, 0xef, 0xd7, 0x3f, 0xeb, 0x9c, 0x52, 0x60, 0x7a, 0xc7, 0x14, 0x55,
-	0x60, 0x47, 0xd5, 0x47, 0x86, 0xc5, 0x67, 0x1a, 0x5c, 0x33, 0xaf, 0x04, 0x04, 0x12, 0x20, 0x3f,
-	0x26, 0xd8, 0xb5, 0xd4, 0x11, 0xe6, 0xb7, 0x3d, 0xc7, 0xca, 0x8c, 0x46, 0x6f, 0x03, 0x0c, 0x0c,
-	0x97, 0xd0, 0xbe, 0xcf, 0xdd, 0xf1, 0xb9, 0x05, 0xff, 0xe6, 0xa9, 0xc7, 0x3e, 0x84, 0x82, 0xa9,
-	0x86, 0xdc, 0x6c, 0xa0, 0xeb, 0x5d, 0xf8, 0xcc, 0x0a, 0xec, 0xe0, 0x91, 0x6a, 0x98, 0x7c, 0xce,
-	0x67, 0x04, 0x84, 0xe7, 0xcd, 0x51, 0x09, 0xb9, 0xb5, 0x5d, 0x9d, 0xcf, 0x07, 0x1a, 0x21, 0x8d,
-	0x1e, 0xc2, 0x6e, 0x78, 0xee, 0x6b, 0xee, 0x0b, 0x87, 0xf2, 0x85, 0x06, 0xd7, 0x2c, 0x75, 0x76,
-	0xfe, 0x9a, 0xd4, 0xb9, 0x23, 0xa5, 0x1c, 0x32, 0x4f, 0x3c, 0x1e, 0x7a, 0x1f, 0xee, 0x6b, 0x63,
-	0xd7, 0xc5, 0x56, 0xe0, 0x9f, 0x38, 0xaa, 0x86, 0x79, 0xf0, 0x4d, 0xfe, 0x9f, 0x31, 0x9e, 0x86,
-	0xf7, 0xa8, 0x06, 0x30, 0x13, 0x22, 0x7c, 0xb1, 0x91, 0x69, 0x16, 0x94, 0xc8, 0x8d, 0xb8, 0x0f,
-	0x7b, 0xe7, 0x06, 0xa1, 0xac, 0x0c, 0x24, 0x2c, 0x4d, 0x15, 0x2a, 0xf1, 0x6b, 0xe2, 0xd8, 0x16,
-	0xc1, 0x62, 0x0f, 0x2a, 0x27, 0xfe, 0xb3, 0x32, 0x0e, 0x93, 0x47, 0x8f, 0x21, 0xc7, 0xba, 0xcc,
-	0xaf, 0x61, 0xb1, 0x2d, 0x4a, 0x2b, 0x7b, 0x50, 0x0a, 0x75, 0x43, 0x15, 0x51, 0x86, 0xfb, 0xa7,
-	0x98, 0x2e, 0x98, 0x8c, 0x96, 0x87, 0x8b, 0x97, 0x47, 0x54, 0x00, 0x45, 0x15, 0x82, 0xe0, 0xa2,
-	0x41, 0x6c, 0x6d, 0x1e, 0x44, 0x0f, 0x2a, 0x5f, 0x39, 0xfa, 0x5d, 0xa7, 0x26, 0x41, 0xa5, 0x8b,
-	0x4d, 0xbc, 0x64, 0x75, 0x45, 0xbf, 0x8b, 0x5f, 0xc0, 0x5e, 0x74, 0x56, 0xd6, 0x78, 0x8c, 0x58,
-	0x67, 0x79, 0x79, 0x97, 0xe6, 0x9d, 0x25, 0x9a, 0xf1, 0xd1, 0x4b, 0x7a, 0xaa, 0xcd, 0x93, 0x42,
-	0x55, 0xc8, 0x6a, 0xb6, 0x35, 0x30, 0x86, 0xcc, 0x1f, 0xa3, 0xc4, 0x67, 0xb0, 0x7f, 0x72, 0xad,
-	0x5a, 0x43, 0xfc, 0x9c, 0xf9, 0xff, 0xb7, 0xe1, 0x0b, 0xc0, 0xcf, 0xeb, 0xfc, 0xdc, 0xb5, 0x07,
-	0x86, 0x19, 0x3e, 0x89, 0xf8, 0x35, 0x1c, 0x24, 0xf0, 0xee, 0x22, 0x3f, 0xf1, 0x0f, 0x0e, 0x4a,
-	0x5f, 0x06, 0x92, 0x3d, 0xfb, 0x3b, 0x6c, 0x79, 0x23, 0x4d, 0xbd, 0x03, 0x0b, 0x3e, 0x20, 0x50,
-	0x03, 0x8a, 0x3a, 0x26, 0x9a, 0x6b, 0x38, 0xde, 0xaa, 0xf4, 0x83, 0x2f, 0x28, 0xd1, 0xab, 0x85,
-	0xed, 0x95, 0xf9, 0x67, 0xdb, 0xeb, 0x09, 0x14, 0x55, 0x4d, 0xc3, 0x84, 0x04, 0x56, 0xb6, 0x37,
-	0xb0, 0x02, 0xa1, 0xe2, 0x31, 0x15, 0x7f, 0x82, 0xc3, 0x53, 0x6c, 0x61, 0x57, 0xa5, 0x38, 0x9a,
-	0x5b, 0x58, 0xa2, 0x85, 0x64, 0xb8, 0xe5, 0x64, 0x1e, 0x43, 0x86, 0x52, 0x93, 0x8d, 0xd6, 0xc1,
-	0x92, 0xff, 0x2e, 0x83, 0x8c, 0xce, 0x3d, 0xcf, 0xfd, 0x74, 0x52, 0xcf, 0xf4, 0x7a, 0xe7, 0xbf,
-	0x79, 0x51, 0x78, 0x6a, 0xa2, 0x09, 0x6f, 0x25, 0xbb, 0x67, 0x15, 0x3b, 0x87, 0x32, 0x2b, 0x4e,
-	0x7f, 0xfe, 0xd4, 0xc5, 0xf6, 0x7b, 0x29, 0x75, 0x8b, 0xd9, 0x29, 0x91, 0x08, 0x25, 0x7e, 0x03,
-	0xd5, 0x60, 0x4f, 0xcd, 0x36, 0x61, 0x98, 0x67, 0x07, 0x0a, 0xf3, 0xad, 0x19, 0xf8, 0x78, 0x27,
-	0xc5, 0xc7, 0x5c, 0x7f, 0xae, 0x26, 0xb6, 0xe0, 0xc1, 0x92, 0x75, 0x96, 0xc6, 0xaa, 0xb9, 0x7e,
-	0x00, 0xfb, 0xde, 0x42, 0x9d, 0x29, 0xcc, 0x36, 0xed, 0x6b, 0x0e, 0x0a, 0xf3, 0x75, 0xfd, 0x9f,
-	0xc2, 0x20, 0x82, 0x6d, 0x7f, 0x02, 0x33, 0x7e, 0x6d, 0xfd, 0xf3, 0x62, 0xd9, 0xb7, 0x97, 0xcb,
-	0xfe, 0x2e, 0xe4, 0xed, 0x5b, 0x0b, 0xbb, 0x7d, 0x43, 0x0f, 0x80, 0xb0, 0x53, 0x9c, 0x4e, 0xea,
-	0xb9, 0x67, 0xde, 0xdd, 0x59, 0x57, 0xc9, 0xf9, 0xcc, 0x33, 0x1d, 0xf1, 0x90, 0x1b, 0xe1, 0xd1,
-	0x15, 0x76, 0x09, 0x9f, 0xf5, 0x61, 0x26, 0x24, 0xc5, 0x6f, 0xa1, 0xba, 0x98, 0x3b, 0x7b, 0xad,
-	0x6e, 0x0c, 0x9d, 0xb8, 0x46, 0x66, 0xed, 0x6a, 0x44, 0x31, 0xec, 0x08, 0xf6, 0x4e, 0x31, 0x5d,
-	0xaa, 0xf4, 0xaa, 0x52, 0x5c, 0x42, 0x25, 0x2e, 0xce, 0x82, 0xb9, 0x83, 0xce, 0x68, 0xbf, 0x2c,
-	0x42, 0x3e, 0x04, 0x4d, 0x64, 0x43, 0x29, 0x0a, 0xa2, 0x48, 0x4a, 0xb1, 0x96, 0x00, 0xc2, 0x82,
-	0xbc, 0xb6, 0x3c, 0xcb, 0xe0, 0x02, 0xca, 0x31, 0x74, 0x46, 0x69, 0x16, 0x92, 0x70, 0x5c, 0xa8,
-	0x2e, 0xf5, 0xd4, 0x13, 0xef, 0x43, 0x0e, 0x19, 0x00, 0xf3, 0x65, 0x8b, 0x1e, 0xa6, 0x98, 0x5d,
-	0x02, 0x72, 0xe1, 0x68, 0x4d, 0xe9, 0x79, 0x12, 0x31, 0x1c, 0x4e, 0x4d, 0x22, 0x09, 0xb1, 0x57,
-	0x26, 0x71, 0x09, 0xbb, 0x71, 0x78, 0x42, 0x1f, 0xa4, 0xbd, 0x4f, 0x12, 0x92, 0xad, 0xb4, 0x7d,
-	0x01, 0xe5, 0x18, 0xce, 0xa7, 0x46, 0x9d, 0xf4, 0x45, 0xb0, 0xd2, 0xb2, 0x0d, 0xa5, 0x28, 0x84,
-	0xa7, 0x76, 0x51, 0xc2, 0xa7, 0x43, 0x6a, 0x17, 0x25, 0x7e, 0x1b, 0xfc, 0x1c, 0xfd, 0x1a, 0x63,
-	0xc0, 0x8a, 0x1e, 0xad, 0x55, 0xc4, 0x38, 0x44, 0x0b, 0x1f, 0x6e, 0xa6, 0xc4, 0xfc, 0xbf, 0xe4,
-	0xbc, 0x01, 0x5d, 0x86, 0x0a, 0xf4, 0x51, 0xaa, 0xb9, 0x95, 0xd0, 0x26, 0x7c, 0xbc, 0xb1, 0x1e,
-	0x8b, 0x64, 0x0c, 0xbb, 0xf1, 0xc5, 0x95, 0xda, 0x30, 0x89, 0xfb, 0x5d, 0x68, 0x6d, 0xa0, 0xc1,
-	0xdc, 0xfe, 0x00, 0xf7, 0x16, 0xe0, 0x05, 0xb5, 0xde, 0x38, 0xc8, 0x8b, 0xeb, 0x4f, 0x68, 0x6f,
-	0xa2, 0xc2, 0x3c, 0xdb, 0x50, 0x8a, 0xae, 0xc6, 0xd4, 0x5e, 0x4b, 0x58, 0xb9, 0xa9, 0xbd, 0x96,
-	0xb8, 0x73, 0x2f, 0xa0, 0x1c, 0xfb, 0x35, 0x44, 0xeb, 0x76, 0xeb, 0x9b, 0x06, 0xb2, 0xf3, 0xf9,
-	0xab, 0x69, 0x8d, 0xfb, 0x7d, 0x5a, 0xe3, 0x5e, 0x4f, 0x6b, 0xdc, 0xe5, 0x27, 0x1b, 0xff, 0x53,
-	0x7f, 0x1a, 0x9e, 0x2f, 0x32, 0x57, 0x59, 0xdf, 0xf6, 0xa3, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff,
-	0x8c, 0x58, 0xeb, 0xd8, 0x9a, 0x0f, 0x00, 0x00,
+	// 1246 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0x4f, 0x6f, 0xe3, 0x44,
+	0x14, 0xc7, 0x49, 0xdb, 0xc4, 0xaf, 0x49, 0x77, 0x77, 0x9a, 0xa6, 0xae, 0x0b, 0x4d, 0x64, 0x10,
+	0x54, 0x62, 0x6b, 0xd3, 0x16, 0x81, 0xc4, 0xee, 0x81, 0xa6, 0x5d, 0x95, 0x4a, 0xa5, 0x5b, 0x99,
+	0x20, 0x95, 0x0a, 0x51, 0xb9, 0xce, 0x24, 0x35, 0x9b, 0xd8, 0xc6, 0x33, 0x69, 0x59, 0x10, 0x48,
+	0x48, 0x48, 0x5c, 0x39, 0x72, 0xe3, 0xeb, 0xec, 0x11, 0xf1, 0x01, 0xc2, 0x2a, 0x47, 0x3e, 0x05,
+	0xb2, 0x3d, 0x76, 0xec, 0xd8, 0x71, 0x93, 0xa5, 0x7b, 0xf3, 0xcc, 0x9b, 0x37, 0xef, 0xef, 0xfc,
+	0xde, 0x4f, 0x86, 0x4f, 0x3b, 0x06, 0xbd, 0xea, 0x5f, 0xca, 0xba, 0xd5, 0x53, 0xf0, 0x95, 0xf6,
+	0x43, 0x17, 0x53, 0xaa, 0xb4, 0xbb, 0xd6, 0x8d, 0xa2, 0xd9, 0x86, 0x42, 0xb0, 0x73, 0x6d, 0xe8,
+	0x98, 0x28, 0x9a, 0xae, 0x5b, 0x7d, 0x93, 0x12, 0xe5, 0x7a, 0x3b, 0xfc, 0x96, 0x6d, 0xc7, 0xa2,
+	0x16, 0x5a, 0x73, 0x4f, 0xcb, 0xc1, 0x49, 0x39, 0x94, 0x5e, 0x6f, 0x8b, 0x95, 0x8e, 0xd5, 0xb1,
+	0xbc, 0x53, 0x8a, 0xfb, 0xe5, 0x2b, 0x88, 0x1b, 0x1d, 0xcb, 0xea, 0x74, 0xb1, 0xe2, 0xad, 0x2e,
+	0xfb, 0x6d, 0xa5, 0xd5, 0x77, 0x34, 0x6a, 0x58, 0x26, 0x93, 0xd7, 0xc6, 0xe5, 0xd4, 0xe8, 0x61,
+	0x42, 0xb5, 0x9e, 0xcd, 0x0e, 0xac, 0x8f, 0x1f, 0xc0, 0x3d, 0x9b, 0x3e, 0xf7, 0x85, 0x52, 0x15,
+	0x2a, 0x7b, 0x7d, 0x7a, 0x85, 0x4d, 0x6a, 0xe8, 0x1a, 0xc5, 0x2d, 0x15, 0x7f, 0xd7, 0xc7, 0x84,
+	0x4a, 0xbf, 0xe4, 0xa1, 0xb0, 0xe7, 0xfb, 0x86, 0xaa, 0x90, 0x33, 0x5a, 0x02, 0x57, 0xe7, 0x36,
+	0xf9, 0xc6, 0xc2, 0x70, 0x50, 0xcb, 0x1d, 0x1d, 0xa8, 0x39, 0xa3, 0x85, 0xf6, 0x01, 0x74, 0x07,
+	0xbb, 0x5a, 0x17, 0x1a, 0x15, 0x72, 0x75, 0x6e, 0x73, 0x71, 0x47, 0x94, 0x7d, 0x6b, 0x72, 0x60,
+	0x4d, 0x6e, 0x06, 0xee, 0x34, 0x8a, 0x2f, 0x06, 0xb5, 0x37, 0x7e, 0xff, 0xa7, 0xc6, 0xa9, 0x3c,
+	0xd3, 0xdb, 0xa3, 0xa8, 0x02, 0xf3, 0x5a, 0xab, 0x67, 0x98, 0x42, 0xbe, 0xce, 0x6d, 0x16, 0x55,
+	0x7f, 0x81, 0x44, 0x28, 0xf6, 0x09, 0x76, 0x4c, 0xad, 0x87, 0x85, 0x39, 0xd7, 0xb0, 0x1a, 0xae,
+	0xd1, 0x5b, 0x00, 0x6d, 0xc3, 0x21, 0xf4, 0xc2, 0x93, 0xce, 0x7b, 0x52, 0xde, 0xdb, 0x39, 0x71,
+	0xc5, 0xeb, 0xc0, 0x77, 0xb5, 0x40, 0xba, 0xe0, 0xeb, 0xba, 0x1b, 0x9e, 0xb0, 0x02, 0xf3, 0xb8,
+	0xa7, 0x19, 0x5d, 0xa1, 0xe0, 0x09, 0xfc, 0x85, 0x6b, 0xcd, 0xd6, 0x08, 0xb9, 0xb1, 0x9c, 0x96,
+	0x50, 0xf4, 0x35, 0x82, 0x35, 0x7a, 0x08, 0x4b, 0xc1, 0xf7, 0x85, 0xee, 0x3c, 0xb7, 0xa9, 0xc0,
+	0xd7, 0xb9, 0xcd, 0x52, 0x63, 0xfe, 0xdf, 0x41, 0x8d, 0xdb, 0x52, 0xcb, 0x81, 0x70, 0xdf, 0x95,
+	0xa1, 0xf7, 0xe1, 0x81, 0xde, 0x77, 0x1c, 0x6c, 0xfa, 0xf6, 0x89, 0xad, 0xe9, 0x58, 0x00, 0xef,
+	0xca, 0xfb, 0x4c, 0x70, 0x12, 0xec, 0xa3, 0x0d, 0x80, 0xf0, 0x10, 0x11, 0x16, 0xeb, 0xf9, 0x4d,
+	0x5e, 0x8d, 0xec, 0x48, 0x7f, 0x72, 0x50, 0xdc, 0x3b, 0x3d, 0x6a, 0x5a, 0xcf, 0xb0, 0x39, 0xb1,
+	0x08, 0x15, 0x98, 0xa7, 0xee, 0x01, 0x2f, 0xff, 0xbc, 0xea, 0x2f, 0x50, 0x1d, 0x16, 0x5b, 0x98,
+	0xe8, 0x8e, 0x61, 0xbb, 0x9d, 0xe2, 0xe5, 0x96, 0x57, 0xa3, 0x5b, 0x63, 0xc5, 0x9b, 0x7b, 0xa5,
+	0xe2, 0x49, 0x8f, 0x60, 0xf5, 0x10, 0x9b, 0xd8, 0xd1, 0x28, 0x0e, 0x1c, 0x65, 0x0d, 0x34, 0xee,
+	0x01, 0x97, 0xf0, 0x40, 0xfa, 0x16, 0x84, 0xa4, 0x32, 0xb1, 0x2d, 0x93, 0x60, 0x74, 0x02, 0xbc,
+	0x66, 0x1b, 0x17, 0x7e, 0x64, 0x9c, 0xe7, 0xdc, 0xdb, 0xf2, 0xc4, 0x97, 0x23, 0x07, 0xfa, 0x8d,
+	0xd2, 0x70, 0x50, 0x0b, 0x73, 0xa6, 0x16, 0x35, 0xdb, 0xf0, 0xbe, 0xa4, 0x15, 0x58, 0x3e, 0x36,
+	0x08, 0x65, 0x1d, 0x4d, 0x82, 0x2e, 0xaf, 0x42, 0x25, 0xbe, 0xed, 0x9b, 0x97, 0x9a, 0x50, 0xd9,
+	0xf7, 0x82, 0x64, 0x92, 0x20, 0xa8, 0xc7, 0x50, 0x60, 0x66, 0x99, 0x53, 0x52, 0x96, 0x53, 0x4c,
+	0x37, 0x50, 0x91, 0x14, 0x78, 0x70, 0x88, 0xe9, 0xd8, 0x95, 0xd1, 0x4e, 0xe7, 0xe2, 0x9d, 0x2e,
+	0xa9, 0x80, 0xa2, 0x0a, 0x2c, 0x37, 0x11, 0x27, 0x72, 0xb3, 0x3b, 0xd1, 0x84, 0xca, 0x97, 0x76,
+	0xeb, 0xae, 0x43, 0x93, 0xa1, 0x72, 0x80, 0xbb, 0x38, 0x71, 0xeb, 0x84, 0xae, 0x95, 0x3e, 0x87,
+	0xe5, 0x28, 0xec, 0x4c, 0x91, 0x8c, 0xd8, 0x23, 0x75, 0xe3, 0x2e, 0x8d, 0x1e, 0xa9, 0xd4, 0x8d,
+	0xa3, 0x58, 0x5a, 0xaa, 0x66, 0x0f, 0x0a, 0x55, 0x61, 0x41, 0xb7, 0xcc, 0xb6, 0xd1, 0x61, 0xf6,
+	0xd8, 0x4a, 0x7a, 0x0a, 0x2b, 0xfb, 0x57, 0x9a, 0xd9, 0xc1, 0xa7, 0xcc, 0xfe, 0xff, 0x75, 0x5f,
+	0x74, 0x5f, 0x42, 0x50, 0xe7, 0x53, 0xc7, 0x6a, 0x1b, 0xdd, 0x20, 0x25, 0xd2, 0x57, 0xb0, 0x96,
+	0x22, 0xbb, 0x8b, 0xf8, 0xa4, 0xbf, 0x39, 0x28, 0x7d, 0xe1, 0x9f, 0xf4, 0x31, 0x26, 0xc4, 0x12,
+	0x2e, 0x03, 0x4b, 0x72, 0xb7, 0x61, 0x49, 0xfe, 0xd5, 0x06, 0xc1, 0x13, 0x58, 0xd4, 0x74, 0x1d,
+	0x13, 0x32, 0x3b, 0x22, 0x41, 0xa0, 0xb8, 0x47, 0xa5, 0x9f, 0x60, 0x3d, 0x40, 0x95, 0x68, 0x6c,
+	0x53, 0xc3, 0x12, 0x7a, 0x0c, 0x79, 0x4a, 0xbb, 0xec, 0x69, 0xad, 0x25, 0xec, 0x1f, 0xb0, 0xe9,
+	0xdb, 0xb8, 0xe7, 0x9a, 0x1f, 0x0e, 0x6a, 0xf9, 0x66, 0xf3, 0xf8, 0x0f, 0xd7, 0x0b, 0x57, 0x4d,
+	0xea, 0xc2, 0x9b, 0xe9, 0xe6, 0x59, 0xc5, 0x8e, 0xa1, 0xcc, 0x8a, 0x13, 0x03, 0xb7, 0xf7, 0x32,
+	0xea, 0x16, 0xbb, 0xa7, 0x44, 0x22, 0x2b, 0xb7, 0x71, 0x5c, 0xfc, 0x8a, 0x9e, 0x08, 0xb1, 0xed,
+	0x19, 0xac, 0xa5, 0xc8, 0x42, 0x7c, 0x5d, 0x8a, 0xb9, 0x41, 0x04, 0xae, 0x9e, 0x9f, 0xc5, 0x8f,
+	0x72, 0xd4, 0x0f, 0x22, 0x7d, 0x0d, 0x55, 0x1f, 0x30, 0xc3, 0xe9, 0x16, 0x24, 0xbc, 0x01, 0xfc,
+	0x68, 0x12, 0xfa, 0xc1, 0xbe, 0x93, 0x61, 0x64, 0xa4, 0x3f, 0x52, 0x93, 0xb6, 0x61, 0x35, 0x71,
+	0x3b, 0x0b, 0x64, 0x12, 0xc0, 0xac, 0xc2, 0x8a, 0x1b, 0x7d, 0xa8, 0x10, 0xa6, 0xe5, 0x25, 0x07,
+	0xfc, 0x68, 0x04, 0xbf, 0x56, 0x6a, 0x83, 0x60, 0xce, 0x83, 0x02, 0x7f, 0xfa, 0x7a, 0xdf, 0xe3,
+	0xfd, 0x37, 0x97, 0xec, 0xbf, 0x77, 0xa1, 0x68, 0xdd, 0x98, 0xd8, 0xb9, 0x30, 0x5a, 0x3e, 0xb9,
+	0x69, 0x2c, 0x0e, 0x07, 0xb5, 0xc2, 0x53, 0x77, 0xef, 0xe8, 0x40, 0x2d, 0x78, 0xc2, 0xa3, 0x16,
+	0x12, 0xa0, 0xd0, 0xc3, 0xbd, 0x4b, 0xec, 0x10, 0x61, 0xc1, 0xa3, 0x0e, 0xc1, 0x52, 0xfa, 0x06,
+	0xaa, 0xe3, 0xb1, 0xb3, 0x6c, 0x1d, 0xc4, 0x18, 0x87, 0x5f, 0xf2, 0xe9, 0xaa, 0x11, 0xe5, 0x25,
+	0x5b, 0xb0, 0x7c, 0x88, 0x69, 0xa2, 0xd2, 0x93, 0x4a, 0x71, 0x0e, 0x95, 0xf8, 0x71, 0xe6, 0xcc,
+	0x1d, 0x74, 0xc6, 0xce, 0xaf, 0x65, 0x28, 0x06, 0xd3, 0x1b, 0x59, 0x50, 0x8a, 0x4e, 0x73, 0x24,
+	0x67, 0xdc, 0x96, 0xc2, 0x06, 0x44, 0x65, 0xea, 0xf3, 0x2c, 0x82, 0x33, 0x28, 0xc7, 0x68, 0x02,
+	0xca, 0xba, 0x21, 0x8d, 0x50, 0x88, 0xd5, 0x44, 0x4f, 0x3d, 0x71, 0xc9, 0x39, 0x32, 0x00, 0x46,
+	0xa8, 0x8f, 0x1e, 0x66, 0x5c, 0x9b, 0x60, 0x14, 0xe2, 0xd6, 0x94, 0xa7, 0x47, 0x41, 0xc4, 0x08,
+	0x41, 0x66, 0x10, 0x69, 0xd4, 0x61, 0x62, 0x10, 0x3f, 0xc2, 0xfd, 0x71, 0x82, 0x87, 0x76, 0x32,
+	0x9d, 0x4b, 0xa5, 0x92, 0xe2, 0xee, 0x4c, 0x3a, 0x2c, 0xac, 0x73, 0x58, 0x8a, 0x0f, 0x69, 0xf4,
+	0x41, 0x56, 0x71, 0xd2, 0xe6, 0xf9, 0xc4, 0xc0, 0xce, 0xa0, 0x1c, 0x63, 0x3b, 0x99, 0x29, 0x4b,
+	0xe3, 0x45, 0x13, 0x6f, 0xb6, 0xa0, 0x14, 0x25, 0x32, 0x99, 0x2d, 0x9c, 0x42, 0xa0, 0x32, 0x5b,
+	0x38, 0x95, 0x21, 0xfd, 0x1c, 0xe5, 0xa4, 0x8c, 0x5e, 0xa0, 0xdd, 0xa9, 0x3a, 0x28, 0x4e, 0x54,
+	0xc4, 0x0f, 0x67, 0x53, 0x62, 0xf6, 0x7f, 0xe3, 0x5c, 0x74, 0x48, 0x0e, 0x4c, 0xf4, 0xd1, 0x14,
+	0x45, 0x4f, 0x19, 0xf0, 0xe2, 0xc7, 0x33, 0xeb, 0x8d, 0x32, 0x91, 0x98, 0x97, 0x99, 0x99, 0x98,
+	0x34, 0x79, 0x33, 0x33, 0x31, 0x79, 0x24, 0xf7, 0x61, 0x29, 0x8e, 0xda, 0x99, 0x0d, 0x9b, 0x3a,
+	0xdc, 0xc4, 0xed, 0x19, 0x34, 0x98, 0xd9, 0xef, 0xe1, 0xde, 0xd8, 0x6c, 0x45, 0xdb, 0xb7, 0xa2,
+	0xd8, 0x38, 0xf6, 0x8b, 0x3b, 0xb3, 0xa8, 0x30, 0xcb, 0x16, 0x94, 0xa2, 0x73, 0x21, 0xb3, 0xd7,
+	0x53, 0xe6, 0x4d, 0x66, 0xaf, 0xa7, 0x0e, 0x9c, 0x33, 0x28, 0xc7, 0xfe, 0x75, 0xa0, 0x69, 0x5f,
+	0xcb, 0x6d, 0x80, 0xd0, 0xf8, 0xec, 0xc5, 0x70, 0x83, 0xfb, 0x6b, 0xb8, 0xc1, 0xbd, 0x1c, 0x6e,
+	0x70, 0xe7, 0x9f, 0xcc, 0xfc, 0x93, 0xe8, 0x51, 0xf0, 0x7d, 0x96, 0xbf, 0x5c, 0xf0, 0xee, 0xde,
+	0xfd, 0x2f, 0x00, 0x00, 0xff, 0xff, 0xcb, 0xac, 0x56, 0x27, 0x6b, 0x12, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1418,11 +1682,13 @@ type AccountsClient interface {
 	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*GetAccountResponse, error)
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*types.Empty, error)
+	GenerateAPIToken(ctx context.Context, in *GenerateAPITokenRequest, opts ...grpc.CallOption) (*GenerateAPITokenResponse, error)
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	Authenticate(ctx context.Context, in *AuthenticateRequest, opts ...grpc.CallOption) (*AuthenticateResponse, error)
 	GetAccountProfile(ctx context.Context, in *GetAccountProfileRequest, opts ...grpc.CallOption) (*GetAccountProfileResponse, error)
 	GenerateServiceToken(ctx context.Context, in *GenerateServiceTokenRequest, opts ...grpc.CallOption) (*GenerateServiceTokenResponse, error)
+	ListServiceTokens(ctx context.Context, in *ListServiceTokensRequest, opts ...grpc.CallOption) (*ListServiceTokensResponse, error)
 	ListNamespaces(ctx context.Context, in *ListNamespacesRequest, opts ...grpc.CallOption) (*ListNamespacesResponse, error)
 	CreateNamespace(ctx context.Context, in *CreateNamespaceRequest, opts ...grpc.CallOption) (*CreateNamespaceResponse, error)
 	GetNamespace(ctx context.Context, in *GetNamespaceRequest, opts ...grpc.CallOption) (*GetNamespaceResponse, error)
@@ -1467,6 +1733,15 @@ func (c *accountsClient) GetAccount(ctx context.Context, in *GetAccountRequest, 
 func (c *accountsClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*types.Empty, error) {
 	out := new(types.Empty)
 	err := c.cc.Invoke(ctx, "/flow.services.accounts.v1.Accounts/UpdateAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsClient) GenerateAPIToken(ctx context.Context, in *GenerateAPITokenRequest, opts ...grpc.CallOption) (*GenerateAPITokenResponse, error) {
+	out := new(GenerateAPITokenResponse)
+	err := c.cc.Invoke(ctx, "/flow.services.accounts.v1.Accounts/GenerateAPIToken", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1518,6 +1793,15 @@ func (c *accountsClient) GenerateServiceToken(ctx context.Context, in *GenerateS
 	return out, nil
 }
 
+func (c *accountsClient) ListServiceTokens(ctx context.Context, in *ListServiceTokensRequest, opts ...grpc.CallOption) (*ListServiceTokensResponse, error) {
+	out := new(ListServiceTokensResponse)
+	err := c.cc.Invoke(ctx, "/flow.services.accounts.v1.Accounts/ListServiceTokens", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *accountsClient) ListNamespaces(ctx context.Context, in *ListNamespacesRequest, opts ...grpc.CallOption) (*ListNamespacesResponse, error) {
 	out := new(ListNamespacesResponse)
 	err := c.cc.Invoke(ctx, "/flow.services.accounts.v1.Accounts/ListNamespaces", in, out, opts...)
@@ -1560,11 +1844,13 @@ type AccountsServer interface {
 	CreateAccount(context.Context, *CreateAccountRequest) (*types.Empty, error)
 	GetAccount(context.Context, *GetAccountRequest) (*GetAccountResponse, error)
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*types.Empty, error)
+	GenerateAPIToken(context.Context, *GenerateAPITokenRequest) (*GenerateAPITokenResponse, error)
 	ChangePassword(context.Context, *ChangePasswordRequest) (*types.Empty, error)
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*types.Empty, error)
 	Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
 	GetAccountProfile(context.Context, *GetAccountProfileRequest) (*GetAccountProfileResponse, error)
 	GenerateServiceToken(context.Context, *GenerateServiceTokenRequest) (*GenerateServiceTokenResponse, error)
+	ListServiceTokens(context.Context, *ListServiceTokensRequest) (*ListServiceTokensResponse, error)
 	ListNamespaces(context.Context, *ListNamespacesRequest) (*ListNamespacesResponse, error)
 	CreateNamespace(context.Context, *CreateNamespaceRequest) (*CreateNamespaceResponse, error)
 	GetNamespace(context.Context, *GetNamespaceRequest) (*GetNamespaceResponse, error)
@@ -1587,6 +1873,9 @@ func (*UnimplementedAccountsServer) GetAccount(ctx context.Context, req *GetAcco
 func (*UnimplementedAccountsServer) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*types.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateAccount not implemented")
 }
+func (*UnimplementedAccountsServer) GenerateAPIToken(ctx context.Context, req *GenerateAPITokenRequest) (*GenerateAPITokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateAPIToken not implemented")
+}
 func (*UnimplementedAccountsServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*types.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
@@ -1601,6 +1890,9 @@ func (*UnimplementedAccountsServer) GetAccountProfile(ctx context.Context, req *
 }
 func (*UnimplementedAccountsServer) GenerateServiceToken(ctx context.Context, req *GenerateServiceTokenRequest) (*GenerateServiceTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateServiceToken not implemented")
+}
+func (*UnimplementedAccountsServer) ListServiceTokens(ctx context.Context, req *ListServiceTokensRequest) (*ListServiceTokensResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListServiceTokens not implemented")
 }
 func (*UnimplementedAccountsServer) ListNamespaces(ctx context.Context, req *ListNamespacesRequest) (*ListNamespacesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListNamespaces not implemented")
@@ -1691,6 +1983,24 @@ func _Accounts_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Accounts_GenerateAPIToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateAPITokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).GenerateAPIToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/flow.services.accounts.v1.Accounts/GenerateAPIToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).GenerateAPIToken(ctx, req.(*GenerateAPITokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Accounts_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangePasswordRequest)
 	if err := dec(in); err != nil {
@@ -1777,6 +2087,24 @@ func _Accounts_GenerateServiceToken_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AccountsServer).GenerateServiceToken(ctx, req.(*GenerateServiceTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Accounts_ListServiceTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServiceTokensRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServer).ListServiceTokens(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/flow.services.accounts.v1.Accounts/ListServiceTokens",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServer).ListServiceTokens(ctx, req.(*ListServiceTokensRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1874,6 +2202,10 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Accounts_UpdateAccount_Handler,
 		},
 		{
+			MethodName: "GenerateAPIToken",
+			Handler:    _Accounts_GenerateAPIToken_Handler,
+		},
+		{
 			MethodName: "ChangePassword",
 			Handler:    _Accounts_ChangePassword_Handler,
 		},
@@ -1892,6 +2224,10 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateServiceToken",
 			Handler:    _Accounts_GenerateServiceToken_Handler,
+		},
+		{
+			MethodName: "ListServiceTokens",
+			Handler:    _Accounts_ListServiceTokens_Handler,
 		},
 		{
 			MethodName: "ListNamespaces",
@@ -2045,6 +2381,135 @@ func (m *Account) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.ID)
 		copy(dAtA[i:], m.ID)
 		i = encodeVarintAccounts(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *APIToken) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *APIToken) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *APIToken) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	n2, err2 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
+	if err2 != nil {
+		return 0, err2
+	}
+	i -= n2
+	i = encodeVarintAccounts(dAtA, i, uint64(n2))
+	i--
+	dAtA[i] = 0x22
+	if len(m.Description) > 0 {
+		i -= len(m.Description)
+		copy(dAtA[i:], m.Description)
+		i = encodeVarintAccounts(dAtA, i, uint64(len(m.Description)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Token) > 0 {
+		i -= len(m.Token)
+		copy(dAtA[i:], m.Token)
+		i = encodeVarintAccounts(dAtA, i, uint64(len(m.Token)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.ID) > 0 {
+		i -= len(m.ID)
+		copy(dAtA[i:], m.ID)
+		i = encodeVarintAccounts(dAtA, i, uint64(len(m.ID)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GenerateAPITokenRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenerateAPITokenRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenerateAPITokenRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Description) > 0 {
+		i -= len(m.Description)
+		copy(dAtA[i:], m.Description)
+		i = encodeVarintAccounts(dAtA, i, uint64(len(m.Description)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GenerateAPITokenResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenerateAPITokenResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenerateAPITokenResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.APIToken != nil {
+		{
+			size, err := m.APIToken.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAccounts(dAtA, i, uint64(size))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2508,20 +2973,20 @@ func (m *ServiceToken) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	n7, err7 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.AccessedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.AccessedAt):])
-	if err7 != nil {
-		return 0, err7
+	n9, err9 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.AccessedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.AccessedAt):])
+	if err9 != nil {
+		return 0, err9
 	}
-	i -= n7
-	i = encodeVarintAccounts(dAtA, i, uint64(n7))
+	i -= n9
+	i = encodeVarintAccounts(dAtA, i, uint64(n9))
 	i--
 	dAtA[i] = 0x22
-	n8, err8 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
-	if err8 != nil {
-		return 0, err8
+	n10, err10 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
+	if err10 != nil {
+		return 0, err10
 	}
-	i -= n8
-	i = encodeVarintAccounts(dAtA, i, uint64(n8))
+	i -= n10
+	i = encodeVarintAccounts(dAtA, i, uint64(n10))
 	i--
 	dAtA[i] = 0x1a
 	if len(m.Description) > 0 {
@@ -2565,12 +3030,12 @@ func (m *GenerateServiceTokenRequest) MarshalToSizedBuffer(dAtA []byte) (int, er
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	n9, err9 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.TTL, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.TTL):])
-	if err9 != nil {
-		return 0, err9
+	n11, err11 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.TTL, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.TTL):])
+	if err11 != nil {
+		return 0, err11
 	}
-	i -= n9
-	i = encodeVarintAccounts(dAtA, i, uint64(n9))
+	i -= n11
+	i = encodeVarintAccounts(dAtA, i, uint64(n11))
 	i--
 	dAtA[i] = 0x12
 	if len(m.Description) > 0 {
@@ -2618,6 +3083,74 @@ func (m *GenerateServiceTokenResponse) MarshalToSizedBuffer(dAtA []byte) (int, e
 		}
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ListServiceTokensRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListServiceTokensRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListServiceTokensRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ListServiceTokensResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListServiceTokensResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListServiceTokensResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.ServiceTokens) > 0 {
+		for iNdEx := len(m.ServiceTokens) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ServiceTokens[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintAccounts(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -2776,12 +3309,12 @@ func (m *Namespace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x1a
 	}
-	n12, err12 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
-	if err12 != nil {
-		return 0, err12
+	n14, err14 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.CreatedAt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt):])
+	if err14 != nil {
+		return 0, err14
 	}
-	i -= n12
-	i = encodeVarintAccounts(dAtA, i, uint64(n12))
+	i -= n14
+	i = encodeVarintAccounts(dAtA, i, uint64(n14))
 	i--
 	dAtA[i] = 0x12
 	if len(m.ID) > 0 {
@@ -2979,6 +3512,64 @@ func (m *Account) Size() (n int) {
 			l = len(s)
 			n += 1 + l + sovAccounts(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *APIToken) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ID)
+	if l > 0 {
+		n += 1 + l + sovAccounts(uint64(l))
+	}
+	l = len(m.Token)
+	if l > 0 {
+		n += 1 + l + sovAccounts(uint64(l))
+	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovAccounts(uint64(l))
+	}
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.CreatedAt)
+	n += 1 + l + sovAccounts(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GenerateAPITokenRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovAccounts(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GenerateAPITokenResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.APIToken != nil {
+		l = m.APIToken.Size()
+		n += 1 + l + sovAccounts(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -3229,6 +3820,36 @@ func (m *GenerateServiceTokenResponse) Size() (n int) {
 	if m.ServiceToken != nil {
 		l = m.ServiceToken.Size()
 		n += 1 + l + sovAccounts(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ListServiceTokensRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ListServiceTokensResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.ServiceTokens) > 0 {
+		for _, e := range m.ServiceTokens {
+			l = e.Size()
+			n += 1 + l + sovAccounts(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -3794,6 +4415,356 @@ func (m *Account) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Namespaces = append(m.Namespaces, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAccounts(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *APIToken) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAccounts
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: APIToken: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: APIToken: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Token", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Token = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CreatedAt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.CreatedAt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAccounts(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GenerateAPITokenRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAccounts
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GenerateAPITokenRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GenerateAPITokenRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAccounts(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GenerateAPITokenResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAccounts
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GenerateAPITokenResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GenerateAPITokenResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field APIToken", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.APIToken == nil {
+				m.APIToken = &APIToken{}
+			}
+			if err := m.APIToken.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -5198,6 +6169,142 @@ func (m *GenerateServiceTokenResponse) Unmarshal(dAtA []byte) error {
 				m.ServiceToken = &ServiceToken{}
 			}
 			if err := m.ServiceToken.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAccounts(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListServiceTokensRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAccounts
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListServiceTokensRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListServiceTokensRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAccounts(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListServiceTokensResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAccounts
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListServiceTokensResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListServiceTokensResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ServiceTokens", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAccounts
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAccounts
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ServiceTokens = append(m.ServiceTokens, &ServiceToken{})
+			if err := m.ServiceTokens[len(m.ServiceTokens)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

@@ -34,6 +34,8 @@ const (
 
 	// CtxTokenKey is the key stored in the context for the token
 	CtxTokenKey = "token"
+	// CtxAPITokenKey is the user api token key stored in the context
+	CtxAPITokenKey = "api-token"
 	// CtxServiceTokenKey is the service key stored in the context
 	CtxServiceTokenKey = "service-token"
 	// CtxTokenKey is the key stored in the context for the username

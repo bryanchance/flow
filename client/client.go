@@ -42,6 +42,7 @@ type ClientConfig struct {
 	Username     string
 	Namespace    string
 	Token        string
+	APIToken     string
 	ServiceToken string
 }
 

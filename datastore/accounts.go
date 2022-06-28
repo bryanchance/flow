@@ -71,9 +71,24 @@ func (d *Datastore) GetAccount(ctx context.Context, username string) (*api.Accou
 	return &account, nil
 }
 
-func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) error {
-	accountKey := getAccountKey(account.Username)
+func (d *Datastore) GetAccountByID(ctx context.Context, id string) (*api.Account, error) {
+	accountIDKey := getAccountIDKey(id)
+	data, err := d.redisClient.Get(ctx, accountIDKey).Bytes()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, ErrAccountDoesNotExist
+		}
+		return nil, errors.Wrapf(err, "error getting account %s from database", id)
+	}
 
+	account := api.Account{}
+	if err := proto.Unmarshal(data, &account); err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
+func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) error {
 	// validate
 	if account.Username == "" {
 		return fmt.Errorf("username cannot be blank")
@@ -116,13 +131,8 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 	account.CurrentNamespace = nsID
 	account.Namespaces = []string{nsID}
 
-	data, err := proto.Marshal(account)
-	if err != nil {
-		return err
-	}
-
-	if err := d.redisClient.Set(ctx, accountKey, data, 0).Err(); err != nil {
-		return errors.Wrapf(err, "error updating account for %s in database", account.Username)
+	if err := d.UpdateAccount(ctx, account); err != nil {
+		return errors.Wrapf(err, "error creating user account for %s in datastore", account.Username)
 	}
 
 	logrus.Debugf("created account %s (admin: %v)", account.Username, account.Admin)
@@ -131,13 +141,18 @@ func (d *Datastore) CreateAccount(ctx context.Context, account *api.Account) err
 
 func (d *Datastore) UpdateAccount(ctx context.Context, account *api.Account) error {
 	accountKey := getAccountKey(account.Username)
+	accountIDKey := getAccountIDKey(account.ID)
 
 	data, err := proto.Marshal(account)
 	if err != nil {
 		return err
 	}
-	if err := d.redisClient.Set(ctx, accountKey, data, 0).Err(); err != nil {
-		return errors.Wrapf(err, "error updating account for %s in database", account.Username)
+
+	// save keys in both the account and account id lookup keyspaces
+	for _, k := range []string{accountKey, accountIDKey} {
+		if err := d.redisClient.Set(ctx, k, data, 0).Err(); err != nil {
+			return errors.Wrapf(err, "error updating account for %s in database", account.Username)
+		}
 	}
 	return nil
 }
@@ -155,13 +170,17 @@ func (d *Datastore) ChangePassword(ctx context.Context, account *api.Account, pa
 
 func (d *Datastore) DeleteAccount(ctx context.Context, username string) error {
 	// ensure account exists
-	if _, err := d.GetAccount(ctx, username); err != nil {
+	acct, err := d.GetAccount(ctx, username)
+	if err != nil {
 		return err
 	}
 
 	accountKey := getAccountKey(username)
-	if err := d.redisClient.Del(ctx, accountKey).Err(); err != nil {
-		return err
+	accountIDKey := getAccountIDKey(acct.ID)
+	for _, k := range []string{accountKey, accountIDKey} {
+		if err := d.redisClient.Del(ctx, k).Err(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -169,6 +188,10 @@ func (d *Datastore) DeleteAccount(ctx context.Context, username string) error {
 
 func getAccountKey(username string) string {
 	return path.Join(dbPrefix, "accounts", username)
+}
+
+func getAccountIDKey(id string) string {
+	return path.Join(dbPrefix, "account-ids", id)
 }
 
 func clearPassword(b []byte) {

@@ -18,11 +18,13 @@ service Accounts {
         rpc CreateAccount(CreateAccountRequest) returns (google.protobuf.Empty);
         rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
         rpc UpdateAccount(UpdateAccountRequest) returns (google.protobuf.Empty);
+        rpc GenerateAPIToken(GenerateAPITokenRequest) returns (GenerateAPITokenResponse);
         rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty);
         rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
         rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
         rpc GetAccountProfile(GetAccountProfileRequest) returns (GetAccountProfileResponse);
         rpc GenerateServiceToken(GenerateServiceTokenRequest) returns (GenerateServiceTokenResponse);
+        rpc ListServiceTokens(ListServiceTokensRequest) returns (ListServiceTokensResponse);
         rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse);
 	rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
         rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse);
@@ -45,6 +47,21 @@ message Account {
         bytes password_crypt = 9 [(gogoproto.jsontag) = "-"];
         string current_namespace = 10;
 	repeated string namespaces = 11;
+}
+
+message APIToken {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string token = 2;
+        string description = 3;
+        google.protobuf.Timestamp created_at = 4 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+}
+
+message GenerateAPITokenRequest {
+        string description = 1;
+}
+
+message GenerateAPITokenResponse {
+        APIToken api_token = 1 [(gogoproto.customname) = "APIToken"];
 }
 
 message ListAccountsRequest {}
@@ -106,6 +123,12 @@ message GenerateServiceTokenRequest {
 
 message GenerateServiceTokenResponse {
         ServiceToken service_token = 1;
+}
+
+message ListServiceTokensRequest {}
+
+message ListServiceTokensResponse {
+        repeated ServiceToken service_tokens = 1;
 }
 
 message CreateNamespaceRequest {

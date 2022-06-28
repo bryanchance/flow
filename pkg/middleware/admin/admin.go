@@ -133,24 +133,35 @@ func (m *AdminRequired) getAccount(ctx context.Context) (*api.Account, error) {
 
 	// check for token
 	token, ok := metadata[flow.CtxTokenKey]
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
-	}
-	var account *api.Account
-	for _, t := range token {
-		acct, err := m.authenticator.GetAccount(ctx, t)
-		if err != nil {
+	if ok {
+		var account *api.Account
+		for _, t := range token {
+			acct, err := m.authenticator.GetAccount(ctx, t)
+			if err != nil {
+				return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
+			}
+
+			account = acct
+			break
+		}
+		if account == nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
 		}
-
-		account = acct
-		break
-	}
-	if account == nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
+		return account, nil
 	}
 
-	return account, nil
+	apiToken, ok := metadata[flow.CtxAPITokenKey]
+	if ok {
+		for _, t := range apiToken {
+			acct, err := m.authenticator.ValidateAPIToken(ctx, t)
+			if err != nil {
+				return nil, status.Errorf(codes.Unauthenticated, "invalid api token")
+			}
+			return acct, nil
+		}
+	}
+
+	return nil, status.Errorf(codes.Unauthenticated, "invalid or missing api token")
 }
 
 func (m *AdminRequired) adminRouteMatch(method string) bool {

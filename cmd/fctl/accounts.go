@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
@@ -34,8 +35,10 @@ var accountsCommand = &cli.Command{
 	Subcommands: []*cli.Command{
 		accountsCreateCommand,
 		accountsProfileCommand,
+		accountsGenerateAPITokenCommand,
 		accountsChangePasswordCommand,
 		accountsGenerateServiceTokenCommand,
+		accountsListServiceTokensCommand,
 	},
 }
 
@@ -197,7 +200,7 @@ var accountsChangePasswordCommand = &cli.Command{
 
 var accountsGenerateServiceTokenCommand = &cli.Command{
 	Name:  "generate-service-token",
-	Usage: "create a new service token",
+	Usage: "create a new global service token",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:  "description",
@@ -232,6 +235,80 @@ var accountsGenerateServiceTokenCommand = &cli.Command{
 
 		fmt.Println(resp.ServiceToken.Token)
 
+		return nil
+	},
+}
+
+var accountsGenerateAPITokenCommand = &cli.Command{
+	Name:  "generate-api-token",
+	Usage: "create a new API token for your account",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "description",
+			Usage: "token description",
+			Value: "",
+		},
+	},
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.GenerateAPIToken(ctx, &accountsapi.GenerateAPITokenRequest{
+			Description: clix.String("description"),
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(resp.APIToken.Token)
+
+		return nil
+	},
+}
+
+var accountsListServiceTokensCommand = &cli.Command{
+	Name:  "list-service-tokens",
+	Usage: "view service tokens",
+	Flags: []cli.Flag{},
+	Action: func(clix *cli.Context) error {
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		resp, err := client.ListServiceTokens(ctx, &accountsapi.ListServiceTokensRequest{})
+		if err != nil {
+			return err
+		}
+
+		w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
+		fmt.Fprintf(w, "TOKEN\tCREATED\tLAST ACCESSED\n")
+		for _, t := range resp.ServiceTokens {
+			accessed := t.AccessedAt.Format(time.RFC3339)
+			if t.AccessedAt.IsZero() {
+				accessed = "never"
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\n",
+				t.Token,
+				t.CreatedAt.Format(time.RFC3339),
+				accessed,
+			)
+		}
+		w.Flush()
 		return nil
 	},
 }

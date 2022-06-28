@@ -39,6 +39,26 @@ func (d *Datastore) SetAuthenticatorKey(ctx context.Context, a auth.Authenticato
 	return nil
 }
 
+func (d *Datastore) GetAuthenticatorKeys(ctx context.Context, a auth.Authenticator, prefix string) ([][]byte, error) {
+	data := [][]byte{}
+
+	keyPrefix := getAuthenticatorKey(a.Name(), prefix)
+	keys, err := d.redisClient.Keys(ctx, keyPrefix).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, k := range keys {
+		d, err := d.redisClient.Get(ctx, k).Bytes()
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, d)
+	}
+
+	return data, nil
+}
+
 func getAuthenticatorKey(authName string, key string) string {
 	return path.Join(dbPrefix, "auth", authName, key)
 }
