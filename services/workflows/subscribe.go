@@ -160,7 +160,9 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 }
 
 func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
-	// TODO: parse scope and determine namespace
+	if info.Scope == nil || info.Scope.Scope == nil {
+		return fmt.Errorf("Scope not defined")
+	}
 	ns := ""
 	switch v := info.Scope.Scope.(type) {
 	case *api.ProcessorScope_Global:
