@@ -4,3 +4,5 @@ updates
 config.toml
 flow.toml
 flow-dev.toml
+
+dist/

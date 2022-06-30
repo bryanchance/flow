@@ -79,9 +79,9 @@ type Config struct {
 	TLSServerCertificate string
 	// TLSKey is the key used for grpc communication
 	TLSServerKey string
-	// TLSClientCertificate is the client certificate used for communication
+	// TLSClientCertificate is the client certificate used for client communication
 	TLSClientCertificate string
-	// TLSClientKey is the client key used for communication
+	// TLSClientKey is the client key used for client communication
 	TLSClientKey string
 	// TLSInsecureSkipVerify disables certificate verification
 	TLSInsecureSkipVerify bool

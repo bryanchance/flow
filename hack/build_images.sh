@@ -12,8 +12,6 @@ if [ ! -z "${PUSH}" ] && [ "${PUSH}" != "n" ] && [ "${PUSH}" != "N" ]; then
     PUSH="--push"
 fi
 
-echo " -> building ${VERSION}${BUILD}"
-
 echo " -> building $DAEMON"
 docker buildx build --build-arg VERSION=${VERSION} --build-arg BUILD=${BUILD} ${IMAGE_BUILD_EXTRA} -t ${REGISTRY}/${DAEMON}:${TAG} ${PUSH} -f Dockerfile .
 

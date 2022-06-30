@@ -21,18 +21,25 @@ services:
       dockerfile: Dockerfile
     ports:
       - 7080:7080
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/flow.toml
+        GRPCAddress = ":7080"
+        S3Endpoint = "minio:9000"
+        S3AccessID = "minioadmin"
+        S3AccessKey = "minioadmin"
+        S3Bucket = "flow"
+        S3UseSSL = false
+        DatabaseAddress = "redis://redis:6379/0"
+        QueueAddress = "redis://redis:6379/0"
+        InitialAdminPassword = "flow"
+        [Authenticator]
+          Name = "token"
+        EOF
+        flow -D server -c /etc/flow.toml
     command: ["-D", "server", "-c", "/etc/flow.toml"]
-    volumes:
-      - ./flow-dev.toml:/etc/flow.toml
     depends_on:
       - minio
       - redis
-
-  manager:
-    image: docker.io/ehazlett/flow-manager:latest
-    ports:
-      - 9080:9080
-    command: ["-a", "backend:7080", "-D", "-l", ":9080", "--api-cors-domain", '"*"']
-    depends_on:
-      - backend
-
