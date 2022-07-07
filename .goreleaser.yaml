@@ -15,6 +15,8 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -w -X github.com/ehazlett/flow/version.GitCommit={{ .FullCommit }} -X github.com/ehazlett/flow/version.Version={{ .RawVersion }}
   - main: ./cmd/flow
     id: "flow"
     binary: flow
@@ -26,6 +28,8 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -w -X github.com/ehazlett/flow/version.GitCommit={{ .FullCommit }} -X github.com/ehazlett/flow/version.Version={{ .RawVersion }}
 archives:
   - id: fctl
     builds:
