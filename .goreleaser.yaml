@@ -1,0 +1,59 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  - main: ./cmd/fctl
+    id: "fctl"
+    binary: fctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+  - main: ./cmd/flow
+    id: "flow"
+    binary: flow
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+archives:
+  - id: fctl
+    builds:
+      - fctl
+    replacements:
+      darwin: macOS
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "fctl_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: flow
+    builds:
+      - flow
+    replacements:
+      darwin: macOS
+    name_template: "flow_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+release:
+  github:
+    owner: ehazlett
+    name: flow
+  draft: true
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
