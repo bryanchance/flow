@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/ehazlett/flow"
@@ -29,6 +30,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error {
@@ -168,6 +171,13 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	}); err != nil {
 		return status.Errorf(codes.Unknown, "error sending response to client: %s", err)
 	}
+
+	// metrics
+	workflowsProcessed.Inc()
+	workflowsQueued.With(prometheus.Labels{
+		"type":     workflow.Type,
+		"priority": strings.ToLower(workflow.Priority.String()),
+	}).Inc()
 
 	return nil
 }

@@ -101,6 +101,8 @@ type Config struct {
 	QueueAddress string
 	// ProfilerAddress enables the performance profiler on the specified address
 	ProfilerAddress string
+	// MetricsAddress enables builtin Prometheus metrics
+	MetricsAddress string
 	// TraceEndpoint is the endpoint of the telemetry tracer
 	TraceEndpoint string
 	// Environment is the environment the app is running in

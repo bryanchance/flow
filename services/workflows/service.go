@@ -33,6 +33,9 @@ import (
 	"github.com/olebedev/emitter"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
@@ -44,6 +47,20 @@ const (
 
 var (
 	empty = &ptypes.Empty{}
+
+	// metrics
+	workflowsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "workflows_processed",
+		Help: "The total number of processed workflows",
+	})
+	workflowsQueued = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "workflows_queued_total",
+		Help: "The total number of workflows queued by type",
+	}, []string{"type", "priority"})
+	workflowProcessors = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "workflows_processors",
+		Help: "The number of workflow processors",
+	}, []string{"type"})
 )
 
 type service struct {
@@ -82,6 +99,10 @@ func New(cfg *flow.Config) (services.Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	r := prometheus.NewRegistry()
+	r.MustRegister(workflowsProcessed)
+	r.MustRegister(workflowsQueued)
 
 	return &service{
 		config:              cfg,
