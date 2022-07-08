@@ -23,7 +23,7 @@ import (
 
 const (
 	workflowName = "flow-workflow-ffmpeg"
-	workflowType = "dev.ehazlett.flow.ffmpeg"
+	workflowType = "dev.ehazlett.flow.encode"
 )
 
 func main() {

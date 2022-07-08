@@ -49,11 +49,11 @@ type Config struct {
 
 // TokenAuthenticator is an authenticator that performs no authentication at all
 type TokenAuthenticator struct {
-	ds           *datastore.Datastore
+	ds           datastore.Datastore
 	publicRoutes map[string]struct{}
 }
 
-func NewTokenAuthenticator(ds *datastore.Datastore, publicRoutes []string) *TokenAuthenticator {
+func NewTokenAuthenticator(ds datastore.Datastore, publicRoutes []string) *TokenAuthenticator {
 	pr := map[string]struct{}{}
 	for _, r := range publicRoutes {
 		pr[r] = struct{}{}
@@ -208,7 +208,7 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 		for _, t := range nt {
 			nToken, err := a.validateServiceToken(ctx, t)
 			if err != nil {
-				logrus.Warnf("unauthenticated request from %s using service token %s", peer.Addr, t)
+				logrus.Warnf("unauthenticated request from %s using service token %s: %s", peer.Addr, t, err)
 				return nil, status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 			}
 
@@ -338,7 +338,7 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 		for _, t := range nt {
 			nToken, err := a.validateServiceToken(ctx, t)
 			if err != nil {
-				logrus.Warnf("unauthenticated request from %s using service token %s", peer.Addr, t)
+				logrus.Warnf("unauthenticated request from %s using service token %s: %s", peer.Addr, t, err)
 				return status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 			}
 
@@ -373,19 +373,9 @@ func (a *TokenAuthenticator) GenerateServiceToken(ctx context.Context, descripti
 }
 
 func (a *TokenAuthenticator) ListServiceTokens(ctx context.Context) ([]*api.ServiceToken, error) {
-	prefix := getServiceTokenKey("*")
-	tokenData, err := a.ds.GetAuthenticatorKeys(ctx, a, prefix)
+	serviceTokens, err := a.ds.GetServiceTokens(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	serviceTokens := []*api.ServiceToken{}
-	for _, data := range tokenData {
-		var st *api.ServiceToken
-		if err := json.Unmarshal(data, &st); err != nil {
-			return nil, err
-		}
-		serviceTokens = append(serviceTokens, st)
 	}
 
 	return serviceTokens, nil
@@ -402,20 +392,13 @@ func (a *TokenAuthenticator) GenerateAPIToken(ctx context.Context, description s
 }
 
 func (a *TokenAuthenticator) createServiceToken(ctx context.Context, token string, description string, ttl time.Duration) (*api.ServiceToken, error) {
-	tokenKey := getServiceTokenKey(token)
-
 	serviceToken := &api.ServiceToken{
 		Token:       token,
 		Description: description,
 		CreatedAt:   time.Now(),
 	}
 
-	data, err := json.Marshal(serviceToken)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, data, ttl); err != nil {
+	if err := a.ds.CreateServiceToken(ctx, serviceToken); err != nil {
 		return nil, errors.Wrap(err, "error saving service token")
 	}
 
@@ -433,8 +416,6 @@ func (a *TokenAuthenticator) createAPIToken(ctx context.Context, token string, d
 		return nil, err
 	}
 
-	tokenKey := getAPITokenKey(token)
-
 	apiToken := &api.APIToken{
 		ID:          acct.ID,
 		Token:       token,
@@ -442,12 +423,7 @@ func (a *TokenAuthenticator) createAPIToken(ctx context.Context, token string, d
 		CreatedAt:   time.Now(),
 	}
 
-	data, err := json.Marshal(apiToken)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, data, -1); err != nil {
+	if err := a.ds.CreateAPIToken(ctx, apiToken); err != nil {
 		return nil, errors.Wrap(err, "error saving api token")
 	}
 
@@ -478,15 +454,9 @@ func (a *TokenAuthenticator) validateToken(ctx context.Context, token string) (*
 }
 
 func (a *TokenAuthenticator) ValidateAPIToken(ctx context.Context, token string) (*api.Account, error) {
-	tokenKey := getAPITokenKey(token)
-	data, err := a.ds.GetAuthenticatorKey(ctx, a, tokenKey)
+	apiToken, err := a.ds.GetAPIToken(ctx, token)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting token %s from datastore", token)
-	}
-
-	var apiToken *api.APIToken
-	if err := json.Unmarshal(data, &apiToken); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error getting api token %s from datastore", token)
 	}
 
 	acct, err := a.ds.GetAccountByID(ctx, apiToken.ID)
@@ -498,26 +468,15 @@ func (a *TokenAuthenticator) ValidateAPIToken(ctx context.Context, token string)
 }
 
 func (a *TokenAuthenticator) validateServiceToken(ctx context.Context, token string) (*api.ServiceToken, error) {
-	tokenKey := getServiceTokenKey(token)
-	data, err := a.ds.GetAuthenticatorKey(ctx, a, tokenKey)
+	serviceToken, err := a.ds.GetServiceToken(ctx, token)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error getting service token %s from datastore", token)
 	}
 
-	var serviceToken *api.ServiceToken
-	if err := json.Unmarshal(data, &serviceToken); err != nil {
-		return nil, err
-	}
-
 	// update accessedAt
 	serviceToken.AccessedAt = time.Now()
-	uData, err := json.Marshal(serviceToken)
-	if err != nil {
+	if err := a.ds.UpdateServiceToken(ctx, serviceToken); err != nil {
 		return nil, err
-	}
-
-	if err := a.ds.SetAuthenticatorKey(ctx, a, tokenKey, uData, 0); err != nil {
-		return nil, errors.Wrapf(err, "error saving service token %s", token)
 	}
 
 	return serviceToken, nil

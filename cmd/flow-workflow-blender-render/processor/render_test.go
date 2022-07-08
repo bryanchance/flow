@@ -36,7 +36,6 @@ func TestParseParametersDefaults(t *testing.T) {
 }
 
 func TestParseParametersCustom(t *testing.T) {
-	testName := "testing"
 	testEngine := "EEVEE"
 	testFrame := 2
 	testEnableGPU := true
@@ -47,7 +46,6 @@ func TestParseParametersCustom(t *testing.T) {
 
 	w := &api.Workflow{
 		Parameters: map[string]string{
-			"name":    testName,
 			"engine":  testEngine,
 			"frame":   fmt.Sprintf("%v", testFrame),
 			"gpu":     fmt.Sprintf("%+v", testEnableGPU),
@@ -63,7 +61,6 @@ func TestParseParametersCustom(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, cfg.Name, testName, "unexpected name")
 	assert.Equal(t, cfg.RenderEngine, testEngine, "unexpected engine")
 	assert.Equal(t, cfg.RenderFrame, testFrame, "unexpected frame")
 	assert.Equal(t, cfg.RenderUseGPU, testEnableGPU, "unexpected GPU")

@@ -17,6 +17,7 @@ service Workflows {
         rpc QueueWorkflow(stream QueueWorkflowRequest) returns (QueueWorkflowResponse);
         rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
         rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+        rpc RequeueWorkflow(RequeueWorkflowRequest) returns (google.protobuf.Empty);
         rpc DeleteWorkflow(DeleteWorkflowRequest) returns (google.protobuf.Empty);
 
         rpc SubscribeWorkflowEvents(stream SubscribeWorkflowEventsRequest) returns (stream WorkflowEvent);
@@ -24,7 +25,6 @@ service Workflows {
         rpc GetWorkflowInputFile(GetWorkflowInputFileRequest) returns (stream WorkflowInputFileContents);
         rpc UploadWorkflowArtifact(stream UploadWorkflowArtifactRequest) returns (UploadWorkflowArtifactResponse);
         rpc UpdateWorkflowStatus(UpdateWorkflowStatusRequest) returns (google.protobuf.Empty);
-        rpc UpdateWorkflowOutput(UpdateWorkflowOutputRequest) returns (google.protobuf.Empty);
         rpc GetWorkflowOutputArtifact(GetWorkflowOutputArtifactRequest) returns (stream WorkflowOutputArtifactContents);
 
         rpc ListWorkflowProcessors(ListWorkflowProcessorsRequest) returns (ListWorkflowProcessorsResponse);
@@ -101,6 +101,10 @@ message Workflow {
 
 message ListWorkflowsResponse {
         repeated Workflow workflows = 1;
+}
+
+message RequeueWorkflowRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
 }
 
 message GetWorkflowRequest {
@@ -188,11 +192,19 @@ message WorkflowAck {
         WorkflowStatus status = 3;
 }
 
+message WorkflowComplete {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string namespace = 2;
+        WorkflowStatus status = 3;
+        string node_id = 4 [(gogoproto.customname) = "NodeID"];
+}
+
 message SubscribeWorkflowEventsRequest {
         oneof request {
                 ProcessorInfo info = 1;
                 WorkflowOutput output = 2;
                 WorkflowAck ack = 3;
+                WorkflowComplete complete = 4;
         }
 }
 
@@ -209,10 +221,6 @@ message WorkflowEvent {
                 Workflow workflow = 1;
                 WorkflowCloseEvent close = 2;
         }
-}
-
-message UpdateWorkflowOutputRequest {
-        WorkflowOutput workflow_output = 1;
 }
 
 message WorkflowOutputArtifactUpload {

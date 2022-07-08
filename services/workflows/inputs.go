@@ -48,8 +48,10 @@ func (s *service) ListWorkflowInputs(ctx context.Context, r *api.ListWorkflowInp
 			if err != nil {
 				return nil, err
 			}
-			for _, o := range iwf.Output.Artifacts {
-				prefixes = append(prefixes, o.StoragePath)
+			if iwf.Output != nil {
+				for _, o := range iwf.Output.Artifacts {
+					prefixes = append(prefixes, o.StoragePath)
+				}
 			}
 		}
 	case *api.Workflow_File:

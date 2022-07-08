@@ -46,6 +46,7 @@ var workflowsCommand = &cli.Command{
 		workflowsListCommand,
 		workflowsInfoCommand,
 		workflowsOutputCommand,
+		workflowsRequeueCommand,
 		workflowsDeleteCommand,
 	},
 }
@@ -354,6 +355,39 @@ var workflowsInfoCommand = &cli.Command{
 		}
 
 		if err := marshaler().Marshal(os.Stdout, resp.Workflow); err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var workflowsRequeueCommand = &cli.Command{
+	Name:      "requeue",
+	Usage:     "requeue workflow",
+	ArgsUsage: "[ID]",
+	Flags:     []cli.Flag{},
+	Action: func(clix *cli.Context) error {
+		id := clix.Args().Get(0)
+		if id == "" {
+			cli.ShowSubcommandHelp(clix)
+			return fmt.Errorf("workflow ID must be specified")
+		}
+
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		if _, err := client.RequeueWorkflow(ctx, &api.RequeueWorkflowRequest{
+			ID: id,
+		}); err != nil {
 			return err
 		}
 

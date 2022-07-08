@@ -11,17 +11,34 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package queue
+package postgres
 
 import (
-	"context"
+	"database/sql"
+	"log"
+	"sync"
+
+	_ "github.com/lib/pq"
 )
 
-func (q *Queue) Schedule(ctx context.Context, namespace, queueName string, data []byte, priority Priority) error {
-	k := getQueueName(namespace, queueName, priority)
-	if err := q.redisClient.RPush(ctx, k, data).Err(); err != nil {
-		return err
+const (
+	accountsTableName  = "accounts"
+	workflowsTableName = "workflows"
+)
+
+type Postgres struct {
+	db        *sql.DB
+	queueLock *sync.Mutex
+}
+
+func NewPostgres(addr string) (*Postgres, error) {
+	db, err := sql.Open("postgres", addr)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return nil
+	return &Postgres{
+		db:        db,
+		queueLock: &sync.Mutex{},
+	}, nil
 }

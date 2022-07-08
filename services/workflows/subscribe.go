@@ -21,7 +21,6 @@ import (
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
-	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -33,121 +32,64 @@ var (
 )
 
 type subscriber struct {
-	subs map[string]*nats.Subscription
 }
 
 func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflowEventsServer) error {
 	doneCh := make(chan bool)
 	stopCh := make(chan bool)
 	errCh := make(chan error)
-	maxWorkflows := uint64(0)
-	workflowsProcessed := uint64(0)
 
-	workflowTickerInterval := time.Second * 5
-	workflowTicker := time.NewTicker(workflowTickerInterval)
-	defer workflowTicker.Stop()
+	req, err := stream.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
-	go func() {
-		for {
-			req, err := stream.Recv()
-			if err == io.EOF {
-				return
+	ctx := stream.Context()
+	pCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	switch v := req.GetRequest().(type) {
+	case *api.SubscribeWorkflowEventsRequest_Info:
+		info := v.Info
+		logrus.Debugf("received workflow subscriber request: %+v", info)
+
+		if err := s.registerProcessor(info); err != nil {
+			if err := stream.Send(&api.WorkflowEvent{
+				Event: &api.WorkflowEvent_Close{
+					Close: &api.WorkflowCloseEvent{
+						Error: &api.WorkflowError{
+							Error: err.Error(),
+						},
+					},
+				},
+			}); err != nil {
+				logrus.WithError(err).Errorf("error registering process %s", info.ID)
 			}
-			if err != nil {
+			return err
+		}
+
+		logrus.Debugf("worker max workflows: %d", info.MaxWorkflows)
+
+		go func() {
+			defer func() {
+				s.unRegisterProcessor(info)
+				doneCh <- true
+			}()
+
+			if err := s.processQueue(pCtx, info, stream, info.MaxWorkflows); err != nil {
 				errCh <- err
 				return
 			}
-
-			ctx := stream.Context()
-			switch v := req.GetRequest().(type) {
-			case *api.SubscribeWorkflowEventsRequest_Info:
-				info := v.Info
-				logrus.Debugf("received workflow subscriber request: %+v", info)
-
-				if err := s.registerProcessor(info); err != nil {
-					if err := stream.Send(&api.WorkflowEvent{
-						Event: &api.WorkflowEvent_Close{
-							Close: &api.WorkflowCloseEvent{
-								Error: &api.WorkflowError{
-									Error: err.Error(),
-								},
-							},
-						},
-					}); err != nil {
-						logrus.WithError(err).Errorf("error registering process %s", info.ID)
-					}
-					doneCh <- true
-					return
-				}
-
-				maxWorkflows = info.MaxWorkflows
-
-				logrus.Debugf("worker max workflows: %d", info.MaxWorkflows)
-
-				go func() {
-					defer func() {
-						s.unRegisterProcessor(info)
-						doneCh <- true
-					}()
-
-					for {
-						select {
-						case <-workflowTicker.C:
-							if err := s.handleNextMessage(ctx, info, stream); err != nil {
-								logrus.WithError(err).Error("error handling next message")
-								return
-							}
-						case <-stopCh:
-							logrus.Infof("worker disconnected: %s", info.ID)
-							return
-						}
-					}
-				}()
-			case *api.SubscribeWorkflowEventsRequest_Ack:
-				ack := v.Ack
-				logrus.Debugf("processor ACK'd workflow %s", ack.ID)
-				uCtx := context.WithValue(context.Background(), flow.CtxNamespaceKey, ack.Namespace)
-				workflow, err := s.ds.GetWorkflow(uCtx, ack.ID)
-				if err != nil {
-					errCh <- err
-					return
-				}
-
-				workflow.Status = ack.Status
-				if err := s.ds.UpdateWorkflow(uCtx, workflow); err != nil {
-					errCh <- err
-					return
-				}
-			case *api.SubscribeWorkflowEventsRequest_Output:
-				logrus.Debugf("received workflow output: %+v", v.Output)
-
-				if err := s.updateWorkflowOutput(ctx, v.Output); err != nil {
-					logrus.WithError(err).Errorf("error updating workflow output for %s", v.Output.ID)
-				}
-
-				// check for max processed jobs
-				workflowsProcessed += 1
-				if maxWorkflows != 0 && workflowsProcessed >= maxWorkflows {
-					logrus.Infof("worker reached max workflows (%d), exiting", maxWorkflows)
-					if err := stream.Send(&api.WorkflowEvent{
-						Event: &api.WorkflowEvent_Close{},
-					}); err != nil {
-						logrus.WithError(err).Errorf("error sending close to", v.Output.ID)
-					}
-					doneCh <- true
-					return
-				}
-
-			default:
-				errCh <- fmt.Errorf("unknown request type %s", v)
-				return
-			}
-		}
-	}()
+		}()
+	}
 
 	select {
 	case err := <-errCh:
 		stopCh <- true
+		cancel()
 		return err
 	case <-doneCh:
 	}
@@ -155,64 +97,131 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 	return nil
 }
 
-func (s *service) handleNextMessage(ctx context.Context, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
+func (s *service) processQueue(ctx context.Context, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer, maxWorkflows uint64) error {
 	if info.Scope == nil || info.Scope.Scope == nil {
 		return fmt.Errorf("Scope not defined")
 	}
-	ns := ""
-	switch v := info.Scope.Scope.(type) {
-	case *api.ProcessorScope_Global:
-		ns = "global"
-	case *api.ProcessorScope_Namespace:
-		ns = v.Namespace
-	}
-	task, err := s.queueClient.Pull(ctx, ns, info.Type)
-	if err != nil {
-		return err
-	}
-	if task == nil {
-		return nil
-	}
 
-	ns, id, err := parseWorkflowQueueValue(task.Data)
-	if err != nil {
-		return err
-	}
+	workflowTickerInterval := time.Second * 5
+	workflowTicker := time.NewTicker(workflowTickerInterval)
+	defer workflowTicker.Stop()
 
-	uCtx := context.WithValue(ctx, flow.CtxNamespaceKey, ns)
-	workflow, err := s.ds.GetWorkflow(uCtx, id)
-	if err != nil {
-		return err
-	}
+	errCh := make(chan error)
+	doneCh := make(chan bool)
 
-	logrus.Debugf("received worker workflow %s", workflow.ID)
+	processed := uint64(0)
+	go func() {
+	HANDLE:
+		for range workflowTicker.C {
+			workflow, err := s.ds.GetNextQueueWorkflow(ctx, info.Type, info.Scope)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					errCh <- err
+					return
+				}
+				logrus.WithError(err).Error("error getting next queue workflow")
+				continue
+			}
+			if workflow == nil {
+				continue
+			}
 
-	// check if job is in job failed cache
-	if kv := s.failedWorkflowCache.Get(workflow.ID); kv != nil {
-		// TODO: store fail count in datastore to determine max number of failures for a single workflow
-		// requeue
-		v := getWorkflowQueueValue(workflow)
-		if err := s.queueClient.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
-			return err
+			logrus.Debugf("received worker workflow %s", workflow.ID)
+
+			// check if job is in job failed cache
+			if kv := s.failedWorkflowCache.Get(workflow.ID); kv != nil {
+				// TODO: store fail count in datastore to determine max number of failures for a single workflow
+				logrus.Warnf("workflow %s is in failed cache; requeueing for another worker", workflow.ID)
+				continue
+			}
+
+			// user context for updating workflow to original
+			logrus.Debugf("sending workflow to subscriber %s", info.ID)
+			if err := stream.Send(&api.WorkflowEvent{
+				Event: &api.WorkflowEvent_Workflow{
+					Workflow: workflow,
+				},
+			}); err != nil {
+				// TODO: requeue?
+				logrus.WithError(err).Errorf("error sending workflow to processor %s", info.Type)
+				continue
+			}
+
+			for {
+				req, err := stream.Recv()
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					errCh <- err
+					return
+				}
+
+				ctx := stream.Context()
+				switch v := req.GetRequest().(type) {
+				case *api.SubscribeWorkflowEventsRequest_Ack:
+					ack := v.Ack
+					logrus.Debugf("processor ACK'd workflow %s", ack.ID)
+					uCtx := context.WithValue(context.Background(), flow.CtxNamespaceKey, ack.Namespace)
+					workflow, err := s.ds.GetWorkflow(uCtx, ack.ID)
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					workflow.Status = ack.Status
+					if err := s.ds.UpdateWorkflow(uCtx, workflow); err != nil {
+						errCh <- err
+						return
+					}
+				case *api.SubscribeWorkflowEventsRequest_Output:
+					logrus.Debugf("received workflow output: %+v", v.Output)
+
+					if err := s.updateWorkflowOutput(ctx, v.Output); err != nil {
+						logrus.WithError(err).Errorf("error updating workflow output for %s", v.Output.ID)
+					}
+				case *api.SubscribeWorkflowEventsRequest_Complete:
+					c := v.Complete
+					logrus.Debugf("processor completed workflow %s", c.ID)
+					uCtx := context.WithValue(context.Background(), flow.CtxNamespaceKey, c.Namespace)
+					workflow, err := s.ds.GetWorkflow(uCtx, c.ID)
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					workflow.Status = c.Status
+					if err := s.ds.UpdateWorkflow(uCtx, workflow); err != nil {
+						errCh <- err
+						return
+					}
+
+					// check for max processed jobs
+					processed += 1.0
+					if maxWorkflows != 0 && processed >= maxWorkflows {
+						logrus.Infof("worker reached max workflows (%d), exiting", maxWorkflows)
+						if err := stream.Send(&api.WorkflowEvent{
+							Event: &api.WorkflowEvent_Close{},
+						}); err != nil {
+							logrus.WithError(err).Errorf("error sending close to worker %s", c.NodeID)
+						}
+						doneCh <- true
+						return
+					}
+					continue HANDLE
+				default:
+					errCh <- fmt.Errorf("unknown request type %s", v)
+					return
+				}
+			}
 		}
-		return fmt.Errorf("workflow %s is in failed cache; requeueing for another worker", workflow.ID)
-	}
+	}()
 
-	// TODO: check if workflow depends on another workflow output and wait until it is complete
-
-	// user context for updating workflow to original
-	logrus.Debugf("sending workflow to subscriber %s", info.ID)
-	if err := stream.Send(&api.WorkflowEvent{
-		Event: &api.WorkflowEvent_Workflow{
-			Workflow: workflow,
-		},
-	}); err != nil {
-		// requeue
-		v := getWorkflowQueueValue(workflow)
-		if err := s.queueClient.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
-			return err
-		}
-		return errors.Wrapf(err, "error sending workflow to processor %s", info.Type)
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		return err
+	case <-doneCh:
 	}
 
 	return nil

@@ -11,16 +11,30 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package queue
+package workflows
 
 import (
-	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func (q *Queue) Delete(ctx context.Context, namespace, queueName string, data []byte, priority Priority) error {
-	k := getQueueName(namespace, queueName, priority)
-	if err := q.redisClient.LRem(ctx, k, int64(1), data).Err(); err != nil {
-		return err
+func TestWorkflowsSQLValueScan(t *testing.T) {
+	w := &Workflow{
+		ID:   "12345",
+		Type: "dev.flow.test",
 	}
-	return nil
+
+	v, err := w.Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	x := &Workflow{}
+	if err := x.Scan(v.([]byte)); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, w.ID, x.ID, "expected ID to be equal")
+	assert.Equal(t, w.Type, x.Type, "expected Type to be equal")
 }

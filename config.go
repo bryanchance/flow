@@ -46,6 +46,9 @@ const (
 	CtxNamespaceKey = "namespace"
 	// CtxDefaultNamespace is the default key used when unauthenticated and no auth
 	CtxDefaultNamespace = "default"
+
+	// GRPCMaxMessagSize is the max message size when sending over GRPC
+	GRPCMaxMessageSize = 32 * 1024 * 1024
 )
 
 type duration struct {
@@ -95,8 +98,8 @@ type Config struct {
 	S3Bucket string
 	// S3UseSSL enables SSL for the S3 service
 	S3UseSSL bool
-	// DatabaseAddress is the address of the database
-	DatabaseAddress string
+	// DatastoreAddress is the address of the datastore
+	DatastoreAddress string
 	// QueueAddress is the address of the queue
 	QueueAddress string
 	// ProfilerAddress enables the performance profiler on the specified address
@@ -115,9 +118,9 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCAddress:     "127.0.0.1:8080",
-		DatabaseAddress: "redis://127.0.0.1:6379/0",
-		ProfilerAddress: "",
+		GRPCAddress:      "127.0.0.1:8080",
+		DatastoreAddress: "redis://127.0.0.1:6379/0",
+		ProfilerAddress:  "",
 	}
 }
 

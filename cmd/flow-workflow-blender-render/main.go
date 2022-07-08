@@ -23,7 +23,7 @@ import (
 
 const (
 	workflowName = "flow-workflow-blender-render"
-	workflowType = "dev.ehazlett.flow.render"
+	workflowType = "dev.ehazlett.flow.blender/render"
 )
 
 func main() {
