@@ -24,6 +24,8 @@ import (
 	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -228,6 +230,11 @@ func (s *service) registerProcessor(p *api.ProcessorInfo) error {
 	logrus.Debugf("adding %s (%s) to processors", p.ID, p.Type)
 	p.StartedAt = time.Now()
 	s.processors[processorID] = p
+
+	workflowProcessors.With(prometheus.Labels{
+		"type": p.Type,
+	}).Inc()
+
 	return nil
 }
 
@@ -240,6 +247,10 @@ func (s *service) unRegisterProcessor(p *api.ProcessorInfo) {
 		logrus.Debugf("removing %s (%s) from processors", p.ID, p.Type)
 		delete(s.processors, processorID)
 	}
+
+	workflowProcessors.With(prometheus.Labels{
+		"type": p.Type,
+	}).Dec()
 }
 
 func (s *service) updateWorkflowOutput(ctx context.Context, o *api.WorkflowOutput) error {

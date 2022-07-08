@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"runtime"
 	"runtime/pprof"
 	"strings"
@@ -41,6 +42,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
@@ -209,6 +211,15 @@ func (s *Server) Run() error {
 	l, err := net.Listen("tcp", s.config.GRPCAddress)
 	if err != nil {
 		return err
+	}
+
+	if addr := s.config.MetricsAddress; addr != "" {
+		http.Handle("/metrics", promhttp.Handler())
+		go func() {
+			if err := http.ListenAndServe(addr, nil); err != nil {
+				logrus.WithError(err).Errorf("error starting metrics server on %s", addr)
+			}
+		}()
 	}
 
 	doneCh := make(chan bool)
