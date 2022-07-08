@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -42,6 +45,7 @@ var workflowsCommand = &cli.Command{
 		workflowsProcessorsCommand,
 		workflowsListCommand,
 		workflowsInfoCommand,
+		workflowsOutputCommand,
 		workflowsDeleteCommand,
 	},
 }
@@ -387,6 +391,88 @@ var workflowsDeleteCommand = &cli.Command{
 		}
 
 		return nil
+	},
+}
+
+var workflowsOutputCommand = &cli.Command{
+	Name:      "output",
+	Usage:     "get workflow output file",
+	ArgsUsage: "[ID] [NAME] [LOCAL-FILENAME | - (for stdout)]",
+	Action: func(clix *cli.Context) error {
+		id := clix.Args().Get(0)
+		if id == "" {
+			return fmt.Errorf("id must be specified")
+		}
+		filename := clix.Args().Get(1)
+		if filename == "" {
+			return fmt.Errorf("filename must be specified")
+		}
+		localFilename := clix.Args().Get(2)
+		if localFilename == "" {
+			return fmt.Errorf("local filename must be specified")
+		}
+
+		ctx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := getClient(clix)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		buf := bytes.Buffer{}
+		fileSize := 0
+
+		stream, err := client.GetWorkflowOutputArtifact(ctx, &api.GetWorkflowOutputArtifactRequest{
+			ID:   id,
+			Name: filename,
+		})
+		for {
+			req, err := stream.Recv()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return status.Errorf(codes.Unknown, "error receiving workflow output content: %s", err)
+			}
+			if err == io.EOF {
+				break
+			}
+			c := req.GetChunkData()
+			if err != nil {
+				logrus.Error(err)
+				return status.Errorf(codes.Unknown, "error receiving chunk data: %s", err)
+			}
+
+			fileSize += len(c)
+
+			if _, err := buf.Write(c); err != nil {
+				logrus.Error(err)
+				return status.Errorf(codes.Internal, "error saving workflow data: %s", err)
+			}
+		}
+
+		if localFilename == "-" {
+			if _, err := buf.WriteTo(os.Stdout); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		outputFile, err := os.Create(localFilename)
+		if err != nil {
+			return err
+		}
+		if _, err := buf.WriteTo(outputFile); err != nil {
+			return err
+		}
+		outputFile.Close()
+
+		return nil
+
 	},
 }
 

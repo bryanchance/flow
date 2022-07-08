@@ -25,6 +25,7 @@ service Workflows {
         rpc UploadWorkflowArtifact(stream UploadWorkflowArtifactRequest) returns (UploadWorkflowArtifactResponse);
         rpc UpdateWorkflowStatus(UpdateWorkflowStatusRequest) returns (google.protobuf.Empty);
         rpc UpdateWorkflowOutput(UpdateWorkflowOutputRequest) returns (google.protobuf.Empty);
+        rpc GetWorkflowOutputArtifact(GetWorkflowOutputArtifactRequest) returns (stream WorkflowOutputArtifactContents);
 
         rpc ListWorkflowProcessors(ListWorkflowProcessorsRequest) returns (ListWorkflowProcessorsResponse);
 }
@@ -54,6 +55,18 @@ message WorkflowOutputArtifact {
 message WorkflowOutputMetadata {
         string thumbnail = 1;
         repeated WorkflowOutputLink links = 2;
+}
+
+message GetWorkflowOutputArtifactRequest {
+        string id = 1 [(gogoproto.customname) = "ID"];
+        string name = 2;
+}
+
+message WorkflowOutputArtifactContents {
+        oneof data {
+                WorkflowOutputArtifact artifact = 1;
+                bytes chunk_data = 2;
+        }
 }
 
 message WorkflowOutput {
