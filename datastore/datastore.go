@@ -55,7 +55,7 @@ func NewDatastore(cfg *flow.Config) (*Datastore, error) {
 	if err != nil {
 		return nil, err
 	}
-	redisOpts.PoolSize = 256
+	redisOpts.PoolSize = 64
 	rdb := redis.NewClient(redisOpts)
 
 	return &Datastore{

@@ -32,11 +32,6 @@ import (
 )
 
 func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error {
-	workflowQueue, err := queue.NewQueue(s.config.QueueAddress)
-	if err != nil {
-		return err
-	}
-
 	logrus.Debug("processing queue request")
 	req, err := stream.Recv()
 	if err != nil {
@@ -157,7 +152,7 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	}
 
 	v := getWorkflowQueueValue(workflow)
-	if err := workflowQueue.Schedule(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
+	if err := s.queueClient.Schedule(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
 		return err
 	}
 

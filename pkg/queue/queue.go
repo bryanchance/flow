@@ -54,6 +54,15 @@ func NewQueue(redisAddr string) (*Queue, error) {
 	}, nil
 }
 
+func (q *Queue) Close() error {
+	if q.redisClient != nil {
+		if err := q.redisClient.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func getQueueName(namespace, name string, priority Priority) string {
 	return fmt.Sprintf("%s/queue/%s/%s.%s", dbPrefix, namespace, name, priority)
 }

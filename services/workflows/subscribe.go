@@ -21,7 +21,6 @@ import (
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
-	"github.com/ehazlett/flow/pkg/queue"
 	nats "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -45,11 +44,6 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 	workflowTickerInterval := time.Second * 5
 	workflowTicker := time.NewTicker(workflowTickerInterval)
 	defer workflowTicker.Stop()
-
-	workflowQueue, err := queue.NewQueue(s.config.QueueAddress)
-	if err != nil {
-		return err
-	}
 
 	go func() {
 		for {
@@ -97,7 +91,7 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 					for {
 						select {
 						case <-workflowTicker.C:
-							if err := s.handleNextMessage(ctx, workflowQueue, info, stream); err != nil {
+							if err := s.handleNextMessage(ctx, info, stream); err != nil {
 								logrus.WithError(err).Error("error handling next message")
 								return
 							}
@@ -159,7 +153,7 @@ func (s *service) SubscribeWorkflowEvents(stream api.Workflows_SubscribeWorkflow
 	return nil
 }
 
-func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
+func (s *service) handleNextMessage(ctx context.Context, info *api.ProcessorInfo, stream api.Workflows_SubscribeWorkflowEventsServer) error {
 	if info.Scope == nil || info.Scope.Scope == nil {
 		return fmt.Errorf("Scope not defined")
 	}
@@ -170,7 +164,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 	case *api.ProcessorScope_Namespace:
 		ns = v.Namespace
 	}
-	task, err := q.Pull(ctx, ns, info.Type)
+	task, err := s.queueClient.Pull(ctx, ns, info.Type)
 	if err != nil {
 		return err
 	}
@@ -196,7 +190,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 		// TODO: store fail count in datastore to determine max number of failures for a single workflow
 		// requeue
 		v := getWorkflowQueueValue(workflow)
-		if err := q.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
+		if err := s.queueClient.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
 			return err
 		}
 		return fmt.Errorf("workflow %s is in failed cache; requeueing for another worker", workflow.ID)
@@ -213,7 +207,7 @@ func (s *service) handleNextMessage(ctx context.Context, q *queue.Queue, info *a
 	}); err != nil {
 		// requeue
 		v := getWorkflowQueueValue(workflow)
-		if err := q.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
+		if err := s.queueClient.Schedule(ctx, workflow.Namespace, info.Type, v, task.Priority); err != nil {
 			return err
 		}
 		return errors.Wrapf(err, "error sending workflow to processor %s", info.Type)

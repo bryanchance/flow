@@ -12,7 +12,7 @@ BUILD?=-d
 VERSION?=dev
 BUILD_ARGS?=
 PACKAGES=$(shell go list ./... | grep -v -e /vendor/)
-WORKFLOWS=$(wildcard cmd/flow-workflow-*)
+PROCESSORS=$(wildcard cmd/flow-workflow-*)
 CYCLO_PACKAGES=$(shell go list ./... | grep -v /vendor/ | sed "s/github.com\/$(NAMESPACE)\/$(APP)\///g" | tail -n +2)
 VAB_ARGS?=
 CWD=$(PWD)
@@ -27,9 +27,9 @@ protos:
 	@>&2 echo " -> building protobufs for grpc"
 	@echo ${PACKAGES} | xargs protobuild -quiet
 
-binaries: $(DAEMON) $(CLI) $(WORKFLOWS)
+binaries: $(DAEMON) $(CLI) $(PROCESSORS)
 
-workflows: $(WORKFLOWS)
+processors: $(PROCESSORS)
 
 daemon: $(DAEMON)
 
@@ -39,16 +39,16 @@ bindir:
 	@mkdir -p bin
 
 $(CLI): bindir
-	@>&2 echo " -> building $(CLI) ${COMMIT}${BUILD} (${GOARCH})"
+	@>&2 echo " -> building $(CLI) ${COMMIT}${BUILD} (${GOOS}/${GOARCH})"
 	@cd cmd/$(CLI) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(CLI)$(EXT) .
 
 $(DAEMON): bindir
-	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD} (${GOARCH})"
+	@>&2 echo " -> building $(DAEMON) ${COMMIT}${BUILD} (${GOOS}/${GOARCH})"
 	@if [ "$(GOOS)" = "windows" ]; then echo "ERR: Flow server not supported on windows"; exit; fi; cd cmd/$(DAEMON) && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(DAEMON)$(EXT) .
 
-$(WORKFLOWS): bindir
-	@echo " -> building $(shell basename $@) ${COMMIT}${BUILD} (${GOARCH})"
-	@cd "$@" && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(basename $$@)$(EXT) .
+$(PROCESSORS): bindir
+	@echo " -> building $(shell basename $@) ${COMMIT}${BUILD} (${GOOS}/${GOARCH})"
+	@cd "$@" && CGO_ENABLED=0 go build -mod=mod -installsuffix cgo -ldflags "-w -X $(REPO)/version.GitCommit=$(COMMIT) -X $(REPO)/version.Version=$(VERSION) -X $(REPO)/version.Build=$(BUILD)" -o ../../bin/$(shell basename $@)$(EXT) .
 
 vet:
 	@echo " -> $@"
@@ -66,4 +66,4 @@ test:
 clean:
 	@rm -rf bin/
 
-.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(WORKFLOWS) binaries
+.PHONY: protos clean docs check test install $(DAEMON) $(CLI) $(PROCESSORS) binaries

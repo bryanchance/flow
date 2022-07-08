@@ -22,5 +22,6 @@ func (q *Queue) Schedule(ctx context.Context, namespace, queueName string, data 
 	if err := q.redisClient.RPush(ctx, k, data).Err(); err != nil {
 		return err
 	}
+
 	return nil
 }

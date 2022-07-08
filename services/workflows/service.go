@@ -24,6 +24,7 @@ import (
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
 	"github.com/ehazlett/flow/datastore"
 	"github.com/ehazlett/flow/pkg/auth"
+	"github.com/ehazlett/flow/pkg/queue"
 	"github.com/ehazlett/flow/services"
 	"github.com/ehazlett/ttlcache"
 	ptypes "github.com/gogo/protobuf/types"
@@ -48,6 +49,7 @@ var (
 type service struct {
 	config              *flow.Config
 	storageClient       *minio.Client
+	queueClient         *queue.Queue
 	ds                  *datastore.Datastore
 	authenticator       auth.Authenticator
 	events              *emitter.Emitter
@@ -76,9 +78,15 @@ func New(cfg *flow.Config) (services.Service, error) {
 		return nil, err
 	}
 
+	queueClient, err := queue.NewQueue(cfg.QueueAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	return &service{
 		config:              cfg,
 		storageClient:       mc,
+		queueClient:         queueClient,
 		ds:                  ds,
 		events:              &emitter.Emitter{},
 		processors:          make(map[string]*api.ProcessorInfo),
@@ -110,6 +118,11 @@ func (s *service) Start() error {
 }
 
 func (s *service) Stop() error {
+	if s.queueClient != nil {
+		if err := s.queueClient.Close(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

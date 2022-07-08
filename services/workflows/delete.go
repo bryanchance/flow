@@ -17,7 +17,6 @@ import (
 	"context"
 
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
-	"github.com/ehazlett/flow/pkg/queue"
 	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/sirupsen/logrus"
@@ -31,19 +30,13 @@ func (s *service) DeleteWorkflow(ctx context.Context, r *api.DeleteWorkflowReque
 
 	logrus.Debugf("deleting workflow %s", workflow.ID)
 
-	// delete from queue
-	workflowQueue, err := queue.NewQueue(s.config.QueueAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	priority, err := getWorkflowQueuePriority(workflow.Priority)
 	if err != nil {
 		return nil, err
 	}
 
 	v := getWorkflowQueueValue(workflow)
-	if err := workflowQueue.Delete(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
+	if err := s.queueClient.Delete(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
 		return nil, err
 	}
 
