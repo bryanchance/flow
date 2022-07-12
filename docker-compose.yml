@@ -1,16 +1,18 @@
 version: "3.9"
 services:
-  redis:
-    image: docker.io/library/redis:latest
-    ports:
-      - 6379:6379
-
   postgres:
     image: docker.io/library/postgres:14-alpine
     environment:
       - "POSTGRES_USER=flow"
       - "POSTGRES_PASSWORD=flow"
       - "POSTGRES_DB=flow"
+    volumes:
+      - ./hack/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - 5432:5432
 
@@ -41,8 +43,7 @@ services:
         S3AccessKey = "minioadmin"
         S3Bucket = "flow"
         S3UseSSL = false
-        DatabaseAddress = "redis://redis:6379/0"
-        QueueAddress = "redis://redis:6379/0"
+        DatastoreAddress = "postgres://flow:flow@postgres:5432/flow?sslmode=disable"
         InitialAdminPassword = "flow"
         [Authenticator]
           Name = "token"
@@ -51,4 +52,4 @@ services:
     command: ["-D", "server", "-c", "/etc/flow.toml"]
     depends_on:
       - minio
-      - redis
+      - postgres

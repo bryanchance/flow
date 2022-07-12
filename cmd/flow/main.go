@@ -14,7 +14,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -58,7 +57,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 }
 
