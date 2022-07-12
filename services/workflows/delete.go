@@ -29,14 +29,7 @@ func (s *service) DeleteWorkflow(ctx context.Context, r *api.DeleteWorkflowReque
 	}
 
 	logrus.Debugf("deleting workflow %s", workflow.ID)
-
-	priority, err := getWorkflowQueuePriority(workflow.Priority)
-	if err != nil {
-		return nil, err
-	}
-
-	v := getWorkflowQueueValue(workflow)
-	if err := s.queueClient.Delete(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
+	if err := s.ds.DeleteQueueWorkflow(ctx, workflow.ID); err != nil {
 		return nil, err
 	}
 

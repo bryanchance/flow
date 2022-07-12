@@ -92,7 +92,9 @@ func NewServer(cfg *flow.Config) (*Server, error) {
 	defer tp.Shutdown(ctx)
 
 	grpcOpts := []grpc.ServerOption{
-		grpc.MaxMsgSize(10 * 1024 * 1024),
+		grpc.MaxMsgSize(flow.GRPCMaxMessageSize),
+		grpc.MaxSendMsgSize(flow.GRPCMaxMessageSize),
+		grpc.MaxRecvMsgSize(flow.GRPCMaxMessageSize),
 	}
 	if cfg.TLSServerCertificate != "" && cfg.TLSServerKey != "" {
 		logrus.WithFields(logrus.Fields{
@@ -122,7 +124,7 @@ func NewServer(cfg *flow.Config) (*Server, error) {
 	unaryServerInterceptors := []grpc.UnaryServerInterceptor{}
 	streamServerInterceptors := []grpc.StreamServerInterceptor{}
 
-	ds, err := datastore.NewDatastore(cfg)
+	ds, err := datastore.NewDatastore(cfg.DatastoreAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
 	}

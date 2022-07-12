@@ -11,18 +11,34 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package queue
+package workflows
 
 import (
-	"fmt"
-	"testing"
+	"bytes"
+	"database/sql/driver"
+
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/pkg/errors"
 )
 
-func TestGetQueueName(t *testing.T) {
-	ns := "testns"
-	name := "test"
-	expected := fmt.Sprintf("%s/queue/%s/%s.normal", dbPrefix, ns, name)
-	if v := getQueueName(ns, name, NORMAL); v != expected {
-		t.Fatalf("expected %q; received %q", expected, v)
+func (w *Workflow) Value() (driver.Value, error) {
+	buf := bytes.Buffer{}
+	if err := marshaler().Marshal(&buf, w); err != nil {
+		return nil, err
 	}
+	return buf.Bytes(), nil
+}
+
+func (w *Workflow) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	buf := bytes.NewReader(b)
+	return jsonpb.Unmarshal(buf, w)
+}
+
+func marshaler() *jsonpb.Marshaler {
+	return &jsonpb.Marshaler{EmitDefaults: true}
 }

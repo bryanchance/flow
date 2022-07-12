@@ -34,8 +34,3 @@ func (s *service) UpdateWorkflowStatus(ctx context.Context, req *api.UpdateWorkf
 
 	return empty, nil
 }
-
-func (s *service) UpdateWorkflowOutput(ctx context.Context, req *api.UpdateWorkflowOutputRequest) (*ptypes.Empty, error) {
-	// TODO
-	return empty, nil
-}

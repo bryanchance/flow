@@ -145,19 +145,6 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 	output.Duration = processorOutput.Duration
 	output.Log = processorOutput.Log
 
-	// update status
-	if err := stream.Send(&api.SubscribeWorkflowEventsRequest{
-		Request: &api.SubscribeWorkflowEventsRequest_Ack{
-			Ack: &api.WorkflowAck{
-				ID:        w.ID,
-				Namespace: w.Namespace,
-				Status:    status,
-			},
-		},
-	}); err != nil {
-		return errors.Wrapf(err, "error updating workflow status for %s", w.ID)
-	}
-
 	// handle artifacts
 	if dir := processorOutput.OutputDir; dir != "" {
 		artifacts, err := h.uploadOutputDir(ctx, w, dir)
@@ -176,6 +163,21 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 		},
 	}); err != nil {
 		return errors.Wrapf(err, "error updating workflow output for %s", w.ID)
+	}
+
+	// update status
+	logrus.Debugf("sending complete request for %s", w.ID)
+	if err := stream.Send(&api.SubscribeWorkflowEventsRequest{
+		Request: &api.SubscribeWorkflowEventsRequest_Complete{
+			Complete: &api.WorkflowComplete{
+				ID:        w.ID,
+				Namespace: w.Namespace,
+				Status:    status,
+				NodeID:    h.cfg.ID,
+			},
+		},
+	}); err != nil {
+		return errors.Wrapf(err, "error completing workflow status for %s", w.ID)
 	}
 
 	return nil

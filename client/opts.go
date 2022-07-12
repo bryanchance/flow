@@ -49,3 +49,10 @@ func WithNamespace(ns string) ClientOpt {
 		c.Namespace = ns
 	}
 }
+
+// WithInsecure is an opt to set insecure for GRPC
+func WithInsecure() ClientOpt {
+	return func(c *ClientConfig) {
+		c.Insecure = true
+	}
+}

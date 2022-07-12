@@ -44,6 +44,7 @@ type ClientConfig struct {
 	Token        string
 	APIToken     string
 	ServiceToken string
+	Insecure     bool
 }
 
 func NewClient(cfg *flow.Config, clientOpts ...ClientOpt) (*Client, error) {
@@ -60,11 +61,16 @@ func NewClient(cfg *flow.Config, clientOpts ...ClientOpt) (*Client, error) {
 		return nil, err
 	}
 
-	if len(opts) == 0 {
-		opts = []grpc.DialOption{
-			grpc.WithInsecure(),
-		}
+	if clientConfig.Insecure {
+		opts = append(opts, grpc.WithInsecure())
 	}
+
+	opts = append(opts,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(flow.GRPCMaxMessageSize),
+			grpc.MaxCallSendMsgSize(flow.GRPCMaxMessageSize),
+		),
+	)
 
 	// interceptors
 	unaryClientInterceptors := []grpc.UnaryClientInterceptor{}

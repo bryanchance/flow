@@ -15,7 +15,7 @@ package workflows
 
 import (
 	"bytes"
-	"fmt"
+	"context"
 	"io"
 	"os"
 	"path"
@@ -24,7 +24,7 @@ import (
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
-	"github.com/ehazlett/flow/pkg/queue"
+	ptypes "github.com/gogo/protobuf/types"
 	minio "github.com/minio/minio-go/v7"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -71,7 +71,6 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	logrus.Debugf("processing workflow input %+v", workflowReq)
 	switch v := workflowReq.Input.(type) {
 	case *api.WorkflowRequest_Workflows:
-		// TODO: get input workflow id storage path
 		wi := []*api.WorkflowInputWorkflow{}
 		for _, i := range v.Workflows.WorkflowInputs {
 			// if no namespace is specified, use current
@@ -149,19 +148,13 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 
 	// queue workflow
 	logrus.Debugf("publishing workflow %s", workflow)
-	priority, err := getWorkflowQueuePriority(workflow.Priority)
-	if err != nil {
-		return err
-	}
-
-	v := getWorkflowQueueValue(workflow)
-	if err := s.queueClient.Schedule(ctx, workflow.Namespace, workflow.Type, v, priority); err != nil {
+	if err := s.ds.CreateQueueWorkflow(ctx, workflow); err != nil {
 		return err
 	}
 
 	// persist workflow to ds
 	logrus.Debugf("saving workflow %s to ds", workflow.ID)
-	if err := s.ds.UpdateWorkflow(ctx, workflow); err != nil {
+	if err := s.ds.CreateWorkflow(ctx, workflow); err != nil {
 		return err
 	}
 
@@ -182,14 +175,20 @@ func (s *service) QueueWorkflow(stream api.Workflows_QueueWorkflowServer) error 
 	return nil
 }
 
-func getWorkflowQueuePriority(p api.WorkflowPriority) (queue.Priority, error) {
-	switch p {
-	case api.WorkflowPriority_LOW:
-		return queue.LOW, nil
-	case api.WorkflowPriority_NORMAL:
-		return queue.NORMAL, nil
-	case api.WorkflowPriority_URGENT:
-		return queue.URGENT, nil
+func (s *service) RequeueWorkflow(ctx context.Context, r *api.RequeueWorkflowRequest) (*ptypes.Empty, error) {
+	workflow, err := s.ds.GetWorkflow(ctx, r.ID)
+	if err != nil {
+		return nil, err
 	}
-	return queue.UNKNOWN, fmt.Errorf("unknown queue priority type %s", p)
+
+	workflow.Status = api.WorkflowStatus_PENDING
+	if err := s.ds.UpdateWorkflow(ctx, workflow); err != nil {
+		return nil, err
+	}
+
+	if err := s.ds.CreateQueueWorkflow(ctx, workflow); err != nil {
+		return nil, err
+	}
+
+	return empty, nil
 }

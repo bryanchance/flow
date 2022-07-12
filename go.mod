@@ -13,6 +13,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/jaypipes/ghw v0.8.0
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lib/pq v1.10.6
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats-server/v2 v2.8.4 // indirect

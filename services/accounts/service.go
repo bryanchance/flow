@@ -38,11 +38,11 @@ var (
 type service struct {
 	config        *flow.Config
 	authenticator auth.Authenticator
-	ds            *datastore.Datastore
+	ds            datastore.Datastore
 }
 
 func New(cfg *flow.Config) (services.Service, error) {
-	ds, err := datastore.NewDatastore(cfg)
+	ds, err := datastore.NewDatastore(cfg.DatastoreAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up datastore")
 	}
@@ -75,7 +75,7 @@ func (s *service) Start() error {
 	// check for admin account and create if missing
 	ctx := context.Background()
 	if _, err := s.ds.GetAccount(ctx, "admin"); err != nil {
-		if err != datastore.ErrAccountDoesNotExist {
+		if err != flow.ErrAccountDoesNotExist {
 			return err
 		}
 		// create
