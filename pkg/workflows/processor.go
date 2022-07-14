@@ -21,8 +21,9 @@ import (
 )
 
 type ProcessorConfig struct {
-	Workflow *api.Workflow
-	InputDir string
+	Workflow       *api.Workflow
+	InputDir       string
+	InputWorkflows []*api.Workflow
 }
 
 type ProcessorOutput struct {

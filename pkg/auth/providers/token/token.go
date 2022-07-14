@@ -218,8 +218,19 @@ func (a *TokenAuthenticator) UnaryServerInterceptor(ctx context.Context, req int
 		if serviceToken == nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 		}
+		namespace := ""
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			logrus.Debugf("adding namespace for service token: %q", ns)
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
+
 		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
-		return handler(tCtx, req)
+		fCtx := context.WithValue(tCtx, flow.CtxNamespaceKey, namespace)
+		return handler(fCtx, req)
 	}
 	logrus.Warnf("unauthenticated request from %s (missing token and service token)", peer.Addr)
 	return nil, status.Errorf(codes.Unauthenticated, "invalid or missing token")
@@ -348,8 +359,18 @@ func (a *TokenAuthenticator) StreamServerInterceptor(srv interface{}, stream grp
 		if serviceToken == nil {
 			return status.Errorf(codes.Unauthenticated, "invalid or missing service token")
 		}
+		namespace := ""
+		// if namespace specified in context use it
+		ns, ok := metadata[flow.CtxNamespaceKey]
+		if ok {
+			logrus.Debugf("adding namespace for service token: %q", ns)
+			if v := ns[0]; v != "" {
+				namespace = v
+			}
+		}
 		tCtx := context.WithValue(ctx, flow.CtxServiceTokenKey, serviceToken.Token)
-		s.WrappedContext = tCtx
+		fCtx := context.WithValue(tCtx, flow.CtxNamespaceKey, namespace)
+		s.WrappedContext = fCtx
 		return handler(srv, s)
 	}
 

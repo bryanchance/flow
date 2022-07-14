@@ -13,7 +13,9 @@
 // limitations under the License.
 package workflows
 
-import "time"
+import (
+	"time"
+)
 
 type Config struct {
 	ID                    string

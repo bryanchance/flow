@@ -42,6 +42,9 @@ func (a *clientAuthenticator) authUnaryInterceptor(ctx context.Context, method s
 	if a.cfg.ServiceToken != "" {
 		kvs = append(kvs, flow.CtxServiceTokenKey, a.cfg.ServiceToken)
 	}
+	if a.cfg.Namespace != "" {
+		kvs = append(kvs, flow.CtxNamespaceKey, a.cfg.Namespace)
+	}
 	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return invoker(authCtx, method, req, reply, cc, opts...)
 }
@@ -56,6 +59,9 @@ func (a *clientAuthenticator) authStreamInterceptor(ctx context.Context, desc *g
 	}
 	if a.cfg.ServiceToken != "" {
 		kvs = append(kvs, flow.CtxServiceTokenKey, a.cfg.ServiceToken)
+	}
+	if a.cfg.Namespace != "" {
+		kvs = append(kvs, flow.CtxNamespaceKey, a.cfg.Namespace)
 	}
 	authCtx := metadata.AppendToOutgoingContext(ctx, kvs...)
 	return streamer(authCtx, desc, cc, method, opts...)

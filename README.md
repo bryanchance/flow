@@ -25,8 +25,8 @@ OPTIONS:
 
 ```
 
-# Redis
-[Redis](https://redis.io) is used for database storage for workflow metadata, user accounts, and queueing.
+# PostgreSQL
+[PostgreSQL](https://www.postgresql.org) is used for database storage for workflow metadata, user accounts, and queueing.
 
 # Minio
 [Minio](https://min.io/) is used for workflow input and output storage.  Minio is lightweight

@@ -109,7 +109,6 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 
 	// process
 	status := api.WorkflowStatus_COMPLETE
-	// TODO: move to func to defer os.Remove this temp dir
 	workflowInputDir, err := os.MkdirTemp("", "flow-workflow-")
 	if err != nil {
 		return err
@@ -125,10 +124,24 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 		Namespace: w.Namespace,
 		StartedAt: time.Now(),
 	}
+	// get input workflows and pass to processor
+	inputWorkflows := []*api.Workflow{}
+	switch v := w.Input.(type) {
+	case *api.Workflow_Workflows:
+		for _, x := range v.Workflows.WorkflowInputs {
+			// get workflow
+			iw, err := h.GetInputWorkflow(ctx, x.ID, x.Namespace)
+			if err != nil {
+				return err
+			}
+			inputWorkflows = append(inputWorkflows, iw)
+		}
+	}
 	// get unpacked dir and specify configuration for Process
 	processorOutput, err := h.processor.Process(ctx, &ProcessorConfig{
-		Workflow: w,
-		InputDir: workflowInputDir,
+		Workflow:       w,
+		InputDir:       workflowInputDir,
+		InputWorkflows: inputWorkflows,
 	})
 	if err != nil {
 		logrus.WithError(err).Errorf("error rendering workflow %s", w.ID)

@@ -19,6 +19,7 @@ import (
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/sirupsen/logrus"
 )
 
 func (p *Postgres) GetWorkflows(ctx context.Context) ([]*api.Workflow, error) {
@@ -53,6 +54,7 @@ func (p *Postgres) GetWorkflow(ctx context.Context, id string) (*api.Workflow, e
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debugf("querying workflow %s in ns %s", id, ns)
 	var workflow *api.Workflow
 	if err := p.db.QueryRowContext(ctx, "SELECT workflow FROM workflows WHERE workflow @> json_build_object('id', $1::text, 'namespace', $2::text)::jsonb;", id, ns).Scan(&workflow); err != nil {
 		if err == sql.ErrNoRows {
