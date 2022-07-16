@@ -28,8 +28,8 @@ OPTIONS:
 # PostgreSQL
 [PostgreSQL](https://www.postgresql.org) is used for database storage for workflow metadata, user accounts, and queueing.
 
-# Minio
-[Minio](https://min.io/) is used for workflow input and output storage.  Minio is lightweight
+# MinIO
+[MinIO](https://min.io/) is used for workflow input and output storage.  Minio is lightweight
 and works very well with Flow but any compatible S3 system should work.
 
 # Flow Processors
