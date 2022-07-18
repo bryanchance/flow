@@ -25,6 +25,6 @@ for workflow in $WORKFLOWS; do
     if [ ! -z "${UPDATE_LATEST}" ] && [ "${UPDATE_LATEST}" != "n" ] && [ "${UPDATE_LATEST}" != "N" ]; then
         WORKFLOW_EXTRA="-t ${REGISTRY}/${workflow}:latest"
     fi
-    docker buildx build --build-arg VERSION=${VERSION} --build-arg BUILD=${BUILD} --build-arg WORKFLOW="${workflow}" ${IMAGE_BUILD_EXTRA} -t ${REGISTRY}/${workflow}:${TAG} ${WORKFLOW_EXTRA} ${PUSH} -f cmd/$workflow/Dockerfile .
+    docker buildx build --build-arg VERSION=${VERSION} --build-arg BUILD=${BUILD} --build-arg PROCESSOR="${workflow}" ${IMAGE_BUILD_EXTRA} -t ${REGISTRY}/${workflow}:${TAG} ${WORKFLOW_EXTRA} ${PUSH} -f cmd/$workflow/Dockerfile .
 done
 

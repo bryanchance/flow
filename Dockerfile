@@ -6,7 +6,7 @@ COPY . /src
 WORKDIR /src
 RUN make VERSION=$VERSION BUILD=$BUILD daemon
 
-FROM alpine:3.15
+FROM alpine:3.16
 COPY --from=build /src/bin/flow /usr/bin/flow
 ENTRYPOINT ["/usr/bin/flow"]
 CMD ["-h"]

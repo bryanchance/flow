@@ -7,7 +7,7 @@ COPY . /src
 WORKDIR /src
 RUN make VERSION=$VERSION BUILD=$BUILD cmd/$WORKFLOW
 
-FROM alpine:3.15
+FROM alpine:3.16
 ARG WORKFLOW
 COPY --from=build /src/bin/$WORKFLOW /usr/bin/flow-workflow
 ENTRYPOINT ["/usr/bin/flow-workflow"]
