@@ -12,7 +12,7 @@ RUN apk add -U make git build-base gcc
 WORKDIR /src
 RUN git clone --depth 1 --branch v0.29.2 https://github.com/aquasecurity/trivy && \
 	cd trivy/cmd/trivy/ && \
-	go build -v .
+	CGO_ENABLED=0 go build -v .
 
 FROM alpine:3.16
 ARG PROCESSOR
