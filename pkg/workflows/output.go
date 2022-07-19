@@ -63,6 +63,11 @@ func (h *WorkflowHandler) uploadOutputDir(ctx context.Context, w *api.Workflow, 
 			continue
 		}
 
+		// skip zero length files
+		if fs.Size() == int64(0) {
+			continue
+		}
+
 		contentType, err := flow.GetContentType(rf)
 		if err != nil {
 			return nil, err

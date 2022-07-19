@@ -14,8 +14,12 @@
 package processor
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,8 +68,11 @@ func (p *Processor) processWorkflow(ctx context.Context, cfg *workflows.Processo
 
 	if trivyCfg.Target == "" {
 		logrus.Infof("target not specified; using workflow input dir")
-		// TODO: check for archive (zip, tar.gz, etc) and extract
 		trivyCfg.Target = cfg.InputDir
+		// check for archive (zip, tar.gz, etc) and extract
+		if err := p.extractArchives(ctx, cfg.InputDir); err != nil {
+			return nil, err
+		}
 	}
 
 	// workflow output info
@@ -101,6 +108,128 @@ func (p *Processor) processWorkflow(ctx context.Context, cfg *workflows.Processo
 	logrus.Debugf("workflow complete: %+v", output)
 
 	return output, nil
+}
+
+func (p *Processor) extractArchives(ctx context.Context, inputDir string) error {
+	// TODO
+	tarballArchives, err := filepath.Glob(filepath.Join(inputDir, "*.tar.gz"))
+	if err != nil {
+		return err
+	}
+
+	for _, tb := range tarballArchives {
+		f, err := os.Open(tb)
+		if err != nil {
+			return err
+		}
+		logrus.Debugf("extracting tar.gz: %s to %s", tb, inputDir)
+		if err := p.extractTarGz(ctx, f, inputDir); err != nil {
+			return err
+		}
+	}
+
+	zipArchives, err := filepath.Glob(filepath.Join(inputDir, "*.zip"))
+	if err != nil {
+		return err
+	}
+
+	for _, z := range zipArchives {
+		logrus.Debugf("extracting zip: %s to %s", z, inputDir)
+		if err := p.extractZip(ctx, z, inputDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Processor) extractTarGz(ctx context.Context, r io.Reader, dest string) error {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		header, err := tr.Next()
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if header == nil {
+			continue
+		}
+
+		target := filepath.Join(dest, header.Name)
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+		case tar.TypeReg:
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+
+			f.Close()
+		}
+	}
+
+	return nil
+}
+
+func (p *Processor) extractZip(ctx context.Context, archivePath, dest string) error {
+	zr, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return err
+	}
+	defer zr.Close()
+
+	for _, f := range zr.File {
+		fp := filepath.Join(dest, f.Name)
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fp, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(fp), os.ModePerm); err != nil {
+			return err
+		}
+
+		df, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		af, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(df, af); err != nil {
+			return err
+		}
+
+		df.Close()
+		af.Close()
+	}
+
+	return nil
 }
 
 func parseParameters(w *api.Workflow) (*trivyConfig, error) {

@@ -22,13 +22,6 @@ import (
 )
 
 const (
-	// QueueSubjectJobPriorityNormal is normal priority for workflows
-	QueueSubjectJobPriorityNormal = "normal"
-	// QueueSubjectJobPriorityUrgent is urgent priority for workflows (processed first)
-	QueueSubjectJobPriorityUrgent = "urgent"
-	// QueueSubjectJobPriorityLow is low priority for workflows (processed last)
-	QueueSubjectJobPriorityLow = "low"
-
 	// S3WorkflowPath is the path in the s3 bucket for workflow content
 	S3WorkflowPath = "workflows"
 
@@ -100,8 +93,6 @@ type Config struct {
 	S3UseSSL bool
 	// DatastoreAddress is the address of the datastore
 	DatastoreAddress string
-	// QueueAddress is the address of the queue
-	QueueAddress string
 	// ProfilerAddress enables the performance profiler on the specified address
 	ProfilerAddress string
 	// MetricsAddress enables builtin Prometheus metrics
