@@ -1,0 +1,208 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-minio
+spec:
+  selector:
+    matchLabels:
+      app: flow-minio
+  template:
+    metadata:
+      labels:
+        app: flow-minio
+    spec:
+      containers:
+      - name: minio
+        image: docker.io/minio/minio:latest
+        command: ["/bin/sh"]
+        args: ["-c", "mkdir -p /data/flow && minio server --console-address :9001 /data"]
+        env:
+          - name: MINIO_ROOT_USER
+            value: "minioadmin"
+          - name: MINIO_ROOT_PASSWORD
+            value: "minioadmin"
+        ports:
+        - containerPort: 9000
+          name: app
+        - containerPort: 9001
+          name: console
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 9000
+          periodSeconds: 5
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow-minio
+  labels:
+    app: flow-minio
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+    name: app
+  - port: 9001
+    targetPort: 9001
+    name: console
+  selector:
+    app: flow-minio
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flow-db-sql
+data:
+  db.sql: |
+    --this should match hack/db.sql
+    create table accounts (id serial primary key, account jsonb);
+    create table namespaces (id serial primary key, namespace jsonb);
+    create table workflows (id serial primary key, workflow jsonb);
+    create table servicetokens (id serial primary key, servicetoken jsonb);
+    create table apitokens (id serial primary key, apitoken jsonb);
+    create table queue (id serial primary key, workflow jsonb);
+    create table authenticator (id serial primary key, key varchar, value bytea, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-db
+spec:
+  selector:
+    matchLabels:
+      app: flow-db
+  template:
+    metadata:
+      labels:
+        app: flow-db
+    spec:
+      containers:
+      - name: postgres
+        image: docker.io/library/postgres:14-alpine
+        env:
+          - name: POSTGRES_USER
+            value: "flow"
+          - name: POSTGRES_PASSWORD
+            value: "flow"
+          - name: POSTGRES_DB
+            value: "flow"
+        ports:
+        - containerPort: 5432
+        readinessProbe:
+          tcpSocket:
+            port: 5432
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 5432
+          periodSeconds: 5
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+          - name: flow-db-sql
+            mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: flow-db-sql
+          configMap:
+            name: flow-db-sql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow-db
+  labels:
+    app: flow-db
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: flow-db
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flow-config
+data:
+  config.toml: |
+    GRPCAddress = "0.0.0.0:7080"
+    S3Endpoint = "flow-minio:9000"
+    S3AccessID = "minioadmin"
+    S3AccessKey = "minioadmin"
+    S3Bucket = "flow"
+    S3UseSSL = false
+    DatastoreAddress = "postgres://flow:flow@flow-db:5432/flow?sslmode=disable"
+    InitialAdminPassword = "flow"
+
+    [Authenticator]
+      Name = "token"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow
+spec:
+  selector:
+    matchLabels:
+      app: flow
+  template:
+    metadata:
+      labels:
+        app: flow
+    spec:
+      containers:
+      - name: flow
+        image: docker.io/ehazlett/flow:latest
+        args:
+          - server
+          - -c
+          - /config/config.toml
+        ports:
+        - containerPort: 7080
+        readinessProbe:
+          tcpSocket:
+            port: 7080
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 7080
+          periodSeconds: 5
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+          - name: flow-config
+            mountPath: /config
+      volumes:
+        - name: flow-config
+          configMap:
+            name: flow-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow
+  labels:
+    app: flow
+spec:
+  ports:
+  - port: 7080
+    name: http
+    targetPort: 7080
+  selector:
+    app: flow
