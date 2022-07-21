@@ -72,7 +72,7 @@ var accountsCreateCommand = &cli.Command{
 		},
 	},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ var accountsProfileCommand = &cli.Command{
 	Usage: "view account profile",
 	Flags: []cli.Flag{},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -149,7 +149,7 @@ var accountsChangePasswordCommand = &cli.Command{
 		},
 	},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,7 @@ var accountsGenerateServiceTokenCommand = &cli.Command{
 		},
 	},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -250,7 +250,7 @@ var accountsGenerateAPITokenCommand = &cli.Command{
 		},
 	},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -279,7 +279,7 @@ var accountsListServiceTokensCommand = &cli.Command{
 	Usage: "view service tokens",
 	Flags: []cli.Flag{},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}

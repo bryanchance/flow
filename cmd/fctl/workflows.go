@@ -56,7 +56,7 @@ var workflowsListCommand = &cli.Command{
 	Usage:   "list available workflows",
 	Aliases: []string{"ls"},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ var workflowsProcessorsCommand = &cli.Command{
 	Name:  "processors",
 	Usage: "list available workflow processors",
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ var workflowsQueueCommand = &cli.Command{
 			return fmt.Errorf("only one input file or workflow IDs can be specified")
 		}
 
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ var workflowsInfoCommand = &cli.Command{
 			return fmt.Errorf("workflow ID must be specified")
 		}
 
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -374,7 +374,7 @@ var workflowsRequeueCommand = &cli.Command{
 			return fmt.Errorf("workflow ID must be specified")
 		}
 
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -407,7 +407,7 @@ var workflowsDeleteCommand = &cli.Command{
 			return fmt.Errorf("workflow ID must be specified")
 		}
 
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}
@@ -446,7 +446,7 @@ var workflowsOutputCommand = &cli.Command{
 			return fmt.Errorf("local filename must be specified")
 		}
 
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}

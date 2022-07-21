@@ -35,7 +35,7 @@ var infoVersionCommand = &cli.Command{
 	Usage: "show flow server version",
 	Flags: []cli.Flag{},
 	Action: func(clix *cli.Context) error {
-		ctx, err := getContext()
+		ctx, err := getContext(clix)
 		if err != nil {
 			return err
 		}

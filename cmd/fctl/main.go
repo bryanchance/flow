@@ -88,6 +88,9 @@ func main() {
 		if clix.Bool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
+		if v := clix.String("addr"); v == "" {
+			return fmt.Errorf("addr cannot be empty")
+		}
 		logrus.SetFormatter(&SimpleFormatter{})
 		return nil
 	}

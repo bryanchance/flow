@@ -15,13 +15,44 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/ehazlett/flow"
 	"github.com/ehazlett/flow/client"
 	"github.com/gogo/protobuf/jsonpb"
+	"github.com/mitchellh/go-homedir"
 	cli "github.com/urfave/cli/v2"
 	"google.golang.org/grpc/metadata"
 )
+
+func localConfigPath(endpoint string) (string, error) {
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		return "", err
+	}
+	epHash := flow.GenerateHash(endpoint)
+	return filepath.Join(homeDir, ".flow", fmt.Sprintf("%s.json", epHash)), nil
+}
+
+func getLocalConfig(endpoint string) (*tokenConfig, error) {
+	localPath, err := localConfigPath(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(localPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg *tokenConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
 
 func getClient(clix *cli.Context) (*client.Client, error) {
 	cert := clix.String("cert")
@@ -38,8 +69,9 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 	return client.NewClient(cfg)
 }
 
-func getContext() (context.Context, error) {
-	config, err := getLocalConfig()
+func getContext(clix *cli.Context) (context.Context, error) {
+	endpoint := clix.String("addr")
+	config, err := getLocalConfig(endpoint)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,7 +24,6 @@ import (
 
 	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	infoapi "github.com/ehazlett/flow/api/services/info/v1"
-	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
 	"golang.org/x/term"
@@ -45,6 +43,8 @@ var loginCommand = &cli.Command{
 			return err
 		}
 		defer client.Close()
+
+		endpoint := clix.String("addr")
 
 		v, err := client.Version(ctx, &infoapi.VersionRequest{})
 		if err != nil {
@@ -75,7 +75,7 @@ var loginCommand = &cli.Command{
 			return err
 		}
 
-		localPath, err := localConfigPath()
+		localPath, err := localConfigPath(endpoint)
 		if err != nil {
 			return err
 		}
@@ -92,29 +92,4 @@ var loginCommand = &cli.Command{
 
 		return nil
 	},
-}
-
-func localConfigPath() (string, error) {
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(homeDir, ".flow", "config.json"), nil
-}
-
-func getLocalConfig() (*tokenConfig, error) {
-	localPath, err := localConfigPath()
-	if err != nil {
-		return nil, err
-	}
-	data, err := os.ReadFile(localPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg *tokenConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
 }
