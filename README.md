@@ -1,6 +1,6 @@
 # Flow Distributed Workflow System
 
-[![Docs](https://img.shields.io/badge/Docs-Flow%20Documentation-blue)](https://flow.ehazlett.dev/docs/start/intro) [![Images](https://img.shields.io/badge/Docker-OCI%20Images-9cf)](https://hub.docker.com/search?q=ehazlett%2Fflow)
+[![docs](https://img.shields.io/badge/flow-documentation-blue)](https://flow.ehazlett.dev/docs/start/intro) [![images](https://img.shields.io/badge/docker-oci%20images-9cf)](https://hub.docker.com/search?q=ehazlett%2Fflow) [![Go](https://img.shields.io/badge/Go-reference-green)](https://pkg.go.dev/github.com/ehazlett/flow)
 
 # Flow Server
 The Flow server manages job submissions. It provides a GRPC API that is used by clients
