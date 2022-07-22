@@ -4,7 +4,7 @@ BUILD=${BUILD:-""}
 REGISTRY=${REGISTRY:-"docker.io/ehazlett"}
 TAG=${TAG:-"dev"}
 DAEMON=flow
-WORKFLOWS=$(ls cmd/ | grep flow-workflow)
+WORKFLOWS=${WORKFLOWS:-$(ls cmd/ | grep flow-workflow)}
 IMAGE_BUILD_EXTRA="${IMAGE_BUILD_EXTRA:-""}"
 PUSH=${PUSH:-""}
 UPDATE_LATEST=${UPDATE_LATEST:-""}
@@ -17,8 +17,11 @@ if [ ! -z "${UPDATE_LATEST}" ] && [ "${UPDATE_LATEST}" != "n" ] && [ "${UPDATE_L
     DAEMON_EXTRA="-t ${REGISTRY}/${DAEMON}:latest"
 fi
 
-echo " -> building $DAEMON"
-docker buildx build --build-arg VERSION=${VERSION} --build-arg BUILD=${BUILD} ${IMAGE_BUILD_EXTRA} ${DAEMON_EXTRA} -t ${REGISTRY}/${DAEMON}:${TAG} ${PUSH} -f Dockerfile .
+# check for skip
+if [ -z "$SKIP_FLOW" ]; then
+    echo " -> building $DAEMON"
+    docker buildx build --build-arg VERSION=${VERSION} --build-arg BUILD=${BUILD} ${IMAGE_BUILD_EXTRA} ${DAEMON_EXTRA} -t ${REGISTRY}/${DAEMON}:${TAG} ${PUSH} -f Dockerfile .
+fi
 
 for workflow in $WORKFLOWS; do
     echo " -> building $workflow"
