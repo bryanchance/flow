@@ -1,5 +1,7 @@
 # Flow Distributed Workflow System
 
+[![Docs](https://img.shields.io/badge/Docs-Documentation-blue)](https://flow.ehazlett.dev)
+
 # Flow Server
 The Flow server manages job submissions. It provides a GRPC API that is used by clients
 to submit and manage workflows.
