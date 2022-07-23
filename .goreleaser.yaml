@@ -1,3 +1,5 @@
+env:
+  - BUILD={{ .Env.BUILD }}
 before:
   hooks:
     - go mod tidy
