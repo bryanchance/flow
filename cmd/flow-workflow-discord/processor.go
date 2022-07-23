@@ -57,14 +57,14 @@ type Message struct {
 }
 
 func (p *Processor) Process(ctx context.Context, cfg *workflows.ProcessorConfig) (*workflows.ProcessorOutput, error) {
-	//w := cfg.Workflow
-
 	logrus.Debugf("processor config: %+v", cfg)
+
+	w := cfg.Workflow
 
 	m := &Message{
 		Username: p.discordName,
 		Footer: Footer{
-			Text: "Sent by Flow (flow.ehazlett.dev)",
+			Text: "Sent by Flow (github.com/ehazlett/flow)",
 		},
 	}
 
@@ -133,6 +133,8 @@ func (p *Processor) Process(ctx context.Context, cfg *workflows.ProcessorConfig)
 		}
 		return nil, fmt.Errorf("error sending discord notification: %s", string(b))
 	}
+
+	logrus.Infof("workflow complete: %s", w.ID)
 
 	return &workflows.ProcessorOutput{
 		FinishedAt: time.Now(),

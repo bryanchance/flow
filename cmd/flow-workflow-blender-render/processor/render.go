@@ -250,7 +250,7 @@ func (p *Processor) renderWorkflow(ctx context.Context, cfg *workflows.Processor
 	output.Duration = output.FinishedAt.Sub(startedAt)
 	output.Log = string(out)
 
-	logrus.Debugf("workflow complete: %+v", output)
+	logrus.Infof("workflow complete: %s", w.ID)
 
 	return output, nil
 }
