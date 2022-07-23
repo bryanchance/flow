@@ -7,7 +7,7 @@ var (
 	Name = "flow"
 
 	// Version defines the application version
-	Version = "0.1.1"
+	Version = "next"
 
 	// Description is the application description
 	Description = "flow render management"
