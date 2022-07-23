@@ -14,7 +14,7 @@ const (
 	WorkflowsService Type = "flow.services.workflows.v1"
 )
 
-// Service is the interface that all stellar services must implement
+// Service is the interface that all services must implement
 type Service interface {
 	// Type returns the type that the service provides
 	Type() Type

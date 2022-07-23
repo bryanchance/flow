@@ -36,7 +36,7 @@ func NewProcessor(blenderPath string, pCfg *workflows.Config) (*Processor, error
 
 func (p *Processor) Process(ctx context.Context, cfg *workflows.ProcessorConfig) (*workflows.ProcessorOutput, error) {
 	w := cfg.Workflow
-	logrus.Debugf("processing workflow %s (%s)", w.Name, w.ID)
+	logrus.Infof("processing workflow %s (%s)", w.Name, w.ID)
 	wCtx, cancel := context.WithTimeout(ctx, p.cfg.WorkflowTimeout)
 	defer cancel()
 	output, err := p.renderWorkflow(wCtx, cfg)

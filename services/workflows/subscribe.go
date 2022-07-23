@@ -257,6 +257,7 @@ func (s *service) updateWorkflowOutput(ctx context.Context, o *api.WorkflowOutpu
 		return err
 	}
 
+	w.UpdatedAt = time.Now()
 	w.Output = o
 
 	if err := s.ds.UpdateWorkflow(uCtx, w); err != nil {
