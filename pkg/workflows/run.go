@@ -4,7 +4,9 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 	"time"
+	"unicode"
 
 	accountsapi "github.com/ehazlett/flow/api/services/accounts/v1"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
@@ -143,7 +145,16 @@ func (h *WorkflowHandler) handleWorkflow(ctx context.Context, w *api.Workflow, s
 	output.Info = processorOutput.Parameters
 	output.FinishedAt = processorOutput.FinishedAt
 	output.Duration = processorOutput.Duration
-	output.Log = processorOutput.Log
+	// convert output to ascii for db
+	log := strings.Map(func(r rune) rune {
+		if unicode.IsPrint(r) {
+			return r
+		}
+		return -1
+	}, processorOutput.Log)
+	output.Log = log
+
+	logrus.Debugf("output: %+v", output)
 
 	// handle artifacts
 	if dir := processorOutput.OutputDir; dir != "" {
