@@ -27,6 +27,9 @@ const (
 	// CtxDefaultNamespace is the default key used when unauthenticated and no auth
 	CtxDefaultNamespace = "default"
 
+	// CtxDatastoreLabels is the key stored in the context for datastore queries with labels
+	CtxDatastoreLabels = "labels"
+
 	// GRPCMaxMessagSize is the max message size when sending over GRPC
 	GRPCMaxMessageSize = 32 * 1024 * 1024
 )

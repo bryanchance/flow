@@ -3,9 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/ehazlett/flow"
 	api "github.com/ehazlett/flow/api/services/workflows/v1"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,26 +16,22 @@ func (p *Postgres) GetWorkflows(ctx context.Context) ([]*api.Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
-	var workflows []*api.Workflow
-	rows, err := p.db.QueryContext(ctx, "SELECT workflow FROM workflows WHERE workflow->>'namespace' = $1 ORDER by workflow->>'createdAt' desc;", ns)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return workflows, nil
+
+	labels, ok := ctx.Value(flow.CtxDatastoreLabels).(map[string]string)
+	if ok {
+		workflows := []*api.Workflow{}
+		for k, v := range labels {
+			w, err := p.getWorkflowsByLabel(ctx, ns, k, v)
+			if err != nil {
+				return nil, err
+			}
+			workflows = append(workflows, w...)
 		}
-		return nil, err
+		return workflows, nil
 	}
 
-	for rows.Next() {
-		var w *api.Workflow
-		if err := rows.Scan(&w); err != nil {
-			return nil, err
-		}
-		workflows = append(workflows, w)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return workflows, nil
+	// if no filters passed return all
+	return p.getAllWorkflows(ctx, ns)
 }
 
 func (p *Postgres) GetWorkflow(ctx context.Context, id string) (*api.Workflow, error) {
@@ -82,4 +80,51 @@ func (p *Postgres) DeleteWorkflow(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (p *Postgres) getAllWorkflows(ctx context.Context, namespace string) ([]*api.Workflow, error) {
+	var workflows []*api.Workflow
+	rows, err := p.db.QueryContext(ctx, "SELECT workflow FROM workflows WHERE workflow->>'namespace' = $1 ORDER by workflow->>'createdAt' desc;", namespace)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return workflows, nil
+		}
+		return nil, err
+	}
+
+	for rows.Next() {
+		var w *api.Workflow
+		if err := rows.Scan(&w); err != nil {
+			return nil, err
+		}
+		workflows = append(workflows, w)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return workflows, nil
+}
+
+func (p *Postgres) getWorkflowsByLabel(ctx context.Context, namespace, key, value string) ([]*api.Workflow, error) {
+	vals := strings.Split(value, ",")
+	var workflows []*api.Workflow
+	rows, err := p.db.QueryContext(ctx, "SELECT workflow FROM workflows WHERE workflow->>'namespace' = ($1) AND workflow -> 'labels' IS NOT NULL AND workflow -> 'labels' ->> ($2) = ANY ($3) ORDER by workflow->>'createdAt' desc;", namespace, key, pq.Array(vals))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return workflows, nil
+		}
+		return nil, err
+	}
+
+	for rows.Next() {
+		var w *api.Workflow
+		if err := rows.Scan(&w); err != nil {
+			return nil, err
+		}
+		workflows = append(workflows, w)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return workflows, nil
 }

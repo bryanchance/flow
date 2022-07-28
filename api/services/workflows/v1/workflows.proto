@@ -30,7 +30,9 @@ service Workflows {
         rpc ListWorkflowProcessors(ListWorkflowProcessorsRequest) returns (ListWorkflowProcessorsResponse);
 }
 
-message ListWorkflowsRequest {}
+message ListWorkflowsRequest {
+        map<string, string> labels = 1;
+}
 
 enum WorkflowStatus {
         PENDING = 0;

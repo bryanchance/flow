@@ -39,8 +39,16 @@ var workflowsCommand = &cli.Command{
 }
 
 var workflowsListCommand = &cli.Command{
-	Name:    "list",
-	Usage:   "list available workflows",
+	Name:  "list",
+	Usage: "list available workflows",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:    "label",
+			Aliases: []string{"l"},
+			Usage:   "filter workflows by label (key=value format)",
+			Value:   &cli.StringSlice{},
+		},
+	},
 	Aliases: []string{"ls"},
 	Action: func(clix *cli.Context) error {
 		ctx, err := getContext(clix)
@@ -54,7 +62,22 @@ var workflowsListCommand = &cli.Command{
 		}
 		defer client.Close()
 
-		resp, err := client.ListWorkflows(ctx, &api.ListWorkflowsRequest{})
+		req := &api.ListWorkflowsRequest{
+			Labels: map[string]string{},
+		}
+
+		for _, o := range clix.StringSlice("label") {
+			parts := strings.Split(o, "=")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid format for label filter; expected key=value")
+			}
+			k, v := parts[0], parts[1]
+			req.Labels[k] = v
+		}
+
+		logrus.Debugf("%+v", req)
+
+		resp, err := client.ListWorkflows(ctx, req)
 		if err != nil {
 			return err
 		}
