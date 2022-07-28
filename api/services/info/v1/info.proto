@@ -15,6 +15,7 @@ option (gogoproto.sizer_all) = true;
 
 
 service Info {
+        rpc WorkflowInfo(WorkflowInfoRequest) returns (WorkflowInfoResponse);
         rpc Version(VersionRequest) returns (VersionResponse);
 }
 
@@ -26,4 +27,11 @@ message VersionResponse {
         string build = 3;
         string commit = 4;
         string authenticator = 5;
+}
+
+message WorkflowInfoRequest {}
+
+message WorkflowInfoResponse {
+        uint64 total_workflows = 1;
+        uint64 pending_workflows = 2;
 }

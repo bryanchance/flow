@@ -399,6 +399,38 @@ func (a *TokenAuthenticator) GenerateAPIToken(ctx context.Context, description s
 	return apiToken, nil
 }
 
+func (a *TokenAuthenticator) Logout(ctx context.Context) error {
+	peer, ok := peer.FromContext(ctx)
+	if !ok {
+		logrus.Warn("failed to get peer from context")
+	}
+	metadata, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		logrus.Warnf("missing metadata in context from %s", peer.Addr)
+		return nil
+	}
+
+	token, ok := metadata[flow.CtxTokenKey]
+	if ok {
+		for _, t := range token {
+			acct, err := a.validateToken(ctx, t)
+			if err != nil {
+				logrus.Warnf("unauthenticated request from %s using token %s to logout", peer.Addr, t)
+				return nil
+			}
+			logrus.Debugf("logging out user: %s", acct.Username)
+
+			tokenKey := getTokenKey(t)
+
+			if err := a.ds.DeleteAuthenticatorKey(ctx, tokenKey); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (a *TokenAuthenticator) createServiceToken(ctx context.Context, token string, description string, ttl time.Duration) (*api.ServiceToken, error) {
 	serviceToken := &api.ServiceToken{
 		Token:       token,

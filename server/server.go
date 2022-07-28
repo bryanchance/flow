@@ -16,7 +16,6 @@ import (
 	"github.com/ehazlett/flow"
 	"github.com/ehazlett/flow/datastore"
 	"github.com/ehazlett/flow/pkg/auth"
-	authnone "github.com/ehazlett/flow/pkg/auth/providers/none"
 	authtoken "github.com/ehazlett/flow/pkg/auth/providers/token"
 	"github.com/ehazlett/flow/pkg/middleware"
 	"github.com/ehazlett/flow/pkg/middleware/admin"
@@ -100,11 +99,9 @@ func NewServer(cfg *flow.Config) (*Server, error) {
 		grpcOpts = append(grpcOpts, grpc.Creds(creds))
 	}
 
-	defaultNoneAuthenticator := &authnone.NoneAuthenticator{}
-
 	// setup default authenticator
 	if cfg.Authenticator == nil {
-		cfg.Authenticator = &flow.AuthenticatorConfig{Name: "none"}
+		cfg.Authenticator = &flow.AuthenticatorConfig{Name: "token"}
 	}
 
 	// interceptors
@@ -121,8 +118,6 @@ func NewServer(cfg *flow.Config) (*Server, error) {
 	grpcMiddleware := []middleware.Middleware{}
 
 	switch strings.ToLower(cfg.Authenticator.Name) {
-	case "none":
-		authenticator = defaultNoneAuthenticator
 	case "token":
 		authenticator = authtoken.NewTokenAuthenticator(ds, publicRoutes)
 		// admin required for token auth

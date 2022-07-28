@@ -25,6 +25,7 @@ type Datastore interface {
 	GetAuthenticatorKey(ctx context.Context, a auth.Authenticator, key string) ([]byte, error)
 	SetAuthenticatorKey(ctx context.Context, a auth.Authenticator, key string, value []byte, ttl time.Duration) error
 	GetAuthenticatorKeys(ctx context.Context, a auth.Authenticator, prefix string) ([][]byte, error)
+	DeleteAuthenticatorKey(ctx context.Context, key string) error
 
 	GetNamespaces(ctx context.Context) ([]*accountsapi.Namespace, error)
 	GetNamespace(ctx context.Context, id string) (*accountsapi.Namespace, error)
@@ -53,6 +54,11 @@ type Datastore interface {
 	GetNextQueueWorkflow(ctx context.Context, queueType string, scope *workflowsapi.ProcessorScope) (*workflowsapi.Workflow, error)
 	CreateQueueWorkflow(ctx context.Context, w *workflowsapi.Workflow) error
 	DeleteQueueWorkflow(ctx context.Context, id string) error
+
+	// info queries
+	GetTotalWorkflowsCount(ctx context.Context) (uint64, error)
+	GetPendingWorkflowsCount(ctx context.Context) (uint64, error)
+	GetTotalProcessorsCount(ctx context.Context) (uint64, error)
 }
 
 func NewDatastore(addr string) (Datastore, error) {

@@ -183,6 +183,12 @@ func (s *service) processQueue(ctx context.Context, info *api.ProcessorInfo, str
 						return
 					}
 
+					// delete from queue
+					if err := s.ds.DeleteQueueWorkflow(uCtx, workflow.ID); err != nil {
+						errCh <- err
+						return
+					}
+
 					// check for max processed jobs
 					processed += 1.0
 					if maxWorkflows != 0 && processed >= maxWorkflows {

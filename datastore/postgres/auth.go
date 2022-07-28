@@ -31,3 +31,11 @@ func (p *Postgres) GetAuthenticatorKeys(ctx context.Context, a auth.Authenticato
 
 	return keys, nil
 }
+
+func (p *Postgres) DeleteAuthenticatorKey(ctx context.Context, key string) error {
+	if _, err := p.db.ExecContext(ctx, "DELETE FROM authenticator WHERE key = ($1)", key); err != nil {
+		return err
+	}
+
+	return nil
+}

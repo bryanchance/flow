@@ -38,6 +38,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		loginCommand,
+		logoutCommand,
 		accountsCommand,
 		infoCommand,
 		workflowsCommand,

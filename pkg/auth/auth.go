@@ -20,6 +20,8 @@ type Authenticator interface {
 	GetAccount(ctx context.Context, username string) (*api.Account, error)
 	// Authenticate authenticates the specified user and returns a byte array from the provider
 	Authenticate(ctx context.Context, username string, password []byte) ([]byte, error)
+	// Logout removes the authenticator key for the specified token
+	Logout(ctx context.Context) error
 	// GenerateAPIToken generates a new user API token
 	GenerateAPIToken(ctx context.Context, description string) (*api.APIToken, error)
 	// GenerateServiceToken generates a new service token

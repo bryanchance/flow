@@ -22,6 +22,7 @@ service Accounts {
         rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty);
         rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty);
         rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+        rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
         rpc GetAccountProfile(GetAccountProfileRequest) returns (GetAccountProfileResponse);
         rpc GenerateServiceToken(GenerateServiceTokenRequest) returns (GenerateServiceTokenResponse);
         rpc ListServiceTokens(ListServiceTokensRequest) returns (ListServiceTokensResponse);
@@ -97,6 +98,8 @@ message AuthenticateResponse {
         Account account = 1;
         bytes config = 2;
 }
+
+message LogoutRequest {}
 
 message ChangePasswordRequest {
         string username = 1;
