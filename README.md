@@ -11,6 +11,8 @@ To get started with Flow, see the [Quick Start](https://flow.ehazlett.dev/docs/s
 See the [docs](https://flow.ehazlett.dev/docs/start/intro) for more in-depth design descriptions
 and usage.
 
+![Flow Example](.img/flow.gif)
+
 ## Flow Server
 The Flow server manages workflow submissions. It provides a GRPC API that is used by clients
 to submit and manage workflows.
