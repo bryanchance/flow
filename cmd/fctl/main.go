@@ -55,21 +55,29 @@ func main() {
 			Value:   "127.0.0.1:7080",
 			EnvVars: []string{"FLOW_ADDR"},
 		},
+		&cli.BoolFlag{
+			Name:    "tls",
+			Usage:   "enable TLS",
+			EnvVars: []string{"FLOW_ENABLE_TLS"},
+		},
 		&cli.StringFlag{
 			Name:    "cert",
 			Aliases: []string{"c"},
 			Usage:   "flow client certificate",
+			EnvVars: []string{"FLOW_CLIENT_CERT"},
 			Value:   "",
 		},
 		&cli.StringFlag{
 			Name:    "key",
 			Aliases: []string{"k"},
 			Usage:   "flow client key",
+			EnvVars: []string{"FLOW_CLIENT_KEY"},
 			Value:   "",
 		},
 		&cli.BoolFlag{
-			Name:  "skip-verify",
-			Usage: "skip TLS verification",
+			Name:    "skip-verify",
+			Usage:   "skip TLS verification",
+			EnvVars: []string{"FLOW_INSECURE_SKIP_VERIFY"},
 		},
 	}
 	app.Before = func(clix *cli.Context) error {

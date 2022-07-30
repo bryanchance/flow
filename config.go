@@ -71,6 +71,8 @@ type Config struct {
 	TLSClientKey string
 	// TLSInsecureSkipVerify disables certificate verification
 	TLSInsecureSkipVerify bool
+	// EnableTLS enables TLS security for connections and loads the system certificates
+	EnableTLS bool
 	// S3Endpoint is the endpoint for the S3 compatible service
 	S3Endpoint string
 	// S3AccessID is the S3 access id

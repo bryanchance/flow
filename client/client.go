@@ -103,6 +103,15 @@ func (c *Client) Close() error {
 // DialOptionsFromConfig returns dial options configured from a Carbon config
 func DialOptionsFromConfig(cfg *flow.Config) ([]grpc.DialOption, error) {
 	opts := []grpc.DialOption{}
+	if cfg.EnableTLS {
+		creds := credentials.NewTLS(&tls.Config{
+			InsecureSkipVerify: cfg.TLSInsecureSkipVerify,
+		})
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+	}
+	// client cert
 	if cfg.TLSClientCertificate != "" {
 		logrus.WithField("cert", cfg.TLSClientCertificate)
 		var creds credentials.TransportCredentials
@@ -124,8 +133,6 @@ func DialOptionsFromConfig(cfg *flow.Config) ([]grpc.DialOption, error) {
 			creds = c
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
-	} else {
-		opts = append(opts, grpc.WithInsecure())
 	}
 
 	return opts, nil

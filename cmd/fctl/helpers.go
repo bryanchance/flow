@@ -48,6 +48,7 @@ func getClient(clix *cli.Context) (*client.Client, error) {
 
 	cfg := &flow.Config{
 		GRPCAddress:           clix.String("addr"),
+		EnableTLS:             clix.Bool("tls"),
 		TLSClientCertificate:  cert,
 		TLSClientKey:          key,
 		TLSInsecureSkipVerify: skipVerification,
