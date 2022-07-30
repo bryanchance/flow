@@ -2,7 +2,7 @@
 
 [![docs](https://img.shields.io/badge/flow-documentation-blue)](https://flow.ehazlett.dev/docs/start/intro) [![images](https://img.shields.io/badge/docker-oci%20images-9cf)](https://hub.docker.com/search?q=ehazlett%2Fflow) [![Go](https://img.shields.io/badge/Go-reference-green)](https://pkg.go.dev/github.com/ehazlett/flow)
 
-![Flow Logo](.img/logo-text.svg = 256x100)
+![Flow Logo]<img src=".img/logo-text.svg" width="256" height="100">
 
 # Getting Started
 To get started with Flow, see the [Quick Start](https://flow.ehazlett.dev/docs/start/quick-start).
