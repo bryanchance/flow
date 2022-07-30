@@ -20,6 +20,8 @@ require (
 	github.com/lib/pq v1.10.6
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/olebedev/emitter v0.0.0-20190110104742-e8d1457e6aee
 	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -44,4 +46,5 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/grpc v1.44.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gotest.tools/v3 v3.3.0 // indirect
 )
