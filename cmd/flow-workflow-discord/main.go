@@ -62,6 +62,7 @@ func main() {
 			Name:    "service-token",
 			Aliases: []string{"t"},
 			Usage:   "flow service token for access",
+			EnvVars: []string{"SERVICE_TOKEN"},
 		},
 		&cli.IntFlag{
 			Name:    "max-workflows",

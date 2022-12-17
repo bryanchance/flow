@@ -9,8 +9,8 @@ WORKDIR /src
 RUN make VERSION=$VERSION COMMIT=$COMMIT BUILD=$BUILD cmd/$PROCESSOR
 
 FROM alpine:3.16
-RUN apk add -U ffmpeg
 ARG PROCESSOR
+RUN apk add -U ffmpeg
 COPY --from=build /src/bin/$PROCESSOR /usr/bin/flow-processor
 ENTRYPOINT ["/usr/bin/flow-processor"]
 CMD ["-h"]

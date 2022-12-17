@@ -13,8 +13,6 @@ VERSION?=dev
 BUILD_ARGS?=
 PACKAGES=$(shell go list ./... | grep -v -e /vendor/)
 PROCESSORS=$(wildcard cmd/flow-workflow-*)
-CYCLO_PACKAGES=$(shell go list ./... | grep -v /vendor/ | sed "s/github.com\/$(NAMESPACE)\/$(APP)\///g" | tail -n +2)
-VAB_ARGS?=
 CWD=$(PWD)
 
 ifeq ($(GOOS), windows)

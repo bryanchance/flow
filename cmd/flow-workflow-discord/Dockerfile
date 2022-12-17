@@ -1,15 +1,15 @@
 FROM golang:alpine as build
-ARG WORKFLOW
+ARG PROCESSOR
 ARG VERSION
 ARG COMMIT
 ARG BUILD
 RUN apk add -U make git
 COPY . /src
 WORKDIR /src
-RUN make VERSION=$VERSION COMMIT=$COMMIT BUILD=$BUILD cmd/$WORKFLOW
+RUN make VERSION=$VERSION COMMIT=$COMMIT BUILD=$BUILD cmd/$PROCESSOR
 
 FROM alpine:3.16
-ARG WORKFLOW
-COPY --from=build /src/bin/$WORKFLOW /usr/bin/flow-workflow
-ENTRYPOINT ["/usr/bin/flow-workflow"]
+ARG PROCESSOR
+COPY --from=build /src/bin/$PROCESSOR /usr/bin/flow-processor
+ENTRYPOINT ["/usr/bin/flow-processor"]
 CMD ["-h"]

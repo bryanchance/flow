@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-workflow-example
+spec:
+  selector:
+    matchLabels:
+      app: flow-workflow-example
+  template:
+    metadata:
+      labels:
+        app: flow-workflow-example
+    spec:
+      containers:
+      - name: example
+        image: docker.io/ehazlett/flow-workflow-example:dev
+        imagePullPolicy: Always
+        args: ["--address", "flow:7080"]
+        env:
+        - name: SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: flow-service-token
+              key: token
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-workflow-blender-render
+spec:
+  selector:
+    matchLabels:
+      app: flow-workflow-blender-render
+  template:
+    metadata:
+      labels:
+        app: flow-workflow-blender-render
+    spec:
+      containers:
+      - name: blender
+        image: docker.io/ehazlett/flow-workflow-blender-render:dev
+        imagePullPolicy: Always
+        args: ["--address", "flow:7080"]
+        env:
+        - name: SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: flow-service-token
+              key: token
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flow-workflow-trivy
+spec:
+  selector:
+    matchLabels:
+      app: flow-workflow-trivy
+  template:
+    metadata:
+      labels:
+        app: flow-workflow-trivy
+    spec:
+      containers:
+      - name: trivy
+        image: docker.io/ehazlett/flow-workflow-trivy:dev
+        imagePullPolicy: Always
+        args: ["--address", "flow:7080"]
+        env:
+        - name: SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: flow-service-token
+              key: token

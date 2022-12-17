@@ -166,7 +166,7 @@ spec:
     spec:
       containers:
       - name: flow
-        image: r.underland.io/flow/flow:dev
+        image: docker.io/ehazlett/flow:dev
         args:
           - server
           - -c
